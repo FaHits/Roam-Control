@@ -9,11 +9,16 @@
 - 源码基线：`38c0d80`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 9 - 路线库和运行设置界面
+- 当前任务：Task 10 - 恢复模型与设备会话基础
 - 任务状态：`completed`
 - 当前执行窗口：DSH-Agent（2026-10-31 完成）
-- 最近完成：Task 9 - 路线库和运行设置界面
+- 最近完成：Task 10 - 恢复模型与设备会话基础
 - 已完成工程修改：
+  - `RoamControl/Features/Routes/State/RouteSessionModel.swift`
+  - `RoamControl/Models/SessionRecoveryRecord.swift`
+  - `RoamControl/App/AppModel.swift`
+  - `RoamControlTests/RouteRecoveryTests.swift`
+  - `RoamControlTests/RouteSessionModelTests.swift`
   - `RoamControl/Features/Routes/Views/RouteEditorView.swift`
   - `RoamControl/Features/Routes/Views/RouteLibraryView.swift`
   - `RoamControl/Features/Routes/Views/RouteRunSetupView.swift`
@@ -58,8 +63,10 @@
 - Task 8 验收修正构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - Task 9 测试结果：GitHub Actions `Xcode 27 verification` run `41095688833` 通过；Xcode 27.1 下 `RouteProfileStoreTests` 的 3 个用例全部通过，`RoamControlTests` 全量 83 个用例 0 失败，结果为 `TEST SUCCEEDED`
 - Task 9 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
+- Task 10 测试结果：GitHub Actions `Xcode 27 verification` run `41102340345` 通过；Xcode 27.1 下新增 `RouteRecoveryTests` 6 个用例、`RouteSessionModelTests` 3 个用例全部通过，`RoamControlTests` 全量 92 个用例 0 失败，结果为 `TEST SUCCEEDED`
+- Task 10 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：执行 Task 10 - 恢复模型与设备会话基础（未认领，先读实施计划 Task 10 并把状态改为 `in_progress`）
+- 下一步：执行 Task 11 - 运行中进度持久化（未认领，先读实施计划 Task 11 并把状态改为 `in_progress`）
 
 ## 自动完成规则
 
@@ -82,7 +89,7 @@
 | Task 7：路线编辑器状态模型 | `completed` | Xcode 27.1 下 21 个编辑器测试与全量 78 个测试通过 |
 | Task 8：手动路线编辑界面 | `completed` | Xcode 27.1 全量 78 个测试与 Debug 构建均通过 |
 | Task 9：路线库和运行设置界面 | `completed` | Xcode 27.1 全量 83 个测试（新增 3 个 `RunProfileStore` 测试）与 Debug 构建均通过 |
-| Task 10：恢复模型与设备会话基础 | `pending` | 等待 Task 9 完成，现可认领 |
+| Task 10：恢复模型与设备会话基础 | `completed` | Xcode 27.1 下 9 个新测试与全量 92 个测试通过 |
 | Task 11：运行中进度持久化 | `pending` | 等待 Task 10 |
 | Task 12：运行卡片与主页整合 | `pending` | 等待 Task 11 |
 | Task 13：中断路线恢复 | `pending` | 等待 Task 12 |
@@ -458,4 +465,86 @@
 - 未验证项：`HomeView` 尚未接入任何路线库或运行设置回调；模拟器手工检查（空状态、新建路线、重命名、删除、闭环默认 `Continuous`、开放路线强制 `Once`、开始按钮禁用状态）留到 Task 12 集成验收
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41095688833
 - 下一步：Task 10 - 恢复模型与设备会话基础
+- 更新时间：2026-10-31
+
+### 2026-10-31 Task 10 完成记录
+
+- 新增文件：`RoamControl/Features/Routes/State/RouteSessionModel.swift`、`RoamControlTests/RouteRecoveryTests.swift`、`RoamControlTests/RouteSessionModelTests.swift`
+- 修改文件：`RoamControl/Models/SessionRecoveryRecord.swift`、`RoamControl/App/AppModel.swift`、`Documentation/ImplementationStatus.md`。未改 `RoamControl.xcodeproj/project.pbxproj`（`PBXFileSystemSynchronizedRootGroup` 让新文件自动进 target），未改 `HomeView.swift`、`RouteRunCard.swift`、`RouteLibraryView.swift`、`RouteRunSetupView.swift`，未改版本号与 build number
+- `SessionRecoveryRecord` 扩展：
+  ```swift
+  enum Kind: String, Codable { case fixedLocation; case walkingRoute; case savedRoute }
+
+  var savedRoute: RouteDefinition? = nil
+  var routeProgress: RouteRunProgress? = nil
+  var runProfile: RunProfile? = nil
+  var runMode: RouteRunMode? = nil
+
+  var isSavedRoute: Bool { kind == .savedRoute }
+  var isRouteSession: Bool { kind == .walkingRoute || kind == .savedRoute }
+
+  static func savedRoute(
+      route: RouteDefinition,
+      at initialTarget: LocationTarget,
+      progress: RouteRunProgress,
+      profile: RunProfile,
+      mode: RouteRunMode
+  ) -> SessionRecoveryRecord
+  ```
+  四个新字段都声明在 `updatedAt` 之后并带 `nil` 默认值，`fixed(at:)` 与 `walking(from:to:paceMetresPerSecond:)` 的字段和取值完全不变；旧 JSON 缺少新键时由 `Codable` 合成为 `nil`
+- `AppModel` 新接口：
+  ```swift
+  func startRouteLocationSession(
+      at initialTarget: LocationTarget,
+      route: RouteDefinition,
+      profile: RunProfile,
+      mode: RouteRunMode
+  ) async
+
+  func updateActiveRouteRecovery(at target: LocationTarget, progress: RouteRunProgress)
+  func finishActiveRouteRecovery(at target: LocationTarget)
+  ```
+- `startRouteLocationSession` 复用 private `startLocationSession(at:selectedTarget:historyTarget:recovery:)`：`deviceTarget` 与 `historyTarget` 都取 `initialTarget`，`selectedTarget` 用路线名构造，`recovery` 用 `.savedRoute(...)`，起始进度固定为 `.init(distanceInLap: 0, completedLaps: 0, elapsedTime: 0)`。路线运行不再有任何路径使用 `.fixed(at:)` 作为起始记录
+- 恢复写入：`persistActiveSessionRecovery` 原有的 5 秒节流逻辑抽成 `saveActiveSessionRecoveryIfDue(at:)`，`updateActiveRouteRecovery` 复用同一节流，没有新增计时器；`finishActiveRouteRecovery` 在同一目录立即编码写盘并同步 `lastRecoverySaveDate`，崩溃不会丢掉最后一个模拟点
+- `applyDeviceSessionPhase(.failed)` 增加例外：`activeSessionRecovery?.isSavedRoute != true` 才调用 `clearActiveSessionRecovery()`，路线运行失败时保留 `.savedRoute` 恢复记录；`.idle` 分支的清理由用户主动停止后的真实位置恢复路径继续沿用，未改
+- `RouteSessionModel` 接口：
+  ```swift
+  enum RouteSessionPhase: Equatable { idle, preparing, running, paused, finished, stopping, failed(String) }
+  enum RouteSessionError: Error, Equatable { notPrepared, invalidProgress }
+
+  @MainActor @Observable final class RouteSessionModel {
+      private(set) var phase: RouteSessionPhase
+      private(set) var route: RouteDefinition?
+      private(set) var snapshot: RouteRunSnapshot?
+      private(set) var errorMessage: String?
+
+      var locksRouteInput: Bool
+      var completedLaps: Int
+      var lapProgress: Double
+      var totalDistance: Double
+
+      func prepare(route:profile:mode:progress:) throws
+      func start(using appModel: AppModel) async
+      func togglePause()
+      func stop(using appModel: AppModel)
+      func handleDeviceSessionPhase(_ phase: DeviceSessionPhase, appModel: AppModel)
+      func reset()
+  }
+  ```
+- `prepare` 顺序固定为：`RouteGeometry(points:isClosed:)` → `mode.validated()` → `profile.validate()` → 自校验 `progress`（`distanceInLap`、`elapsedTime` 必须有限且非负，`completedLaps` 必须非负，否则 `throw RouteSessionError.invalidProgress`）→ `RouteRunner(geometry:profile:mode:progress:)`。`prepare` 不调用设备、不启动 tick、不修改 `phase`（保持 `.idle`）
+- `start` 行为：未配对直接 `.failed("Pair this iPhone before starting a route.")`；`.preparing/.running/.paused/.stopping` 期间不重复启动；设 `.preparing` 后用 `snapshot.groundCoordinate` 构造 `LocationTarget` 并调用 `appModel.startRouteLocationSession(...)`；设备仍 `.idle` 时 `.failed("Roam Control could not start the route session.")`；设备已 `.active` 时主动调用一次 `handleDeviceSessionPhase(.active(target))`；启动成功后用当前进度写一次种子 `updateActiveRouteRecovery`，不做每 tick 持久化（Task 11）
+- 设备阶段幂等规则：`.active` 只在 `phase == .preparing` 且 `movementTask == nil` 时开循环，所以每次 `updateLocation` 触发的 `.active` 回调不会重复启动第二个循环；`.failed(message)` 只在 `.preparing/.running/.paused/.stopping` 时生效，取消循环、写 `errorMessage`、进 `.failed`，不调用 `finishActiveRouteRecovery`；`.idle` 在 `.stopping` 时取消并 `reset()`，在 `.running/.preparing` 时进 `.failed("The active location session ended before the route finished.")`；`.openingLocalDevVPN/.discovering/.connecting/.stopping` 只更新等待状态
+- 移动循环：整个 active 会话只有一个 `@MainActor` `movementTask`，每轮 `Date.now` 算真实 delta 并传给 `runner.advance(by:)`，`sleep` 约 1 秒，不固定 1.0、不截断；暂停时只重置 `lastTick` 不推进，恢复不重建循环；`RouteRunner` 作为 `var runner` 原地推进，不是每 tick 新建
+- 坐标分流：`snapshot.groundCoordinate` 只用于路线进度与恢复种子，`snapshot.reportedCoordinate` 才用于构造发给设备的 `LocationTarget`，名称 `Running <route name>`，subtitle 为 `<laps> laps · <speed> m/s · <cadence> spm`
+- 终止路径：`updateLocation` 结果不是 `.updated` 立即失败并取消循环；runner 进入 `.finished` 时设 `.finished`、取消循环、调用 `finishActiveRouteRecovery(at: 最后一个 target)`；`stop(using:)` 取消循环、设 `.stopping`、调用 `deviceSession.stop()`，不调用 `finishActiveRouteRecovery`；`reset()` 只清状态不碰设备
+- `locksRouteInput`：`.preparing/.running/.paused/.stopping/.finished` 为 `true`，`.idle/.failed` 为 `false`
+- 新增测试：`RouteRecoveryTests` 6 个用例（`testExistingFixedLocationRecordStillDecodes`、`testExistingWalkingRecordStillDecodes`、`testSavedRouteRecordRoundTripsSnapshotAndProgress`、`testSavedRouteRecordContainsRouteGeometry`、`testRouteModeAndProfileRemainDeterministicAfterDecoding`、`testFixedFactoryKeepsLegacyShape`），旧 JSON 用 `JSONSerialization` 手写字典并省略新键；`RouteSessionModelTests` 3 个用例（`testPrepareRejectsInvalidModeBeforeDeviceCall`、`testPrepareBuildsSnapshotAtSuppliedProgress`、`testPrepareRejectsNegativeProgress`）。测试数从 83 增至 92
+- 红灯：提交 `afcd14d`（`test(routes): define route recovery and session contracts`），run `41102232658` 编译失败，错误为 `value of type 'SessionRecoveryRecord' has no member 'savedRoute'`（同类 9 条），失败原因是符号缺失而不是测试逻辑
+- 实现提交：`8193394`（`feat(routes): connect route runner to device session`）
+- CI：run `41102340345`、job `124221570276`，Xcode 27.1，6 分 40 秒；`Test case … passed` 92 行、`failed` 0 行，`** TEST SUCCEEDED **`，同一 run 的 `Build Debug` 为 `** BUILD SUCCEEDED **`；9 个新用例逐条通过
+- 偏差：`startLocationSession` 里既有的 `pendingSessionAnalyticsEvent` 三元表达式未改，`.savedRoute` 启动时仍记为 `fixedLocationStarted`，没有新增路线专属事件，避免扩大本任务范围
+- 本地无法验证的事实：本机是 Windows 且没有 `xcodebuild`，全量测试与 Debug 构建都在 `xcode-27` runner 上完成，没有本地测试通过的结论
+- 未验证项：真实设备会话（配对、Local DevVPN 连接、`updateLocation` 逐秒回传）、失败后恢复记录的跨启动恢复、后台长跑与每 tick 进度持久化（Task 11）、`HomeView` 与 `RouteRunCard` 整合（Task 12）、模拟器/真机手工验收
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41102340345
+- 下一步：Task 11 - 运行中进度持久化
 - 更新时间：2026-10-31
