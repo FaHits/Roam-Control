@@ -10,20 +10,24 @@
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
 - 当前任务：Task 2 - 路线坐标与闭环几何
-- 任务状态：`in_progress`
+- 任务状态：`completed`
 - 当前执行窗口：Codex Task 2
-- 最近完成：Task 1 - XCTest 目标和最小基线测试
+- 最近完成：Task 2 - 路线坐标与闭环几何
 - 已完成工程修改：
+  - `RoamControl/Features/Routes/Models/GeoCoordinate.swift`
+  - `RoamControl/Features/Routes/Models/RouteDefinition.swift`
+  - `RoamControl/Features/Routes/Models/RouteGeometry.swift`
+  - `RoamControlTests/RouteGeometryTests.swift`
   - `RoamControl.xcodeproj/project.pbxproj`
   - `RoamControl.xcodeproj/xcshareddata/xcschemes/RoamControl.xcscheme`
   - `RoamControlTests/BaselineTests.swift`
   - `.github/workflows/xcode-27.yml`
 - 已完成的仓库准备：个人 fork、`fork` 远程、开发分支、版本规范、设计计划、跨窗口交接规则均已建立并纳入 Git
 - 自动同步规则：任务验证完成后自动更新本文件、提交任务文件并推送到个人 fork，不需要用户再次提醒
-- Task 1 测试结果：GitHub Actions `Xcode 27 verification` run `41039599444` 通过；Xcode 27.1（27A9275），`BaselineTests.testLocationTargetPreservesCoordinate()` 通过，结果为 `TEST SUCCEEDED`
-- Task 1 构建结果：同一 run 的 Debug 模拟器构建通过，结果为 `BUILD SUCCEEDED`
+- Task 2 测试结果：GitHub Actions `Xcode 27 verification` run `41048147464` 通过；Xcode 27.1 下 `RouteGeometryTests` 的 10 个用例全部通过，结果为 `TEST SUCCEEDED`
+- Task 2 构建结果：同一 run 的 Debug 模拟器构建通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：执行 Task 2 的窗口先认领本任务，再读取 Task 2 章节
+- 下一步：执行 Task 3 - 确定性拟人速度、步频和 GPS 抖动
 
 ## 自动完成规则
 
@@ -38,8 +42,8 @@
 | 任务 | 状态 | 结果或下一步 |
 |---|---|---|
 | Task 1：增加 XCTest 目标和最小基线测试 | `completed` | Xcode 27.1 测试与 Debug 构建均通过 |
-| Task 2：路线坐标与闭环几何 | `pending` | 前置条件满足，可认领执行 |
-| Task 3：确定性拟人速度、步频和 GPS 抖动 | `pending` | 等待 Task 2 |
+| Task 2：路线坐标与闭环几何 | `completed` | Xcode 27.1 下 10 个几何测试与 Debug 构建均通过 |
+| Task 3：确定性拟人速度、步频和 GPS 抖动 | `pending` | Task 2 已完成，可开始 |
 | Task 4：纯 Swift 路线运行器 | `pending` | 等待 Task 3 |
 | Task 5：路线库原子持久化 | `pending` | 等待 Task 4 |
 | Task 6：路线库状态模型 | `pending` | 等待 Task 5 |
@@ -92,4 +96,30 @@
 - 自动化规则：已通过验证的任务完成后，窗口自动更新状态、创建任务提交、推送到 `fork` 并核对远端。
 - 验证要求：文档格式检查通过；代码测试与构建的最新证据仍为 Task 1 的 CI run `41039599444`。
 - 下一步：Task 2 可认领。下一步第一条动作是读取 Task 2 并将状态改为 `in_progress`。
+- 更新时间：2026-10-30
+
+### 2026-10-30 Task 2 完成记录
+
+- 任务：Task 2 - 路线坐标与闭环几何
+- 状态：`completed`
+- 分支与基线：`feat/manual-running-routes`，源码基线 `24cb5ad`
+- 修改文件：
+  - `RoamControl/Features/Routes/Models/GeoCoordinate.swift`
+  - `RoamControl/Features/Routes/Models/RouteDefinition.swift`
+  - `RoamControl/Features/Routes/Models/RouteGeometry.swift`
+  - `RoamControlTests/RouteGeometryTests.swift`
+  - `Documentation/ImplementationStatus.md`
+- 模型：新增 `GeoCoordinate`、`RouteSource`、`RouteDefinition`、`RouteGeometryError` 和 `RouteGeometry`
+- 几何规则：校验有限经纬度；连续距离小于 0.5 米的点折叠；闭环至少 3 个有效点、开放路线至少 2 个；闭环接缝只由 `RouteGeometry` 添加一次；总长度包含闭合段；负距离返回起点，达到或超过总长度返回终点；段内使用线性经纬度插值
+- 红灯命令：`xcodebuild test -project RoamControl.xcodeproj -scheme RoamControl -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' -only-testing:RoamControlTests CODE_SIGNING_ALLOWED=NO`
+- 红灯结果：run `41043952436` 在 `RouteGeometryTests.swift:5` 以 `cannot find 'GeoCoordinate' in scope` 失败，确认测试先于生产类型存在
+- 绿灯测试命令：`xcodebuild test -project RoamControl.xcodeproj -scheme RoamControl -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' -only-testing:RoamControlTests CODE_SIGNING_ALLOWED=NO`
+- 测试结果：run `41048147464`、job `124037253823`、Xcode 27.1；`RouteGeometryTests` 10 个用例全部通过，结果为 `TEST SUCCEEDED`
+- 构建命令：`xcodebuild build -project RoamControl.xcodeproj -scheme RoamControl -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO`
+- 构建结果：`BUILD SUCCEEDED`
+- 静态检查：`git diff --check` 通过；路线模型与测试未导入 `MapKit` 或 `SwiftUI`
+- 已知风险：本地 Windows 无法运行 `xcodebuild`；runner 出现一次瞬时的 iOS 模拟器 service hub 告警和 `invalidDigitCount` 日志，但测试与构建均成功；`coordinate(atDistance:)` 按任务约定将超过总长的距离夹到终点，后续圈数推进逻辑必须自行记录圈数并将圈内距离传入该 API
+- 验证提交：`cfff42a`
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41048147464
+- 下一步：执行 Task 3 - 确定性拟人速度、步频和 GPS 抖动
 - 更新时间：2026-10-30
