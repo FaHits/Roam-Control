@@ -9,11 +9,14 @@
 - 源码基线：`b68dac0`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 3 - 确定性拟人速度、步频和 GPS 抖动
-- 任务状态：`completed`
-- 当前执行窗口：DSH Task 3（2026-10-30 19:52 起，Asia/Shanghai）
-- 最近完成：Task 3 - 确定性拟人速度、步频和 GPS 抖动
+- 当前任务：Task 5 - 路线库原子持久化
+- 任务状态：`pending`
+- 当前执行窗口：无（DSH Task 4 窗口已于 2026-10-30 21:19 收尾，Asia/Shanghai）
+- 最近完成：Task 4 - 纯 Swift 路线运行器
 - 已完成工程修改：
+  - `RoamControl/Features/Routes/Models/RouteRunMode.swift`
+  - `RoamControl/Features/Routes/Core/RouteRunner.swift`
+  - `RoamControlTests/RouteRunnerTests.swift`
   - `RoamControl/Features/Routes/Models/RunProfile.swift`
   - `RoamControl/Features/Routes/Core/HumanizedMotionModel.swift`
   - `RoamControlTests/HumanizedMotionModelTests.swift`
@@ -31,8 +34,10 @@
 - Task 2 构建结果：同一 run 的 Debug 模拟器构建通过，结果为 `BUILD SUCCEEDED`
 - Task 3 测试结果：GitHub Actions `Xcode 27 verification` run `41055798306` 通过；Xcode 27.1 下 `HumanizedMotionModelTests` 的 8 个用例全部通过，`RoamControlTests` 全量 19 个用例 0 失败，结果为 `TEST SUCCEEDED`
 - Task 3 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
+- Task 4 测试结果：GitHub Actions `Xcode 27 verification` run `41061243835` 通过；Xcode 27.1 下 `RouteRunnerTests` 的 18 个用例全部通过，`RoamControlTests` 全量 37 个用例 0 失败，结果为 `TEST SUCCEEDED`
+- Task 4 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：执行 Task 4 - 纯 Swift 路线运行器
+- 下一步：执行 Task 5 - 路线库原子持久化
 
 ## 自动完成规则
 
@@ -49,8 +54,8 @@
 | Task 1：增加 XCTest 目标和最小基线测试 | `completed` | Xcode 27.1 测试与 Debug 构建均通过 |
 | Task 2：路线坐标与闭环几何 | `completed` | Xcode 27.1 下 10 个几何测试与 Debug 构建均通过 |
 | Task 3：确定性拟人速度、步频和 GPS 抖动 | `completed` | Xcode 27.1 下 8 个运动模型测试与全量 19 个测试通过 |
-| Task 4：纯 Swift 路线运行器 | `pending` | Task 3 已完成，可开始 |
-| Task 5：路线库原子持久化 | `pending` | 等待 Task 4 |
+| Task 4：纯 Swift 路线运行器 | `completed` | Xcode 27.1 下 18 个运行器测试与全量 37 个测试通过 |
+| Task 5：路线库原子持久化 | `pending` | Task 4 已完成，可认领 |
 | Task 6：路线库状态模型 | `pending` | 等待 Task 5 |
 | Task 7：路线编辑器状态模型 | `pending` | 等待 Task 6 |
 | Task 8：手动路线编辑界面 | `pending` | 等待 Task 7 |
@@ -157,4 +162,39 @@
 - 验证提交：`35a879f`；同任务另含 `fb91b3f`（红灯测试）与 `fed5ca9`（测试辅助方法重命名）
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41055798306
 - 下一步第一条命令或动作：下一窗口先核对 Git 状态与本文件，再读取 Task 4 章节并把 Task 4 标记为 `in_progress`
+- 更新时间：2026-10-30
+
+### 2026-10-30 Task 4 完成记录
+
+- 任务：Task 4 - 纯 Swift 路线运行器
+- 状态：`completed`
+- 分支与基线：`feat/manual-running-routes`，源码基线 `604cbd27a37e7fbccf39b6ce4d6a38d9450fbe7c`
+- 修改文件：
+  - `RoamControl/Features/Routes/Models/RouteRunMode.swift`
+  - `RoamControl/Features/Routes/Core/RouteRunner.swift`
+  - `RoamControlTests/RouteRunnerTests.swift`
+  - `Documentation/ImplementationStatus.md`
+- 接口：`RouteRunMode`（`once`、`laps(Int)`、`continuous`，`Codable`、`Equatable`、`Sendable`，`validated()`）、`RouteRunModeError`（`invalidLapCount`、`requiresClosedRoute`）、`RouteRunnerPhase`（`idle`、`running`、`paused`、`finished`）、`RouteRunProgress`（`distanceInLap`、`completedLaps`、`elapsedTime`）、`RouteRunSnapshot`（九个字段）、`RouteRunner`（`geometry`、`profile`、`mode`、`phase`、`snapshot`、`start()`、`pause()`、`resume()`、`advance(by:)`）
+- 模式校验：`validated()` 只管圈数，`laps(0)`、`laps(-1)` 抛 `invalidLapCount`；闭环要求由 `RouteRunner.init` 判定，开放路线用 `laps(_:)` 或 `continuous` 抛 `requiresClosedRoute`；初始化器是 `throws`，没有 `precondition`、没有强制解包，非法模式不会崩溃
+- 初始状态：`phase` 为 `idle`，`groundCoordinate` 由 `RouteGeometry.coordinate(atDistance:)` 按 `progress.distanceInLap` 采样，`reportedCoordinate` 由 `HumanizedMotionModel.reportedCoordinate(for:at:profile:)` 在 `progress.elapsedTime` 生成，速度、步频同时间点取值；`distanceInLap` 先夹到 `0...totalDistance`，越界的恢复进度不会让几何采样越界
+- 推进算法：`advance(by:)` 只用传入的 delta，不读 `Date`、`Timer`、SwiftUI、MapKit、`AppModel` 或 `UserDefaults`；非正、NaN、±∞ 的 delta 和非 `running` 相位都原样返回当前快照；新 `elapsedTime = 旧 + delta`，本 tick 用新 `elapsedTime` 的速度推进 `速度 × delta`，GPS 抖动只改上报坐标；`finished` 由 `completedLaps >= 目标圈数` 判定，是终态
+- 圈数算法：闭环一次算完，`covered = Double(completedLaps) × L + distanceInLap + step`，超出目标圈数时先按 `目标圈数 × L` 封顶，然后 `商 = floor(covered / L)`、`余数 = covered − 商 × L`；跨接缝时 `completedLaps` 只加一次，地面坐标始终由圈内距离采样，所以接缝前后连续
+- 浮点容差：`max(1e-9, 0.000000001 × L)`（1 km 圈约 1 微米）；`L − 余数 ≤ 容差` 时补一圈并把圈内距离清零（防 0.999999 圈漏记），`余数 ≤ 容差` 时清零（防 1.000001 圈重记）
+- 完成语义：`laps(n)` 第 n 圈立即 `finished`，同时 `completedLaps == n`、`distanceInLap == 0`、坐标回到起点；闭环 `once` 等价一圈；`continuous` 永不 `finished`；开放路线 `once` 到终点时 `completedLaps == 1`、`distanceInLap == totalDistance`、坐标等于路线最后一点；超出目标的 delta 只把行程推到目标终点，`elapsedTime` 仍按真实 delta 增加
+- `snapshot.totalDistance` 定义：累计已跑地面里程，闭环为 `completedLaps × L + distanceInLap`，开放路线为已跑距离
+- 测试覆盖：18 个用例，含计划里的 10 个（起点、暂停不推进、继续从暂停点走、有限圈数完成、开放路线终点、闭环接缝无跳变、接缝只记一圈、大 delta 跨 4.5 圈、1000 圈无漂移、`progress` 恢复圈内位置）以及开放路线 `once` 终点坐标精确、闭环 `once` 完成语义、`finished` 终态、非正/NaN/±∞ delta 不推进、`laps(0)`/`laps(-1)`/开放路线 `continuous`/开放路线 `laps` 四类模式校验；断言除相位外都覆盖坐标、圈数、圈内距离与 `elapsedTime`，接缝用例额外交付速度与步频有限性
+- 测试数据：边长约 0.1 km 的方形闭环（周长 L ≈ 0.41 km），用零速度变化、零步频变化、零抖动半径的 `steadyProfile`，使速度、步频与上报坐标都是精确值；1000 圈用例以 4 m/s、每 tick 1 秒推进约 10.3 万次，耗时 0.335 秒
+- 红灯命令：`xcodebuild test -project RoamControl.xcodeproj -scheme RoamControl -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' -only-testing:RoamControlTests CODE_SIGNING_ALLOWED=NO`
+- 红灯结果：run `41061030062`（提交 `93a31c4`）编译期失败，`RouteRunnerTests.swift:46` 报 `cannot find 'RouteRunner' in scope`，全部 102 条报错都是 `RouteRunner`、`RouteRunProgress`、`RouteRunModeError`、`RouteRunMode` 成员缺失，失败原因正是实现类型尚不存在
+- 绿灯结果：run `41061243835`、Xcode 27.1（build `27A9275`）；`RouteRunnerTests` 18 个用例逐个通过（最慢 `testThousandLapsDoNotAccumulateLapError` 0.335 秒），全量 `RoamControlTests` 37 个用例 0 失败，`** TEST SUCCEEDED **`
+- 构建命令：`xcodebuild build -project RoamControl.xcodeproj -scheme RoamControl -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO`
+- 构建结果：同一 run 的 `Build Debug` 步骤 `** BUILD SUCCEEDED **`
+- 定向测试取证方式：本地为 Windows 且没有 `xcodebuild`，CI 工作流固定执行 `-only-testing:RoamControlTests`，因此只跑 `-only-testing:RoamControlTests/RouteRunnerTests` 的命令没有实际执行；18 个用例的通过记录是从 run 日志逐条提取的，工作流文件未改动
+- 静态检查：`git diff --check` 通过；实现只导入 Foundation，不访问 `Date`、`Timer`、SwiftUI、MapKit、`AppModel`、`UserDefaults`；最后一次提交同时清掉了测试里两处 `advance(by:)` 返回值未使用的警告
+- 未验证内容：不涉及真实设备会话、真实定位与后台恢复（Task 10、Task 11）；没有 UI；tick 频率由未来的会话层决定，本任务只保证任意 delta 下的结果可复现
+- 已知风险：容差按圈长比例 1e-9 取，若 `RouteGeometry` 的距离计算方式改变需要复核；`continuous` 的 `totalDistance` 会随里程无限增长，1000 圈（约 413 km）实测无漂移，长期上限取决于 `Double` 精度；闭环的目标圈数封顶只在 `advance(by:)` 内生效，绕过它直接改 `snapshot` 不在设计范围内
+- Task 5 前置状态：`RouteRunProgress` 与 `RouteRunMode` 都是 `Codable`、`Equatable`、`Sendable`，可直接被路线库或进度文件序列化；恢复运行时只需把持久化的 `elapsedTime`、`completedLaps`、`distanceInLap` 传回 `RouteRunner.init`，地面坐标会自动重算，不需要额外存储坐标
+- 验证提交：`72334e5`（红绿灯实现）；同任务另含 `93a31c4`（红灯测试）
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41061243835
+- 下一步第一条命令或动作：下一窗口先核对 Git 状态与本文件，再读取 Task 5 章节并把 Task 5 标记为 `in_progress`
 - 更新时间：2026-10-30

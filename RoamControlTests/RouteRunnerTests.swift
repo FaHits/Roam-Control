@@ -179,7 +179,7 @@ final class RouteRunnerTests: XCTestCase {
         let secondsPerLap = lapLength / 2.0
         var ticks = 0
         while runner.phase != .finished && ticks < 10 {
-            runner.advance(by: secondsPerLap)
+            _ = runner.advance(by: secondsPerLap)
             ticks += 1
         }
 
@@ -362,7 +362,7 @@ final class RouteRunnerTests: XCTestCase {
 
         var ticks = 0
         while runner.phase != .finished && ticks < 400_000 {
-            runner.advance(by: 1)
+            _ = runner.advance(by: 1)
             ticks += 1
         }
 
