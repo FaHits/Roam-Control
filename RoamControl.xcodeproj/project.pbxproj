@@ -10,14 +10,26 @@
 		A10000000000000000000001 /* Frameworks/RoamPairingFFI.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* Frameworks/RoamPairingFFI.xcframework */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+    B00000000000000000000011 /* PBXContainerItemProxy */ = {
+        isa = PBXContainerItemProxy;
+        containerPortal = A0000000000000000000000A /* Project object */;
+        proxyType = 1;
+        remoteGlobalIDString = A00000000000000000000006;
+        remoteInfo = RoamControl;
+    };
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		A00000000000000000000001 /* RoamControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RoamControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000002 /* Frameworks/RoamPairingFFI.xcframework */ = {isa = PBXFileReference; explicitFileType = wrapper.xcframework; path = Frameworks/RoamPairingFFI.xcframework; sourceTree = "<group>"; };
 		A20000000000000000000001 /* Configuration/Local.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Configuration/Local.xcconfig; sourceTree = "<group>"; };
+    B00000000000000000000001 /* RoamControlTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RoamControlTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A00000000000000000000002 /* RoamControl */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = RoamControl; sourceTree = "<group>"; };
+    B00000000000000000000002 /* RoamControlTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = RoamControlTests; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -29,6 +41,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+    B00000000000000000000003 /* Frameworks */ = {
+        isa = PBXFrameworksBuildPhase;
+        buildActionMask = 2147483647;
+        files = (
+        );
+        runOnlyForDeploymentPostprocessing = 0;
+    };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -39,6 +58,7 @@
 				A20000000000000000000001 /* Configuration/Local.xcconfig */,
 				A10000000000000000000002 /* Frameworks/RoamPairingFFI.xcframework */,
 				A00000000000000000000005 /* Products */,
+                B00000000000000000000002 /* RoamControlTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -46,6 +66,7 @@
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000001 /* RoamControl.app */,
+                B00000000000000000000001 /* RoamControlTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -73,6 +94,27 @@
 			productReference = A00000000000000000000001 /* RoamControl.app */;
 			productType = "com.apple.product-type.application";
 		};
+    B00000000000000000000006 /* RoamControlTests */ = {
+        isa = PBXNativeTarget;
+        buildConfigurationList = B00000000000000000000007 /* Build configuration list for PBXNativeTarget "RoamControlTests" */;
+        buildPhases = (
+            B00000000000000000000008 /* Sources */,
+            B00000000000000000000003 /* Frameworks */,
+            B00000000000000000000009 /* Resources */,
+        );
+        buildRules = (
+        );
+        dependencies = (
+            B00000000000000000000010 /* PBXTargetDependency */,
+        );
+        fileSystemSynchronizedGroups = (
+            B00000000000000000000002 /* RoamControlTests */,
+        );
+        name = RoamControlTests;
+        productName = RoamControlTests;
+        productReference = B00000000000000000000001 /* RoamControlTests.xctest */;
+        productType = "com.apple.product-type.bundle.unit-test";
+    };
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -83,7 +125,11 @@
 				LastSwiftUpdateCheck = 1600;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
-					A00000000000000000000006 = {
+					B00000000000000000000006 = {
+                        CreatedOnToolsVersion = 27.0;
+                        TestTargetID = A00000000000000000000006;
+                    };
+                    A00000000000000000000006 = {
 						CreatedOnToolsVersion = 16.0;
 					};
 				};
@@ -102,6 +148,7 @@
 			projectRoot = "";
 			targets = (
 				A00000000000000000000006 /* RoamControl */,
+                B00000000000000000000006 /* RoamControlTests */,
 			);
 		};
 /* End PBXProject section */
@@ -114,6 +161,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+    B00000000000000000000009 /* Resources */ = {
+        isa = PBXResourcesBuildPhase;
+        buildActionMask = 2147483647;
+        files = (
+        );
+        runOnlyForDeploymentPostprocessing = 0;
+    };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -124,7 +178,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+    B00000000000000000000008 /* Sources */ = {
+        isa = PBXSourcesBuildPhase;
+        buildActionMask = 2147483647;
+        files = (
+        );
+        runOnlyForDeploymentPostprocessing = 0;
+    };
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+    B00000000000000000000010 /* PBXTargetDependency */ = {
+        isa = PBXTargetDependency;
+        target = A00000000000000000000006 /* RoamControl */;
+        targetProxy = B00000000000000000000011 /* PBXContainerItemProxy */;
+    };
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A0000000000000000000000C /* Debug */ = {
@@ -134,6 +203,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+                ENABLE_TESTABILITY = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -217,6 +287,38 @@
 			};
 			name = Release;
 		};
+    B0000000000000000000000E /* Debug */ = {
+        isa = XCBuildConfiguration;
+        buildSettings = {
+            BUNDLE_LOADER = "$(TEST_HOST)";
+            CODE_SIGN_STYLE = Automatic;
+            GENERATE_INFOPLIST_FILE = YES;
+            IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+            PRODUCT_BUNDLE_IDENTIFIER = com.sean.roamcontrol.tests;
+            PRODUCT_NAME = "$(TARGET_NAME)";
+            SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+            SWIFT_VERSION = 5.0;
+            TARGETED_DEVICE_FAMILY = 1;
+            TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RoamControl.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RoamControl";
+        };
+        name = Debug;
+    };
+    B0000000000000000000000F /* Release */ = {
+        isa = XCBuildConfiguration;
+        buildSettings = {
+            BUNDLE_LOADER = "$(TEST_HOST)";
+            CODE_SIGN_STYLE = Automatic;
+            GENERATE_INFOPLIST_FILE = YES;
+            IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+            PRODUCT_BUNDLE_IDENTIFIER = com.sean.roamcontrol.tests;
+            PRODUCT_NAME = "$(TARGET_NAME)";
+            SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+            SWIFT_VERSION = 5.0;
+            TARGETED_DEVICE_FAMILY = 1;
+            TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RoamControl.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RoamControl";
+        };
+        name = Release;
+    };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -238,6 +340,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+    B00000000000000000000007 /* Build configuration list for PBXNativeTarget "RoamControlTests" */ = {
+        isa = XCConfigurationList;
+        buildConfigurations = (
+            B0000000000000000000000E /* Debug */,
+            B0000000000000000000000F /* Release */,
+        );
+        defaultConfigurationIsVisible = 0;
+        defaultConfigurationName = Release;
+    };
 /* End XCConfigurationList section */
 	};
 	rootObject = A0000000000000000000000A /* Project object */;
