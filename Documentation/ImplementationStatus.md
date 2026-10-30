@@ -10,8 +10,8 @@
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
 - 当前任务：Task 5 - 路线库原子持久化
-- 任务状态：`pending`
-- 当前执行窗口：无（DSH Task 4 窗口已于 2026-10-30 21:19 收尾，Asia/Shanghai）
+- 任务状态：`in_progress`
+- 当前执行窗口：DSH Task 5 窗口，认领于 2026-10-30 21:38（Asia/Shanghai）
 - 最近完成：Task 4 - 纯 Swift 路线运行器
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Models/RouteRunMode.swift`
@@ -37,7 +37,7 @@
 - Task 4 测试结果：GitHub Actions `Xcode 27 verification` run `41061243835` 通过；Xcode 27.1 下 `RouteRunnerTests` 的 18 个用例全部通过，`RoamControlTests` 全量 37 个用例 0 失败，结果为 `TEST SUCCEEDED`
 - Task 4 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：执行 Task 5 - 路线库原子持久化
+- 下一步：执行 Task 5 - 路线库原子持久化（DSH Task 5 窗口已认领，先生成 RED 测试）
 
 ## 自动完成规则
 
@@ -55,7 +55,7 @@
 | Task 2：路线坐标与闭环几何 | `completed` | Xcode 27.1 下 10 个几何测试与 Debug 构建均通过 |
 | Task 3：确定性拟人速度、步频和 GPS 抖动 | `completed` | Xcode 27.1 下 8 个运动模型测试与全量 19 个测试通过 |
 | Task 4：纯 Swift 路线运行器 | `completed` | Xcode 27.1 下 18 个运行器测试与全量 37 个测试通过 |
-| Task 5：路线库原子持久化 | `pending` | Task 4 已完成，可认领 |
+| Task 5：路线库原子持久化 | `in_progress` | DSH Task 5 窗口执行中（2026-10-30 21:38 认领） |
 | Task 6：路线库状态模型 | `pending` | 等待 Task 5 |
 | Task 7：路线编辑器状态模型 | `pending` | 等待 Task 6 |
 | Task 8：手动路线编辑界面 | `pending` | 等待 Task 7 |
