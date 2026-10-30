@@ -349,6 +349,31 @@ final class AppModel {
         )
     }
 
+    func startRouteLocationSession(
+        at initialTarget: LocationTarget,
+        route: RouteDefinition,
+        profile: RunProfile,
+        mode: RouteRunMode
+    ) async {
+        await startLocationSession(
+            at: initialTarget,
+            selectedTarget: LocationTarget(
+                name: route.name,
+                subtitle: initialTarget.subtitle,
+                latitude: initialTarget.latitude,
+                longitude: initialTarget.longitude
+            ),
+            historyTarget: initialTarget,
+            recovery: .savedRoute(
+                route: route,
+                at: initialTarget,
+                progress: RouteRunProgress(distanceInLap: 0, completedLaps: 0, elapsedTime: 0),
+                profile: profile,
+                mode: mode
+            )
+        )
+    }
+
     private func startLocationSession(
         at deviceTarget: LocationTarget,
         selectedTarget: LocationTarget,
@@ -556,7 +581,12 @@ final class AppModel {
                     analyticsEvent(forLocationStartFailure: message),
                     enabled: sharesAnonymousUsageStatistics
                 )
-                if deviceSession.lastFailureStage != .locationRestore {
+                // A failed route run keeps its recovery record so the route,
+                // progress and profile stay available for the next launch.
+                if
+                    deviceSession.lastFailureStage != .locationRestore,
+                    activeSessionRecovery?.isSavedRoute != true
+                {
                     clearActiveSessionRecovery()
                 }
             }
@@ -589,7 +619,30 @@ final class AppModel {
             recovery.updatedAt = now
         }
         activeSessionRecovery = recovery
+        saveActiveSessionRecoveryIfDue(at: now)
+    }
 
+    func updateActiveRouteRecovery(at target: LocationTarget, progress: RouteRunProgress) {
+        guard var recovery = activeSessionRecovery, recovery.kind == .savedRoute else { return }
+        let now = Date.now
+        recovery.routeProgress = progress
+        recovery.lastReportedLocation = target
+        recovery.updatedAt = now
+        activeSessionRecovery = recovery
+        saveActiveSessionRecoveryIfDue(at: now)
+    }
+
+    func finishActiveRouteRecovery(at target: LocationTarget) {
+        guard let recovery = activeSessionRecovery, recovery.kind == .savedRoute else { return }
+        let finished = SessionRecoveryRecord.fixed(at: target)
+        activeSessionRecovery = finished
+        lastRecoverySaveDate = .now
+        guard let data = try? JSONEncoder().encode(finished) else { return }
+        preferences.set(data, forKey: Self.activeSessionRecoveryKey)
+    }
+
+    private func saveActiveSessionRecoveryIfDue(at now: Date) {
+        guard let recovery = activeSessionRecovery else { return }
         let shouldSave = lastRecoverySaveDate == nil
             || now.timeIntervalSince(lastRecoverySaveDate ?? .distantPast) >= 5
             || recovery.kind == .fixedLocation
