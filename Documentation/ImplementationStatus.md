@@ -9,9 +9,9 @@
 - 源码基线：`b68dac0`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 2 - 路线坐标与闭环几何
-- 任务状态：`completed`
-- 当前执行窗口：Codex Task 2
+- 当前任务：Task 3 - 确定性拟人速度、步频和 GPS 抖动
+- 任务状态：`in_progress`
+- 当前执行窗口：DSH Task 3（2026-10-30 19:52 起，Asia/Shanghai）
 - 最近完成：Task 2 - 路线坐标与闭环几何
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Models/GeoCoordinate.swift`
@@ -27,7 +27,7 @@
 - Task 2 测试结果：GitHub Actions `Xcode 27 verification` run `41048147464` 通过；Xcode 27.1 下 `RouteGeometryTests` 的 10 个用例全部通过，结果为 `TEST SUCCEEDED`
 - Task 2 构建结果：同一 run 的 Debug 模拟器构建通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：执行 Task 3 - 确定性拟人速度、步频和 GPS 抖动
+- 下一步：Task 3 正在实现 `RunProfile` 与 `HumanizedMotionModel`，先提交 RED 证据再实现
 
 ## 自动完成规则
 
@@ -43,7 +43,7 @@
 |---|---|---|
 | Task 1：增加 XCTest 目标和最小基线测试 | `completed` | Xcode 27.1 测试与 Debug 构建均通过 |
 | Task 2：路线坐标与闭环几何 | `completed` | Xcode 27.1 下 10 个几何测试与 Debug 构建均通过 |
-| Task 3：确定性拟人速度、步频和 GPS 抖动 | `pending` | Task 2 已完成，可开始 |
+| Task 3：确定性拟人速度、步频和 GPS 抖动 | `in_progress` | DSH Task 3 窗口认领，先写测试 |
 | Task 4：纯 Swift 路线运行器 | `pending` | 等待 Task 3 |
 | Task 5：路线库原子持久化 | `pending` | 等待 Task 4 |
 | Task 6：路线库状态模型 | `pending` | 等待 Task 5 |
