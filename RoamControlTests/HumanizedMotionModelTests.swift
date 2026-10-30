@@ -35,32 +35,39 @@ final class HumanizedMotionModelTests: XCTestCase {
     }
 
     func testProfileRejectsOutOfRangeValues() {
-        for value in [-0.1, 0.49, 10.01, .nan, .infinity, -.infinity] {
-            assertInvalid(profile(speed: value), .invalidSpeed)
+        let invalidSpeeds: [Double] = [-0.1, 0.49, 10.01, .nan, .infinity, -Double.infinity]
+        for value in invalidSpeeds {
+            assertInvalid(makeProfile(speed: value), .invalidSpeed)
         }
-        for value in [59.9, 240.1, -60, .nan, .infinity, -.infinity] {
-            assertInvalid(profile(cadence: value), .invalidCadence)
+        let invalidCadences: [Double] = [59.9, 240.1, -60, .nan, .infinity, -Double.infinity]
+        for value in invalidCadences {
+            assertInvalid(makeProfile(cadence: value), .invalidCadence)
         }
-        for value in [-0.01, 0.36, 1, .nan, .infinity, -.infinity] {
-            assertInvalid(profile(speedVariation: value), .invalidVariation)
-            assertInvalid(profile(cadenceVariation: value), .invalidVariation)
+        let invalidVariations: [Double] = [-0.01, 0.36, 1, .nan, .infinity, -Double.infinity]
+        for value in invalidVariations {
+            assertInvalid(makeProfile(speedVariation: value), .invalidVariation)
+            assertInvalid(makeProfile(cadenceVariation: value), .invalidVariation)
         }
-        for value in [-0.01, 10.01, 50, .nan, .infinity, -.infinity] {
-            assertInvalid(profile(jitter: value), .invalidJitter)
+        let invalidJitters: [Double] = [-0.01, 10.01, 50, .nan, .infinity, -Double.infinity]
+        for value in invalidJitters {
+            assertInvalid(makeProfile(jitter: value), .invalidJitter)
         }
 
         // Boundary values themselves are valid.
         for value in [0.5, 10.0] {
-            XCTAssertNoThrow(try profile(speed: value).validate(), "speed \(value)")
+            XCTAssertNoThrow(try makeProfile(speed: value).validate(), "speed \(value)")
         }
         for value in [60.0, 240.0] {
-            XCTAssertNoThrow(try profile(cadence: value).validate(), "cadence \(value)")
+            XCTAssertNoThrow(try makeProfile(cadence: value).validate(), "cadence \(value)")
         }
         for value in [0.0, 0.35] {
-            XCTAssertNoThrow(try profile(speedVariation: value, cadenceVariation: value).validate(), "variation \(value)")
+            XCTAssertNoThrow(
+                try makeProfile(speedVariation: value, cadenceVariation: value).validate(),
+                "variation \(value)"
+            )
         }
         for value in [0.0, 10.0] {
-            XCTAssertNoThrow(try profile(jitter: value).validate(), "jitter \(value)")
+            XCTAssertNoThrow(try makeProfile(jitter: value).validate(), "jitter \(value)")
         }
     }
 
@@ -220,7 +227,7 @@ final class HumanizedMotionModelTests: XCTestCase {
 
     // MARK: - Helpers
 
-    private func profile(
+    private func makeProfile(
         speed: Double? = nil,
         cadence: Double? = nil,
         speedVariation: Double? = nil,
