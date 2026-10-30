@@ -9,27 +9,36 @@
 - 源码基线：`b68dac0`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 1 - 增加 XCTest 目标和最小基线测试
-- 任务状态：`completed`
-- 当前执行窗口：`DSH-Task1-20261030`
-- 源码修改：
+- 当前任务：Task 2 - 路线坐标与闭环几何
+- 任务状态：`pending`
+- 当前执行窗口：未认领
+- 最近完成：Task 1 - XCTest 目标和最小基线测试
+- 已完成工程修改：
   - `RoamControl.xcodeproj/project.pbxproj`
   - `RoamControl.xcodeproj/xcshareddata/xcschemes/RoamControl.xcscheme`
   - `RoamControlTests/BaselineTests.swift`
   - `.github/workflows/xcode-27.yml`
-  - `Documentation/ImplementationStatus.md`
-- 已完成的仓库准备：已创建个人 fork、`fork` 远程、开发分支、版本规范和 AI 交接规范
-- 测试结果：GitHub Actions `Xcode 27 verification` run `41039599444` 通过；Xcode 27.1（27A9275），`BaselineTests.testLocationTargetPreservesCoordinate()` 通过，结果为 `TEST SUCCEEDED`
-- 构建结果：同一 run 的 Debug 模拟器构建通过，结果为 `BUILD SUCCEEDED`
+- 已完成的仓库准备：个人 fork、`fork` 远程、开发分支、版本规范、设计计划、跨窗口交接规则均已建立并纳入 Git
+- 自动同步规则：任务验证完成后自动更新本文件、提交任务文件并推送到个人 fork，不需要用户再次提醒
+- Task 1 测试结果：GitHub Actions `Xcode 27 verification` run `41039599444` 通过；Xcode 27.1（27A9275），`BaselineTests.testLocationTargetPreservesCoordinate()` 通过，结果为 `TEST SUCCEEDED`
+- Task 1 构建结果：同一 run 的 Debug 模拟器构建通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：Task 1 已结束。按计划开始 Task 2 时，先更新本文件认领状态，再读取 Task 2 章节
+- 下一步：执行 Task 2 的窗口先认领本任务，再读取 Task 2 章节
+
+## 自动完成规则
+
+- 只有实际测试和构建通过的任务才能进入 `completed`。
+- `completed` 后自动更新本文件、提交当前任务文件和状态文件、推送到 `fork`。
+- 禁止使用 `git add .`，不得夹带其他窗口或用户的改动。
+- 推送后必须核对远端哈希，再报告提交和 CI 状态。
+- `implemented_unverified`、`blocked` 或 `in_progress` 不得由窗口自行升级为完成。
 
 ## 任务进度
 
 | 任务 | 状态 | 结果或下一步 |
 |---|---|---|
 | Task 1：增加 XCTest 目标和最小基线测试 | `completed` | Xcode 27.1 测试与 Debug 构建均通过 |
-| Task 2：路线坐标与闭环几何 | `pending` | 等待 Task 1 |
+| Task 2：路线坐标与闭环几何 | `pending` | 前置条件满足，可认领执行 |
 | Task 3：确定性拟人速度、步频和 GPS 抖动 | `pending` | 等待 Task 2 |
 | Task 4：纯 Swift 路线运行器 | `pending` | 等待 Task 3 |
 | Task 5：路线库原子持久化 | `pending` | 等待 Task 4 |
@@ -73,4 +82,14 @@
 - 下一步第一条命令或动作：下一窗口先检查 Git 状态和本文件；开始 Task 2 前将其标记为 `in_progress`
 - 验证提交：`3cf606e6dae9fd52a45410dfd9c6fce0d5192479`
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41039599444
+- 更新时间：2026-10-30
+
+### 2026-10-30 仓库治理完成
+
+- 任务：把跨窗口开发规则、设计、计划和版本规范纳入 Git。
+- 状态：`completed`。
+- 修改文件：`AGENTS.md`、`Documentation/AIDevelopment.md`、`Documentation/ImplementationStatus.md`、`Documentation/Plans/`、`VERSIONING.md`。
+- 自动化规则：已通过验证的任务完成后，窗口自动更新状态、创建任务提交、推送到 `fork` 并核对远端。
+- 验证要求：文档格式检查通过；代码测试与构建的最新证据仍为 Task 1 的 CI run `41039599444`。
+- 下一步：Task 2 可认领。下一步第一条动作是读取 Task 2 并将状态改为 `in_progress`。
 - 更新时间：2026-10-30
