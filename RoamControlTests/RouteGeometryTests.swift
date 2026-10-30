@@ -34,6 +34,13 @@ final class RouteGeometryTests: XCTestCase {
         )
     }
 
+    func testClosedRouteWithRepeatedStartDoesNotDuplicateSeam() throws {
+        let geometry = try RouteGeometry(points: square + [start], isClosed: true)
+
+        XCTAssertEqual(geometry.points, square + [start])
+        XCTAssertEqual(geometry.segmentLengths.count, 4)
+    }
+
     func testClosedRouteReturnsStartAtTotalDistance() throws {
         let geometry = try RouteGeometry(points: square, isClosed: true)
         let coordinate = geometry.coordinate(atDistance: geometry.totalDistance)
