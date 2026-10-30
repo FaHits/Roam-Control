@@ -12,7 +12,7 @@
 - 当前任务：Task 8 - 手动路线编辑界面
 - 任务状态：`completed`
 - 当前执行窗口：DSH-Agent（2026-10-30 23:20 认领，2026-10-30 23:27 完成）
-- 最近完成：Task 8 - 手动路线编辑界面
+- 最近完成：Task 8 - 手动路线编辑界面（含 2026-10-31 验收修正：`canSave` 同时要求名称非空）
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Views/RouteEditorView.swift`
   - `RoamControl/Features/Routes/State/RouteEditorModel.swift`
@@ -51,6 +51,8 @@
 - Task 7 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - Task 8 测试结果：GitHub Actions `Xcode 27 verification` run `41079471220` 通过；Xcode 27.1 下 `RoamControlTests` 全量 78 个用例 0 失败，结果为 `TEST SUCCEEDED`（本任务只新增视图，未新增测试）
 - Task 8 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
+- Task 8 验收修正测试结果：GitHub Actions run `41088976344` 通过；`RoamControlTests` 全量 80 个用例 0 失败（新增 2 个 `canSave` 名称测试），结果为 `TEST SUCCEEDED`
+- Task 8 验收修正构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
 - 下一步：执行 Task 9 - 接入 Home 与路线库（未认领，先读实施计划 Task 9 并把状态改为 `in_progress`）
 
@@ -372,3 +374,23 @@
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41079471220
 - 下一步第一条命令或动作：下一窗口先核对 Git 状态与本文件，再读取 Task 9 章节并把 Task 9 标记为 `in_progress`
 - 更新时间：2026-10-30
+
+### 2026-10-31 Task 8 验收修正
+
+- 触发问题：`RouteEditorModel.canSave` 原先只检查 `temporaryGeometry != nil`，名称清空后仍为 `true`，`RouteEditorView` 的 Save 只绑定 `!model.canSave`，因此空名称时按钮仍可点击，只在按下后由 `makeRoute` 抛 `RouteEditorError.emptyName` 并显示错误；Task 8 验收项「空名称时 Save 禁用」当时未满足
+- 修改：`RoamControl/Features/Routes/State/RouteEditorModel.swift` 的 `canSave` 改为
+  ```swift
+  var canSave: Bool {
+      temporaryGeometry != nil && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+  ```
+  名称判定与 `makeRoute` 使用同一套 trim 规则，按钮可用性与保存结果因此一致
+- 未改动：`makeRoute` 行为保持不变（仍负责 trim、空名抛 `RouteEditorError.emptyName`、写入 `errorMessage`）；`RouteEditorView` 逻辑未动，仍是 `.disabled(!model.canSave)`；未改 `RouteLibraryView`、`RouteRunSetupView`、`project.pbxproj`
+- 新增测试：`RoamControlTests/RouteEditorModelTests.swift` 增加 `testCanSaveRequiresNonBlankName`（三点闭环 + 有效名称时为 `true`，`""` 与 `"   \n"` 均为 `false`）和 `testCanSaveRecoversAfterNameIsRestored`（名称设为 `"Riverside loop"` 为 `true`，清空为 `false`，恢复后回到 `true` 且 `errorMessage` 仍为 `nil`）
+- 现有覆盖：`makeRoute` 空名抛错的既有测试未改，仍全绿；测试数从 78 增至 80
+- 提交：`aec2038`（`fix(routes): require a route name before saving`），本记录单独提交 `docs(routes): record Task 8 acceptance fix`
+- CI：run `41088976344`、job `124177498609`，12 分 24 秒；`Test case … passed` 80 行、`failed` 0 行，`** TEST SUCCEEDED **`，`Build Debug` `** BUILD SUCCEEDED **`；两个新用例在日志中逐条通过
+- 本地无法验证的事实：本机是 Windows 且没有 `xcodebuild`，全量测试与 Debug 构建都在 `xcode-27` runner 上完成
+- 验收状态：`空名称时 Save 禁用` 现由模型测试保证，不再依赖模拟器手工确认；模拟器侧其余手工检查（四点矩形、闭环闭合段、Undo 同步、Clear 确认、`onSave` 收包）仍留给 Task 9 接入后验证
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41088976344
+- 更新时间：2026-10-31
