@@ -10,10 +10,13 @@
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
 - 当前任务：Task 3 - 确定性拟人速度、步频和 GPS 抖动
-- 任务状态：`in_progress`
+- 任务状态：`completed`
 - 当前执行窗口：DSH Task 3（2026-10-30 19:52 起，Asia/Shanghai）
-- 最近完成：Task 2 - 路线坐标与闭环几何
+- 最近完成：Task 3 - 确定性拟人速度、步频和 GPS 抖动
 - 已完成工程修改：
+  - `RoamControl/Features/Routes/Models/RunProfile.swift`
+  - `RoamControl/Features/Routes/Core/HumanizedMotionModel.swift`
+  - `RoamControlTests/HumanizedMotionModelTests.swift`
   - `RoamControl/Features/Routes/Models/GeoCoordinate.swift`
   - `RoamControl/Features/Routes/Models/RouteDefinition.swift`
   - `RoamControl/Features/Routes/Models/RouteGeometry.swift`
@@ -26,8 +29,10 @@
 - 自动同步规则：任务验证完成后自动更新本文件、提交任务文件并推送到个人 fork，不需要用户再次提醒
 - Task 2 测试结果：GitHub Actions `Xcode 27 verification` run `41048147464` 通过；Xcode 27.1 下 `RouteGeometryTests` 的 10 个用例全部通过，结果为 `TEST SUCCEEDED`
 - Task 2 构建结果：同一 run 的 Debug 模拟器构建通过，结果为 `BUILD SUCCEEDED`
+- Task 3 测试结果：GitHub Actions `Xcode 27 verification` run `41055798306` 通过；Xcode 27.1 下 `HumanizedMotionModelTests` 的 8 个用例全部通过，`RoamControlTests` 全量 19 个用例 0 失败，结果为 `TEST SUCCEEDED`
+- Task 3 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：Task 3 正在实现 `RunProfile` 与 `HumanizedMotionModel`，先提交 RED 证据再实现
+- 下一步：执行 Task 4 - 纯 Swift 路线运行器
 
 ## 自动完成规则
 
@@ -43,8 +48,8 @@
 |---|---|---|
 | Task 1：增加 XCTest 目标和最小基线测试 | `completed` | Xcode 27.1 测试与 Debug 构建均通过 |
 | Task 2：路线坐标与闭环几何 | `completed` | Xcode 27.1 下 10 个几何测试与 Debug 构建均通过 |
-| Task 3：确定性拟人速度、步频和 GPS 抖动 | `in_progress` | DSH Task 3 窗口认领，先写测试 |
-| Task 4：纯 Swift 路线运行器 | `pending` | 等待 Task 3 |
+| Task 3：确定性拟人速度、步频和 GPS 抖动 | `completed` | Xcode 27.1 下 8 个运动模型测试与全量 19 个测试通过 |
+| Task 4：纯 Swift 路线运行器 | `pending` | Task 3 已完成，可开始 |
 | Task 5：路线库原子持久化 | `pending` | 等待 Task 4 |
 | Task 6：路线库状态模型 | `pending` | 等待 Task 5 |
 | Task 7：路线编辑器状态模型 | `pending` | 等待 Task 6 |
@@ -122,4 +127,34 @@
 - 验证提交：`cfff42a`
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41048147464
 - 下一步：执行 Task 3 - 确定性拟人速度、步频和 GPS 抖动
+- 更新时间：2026-10-30
+
+### 2026-10-30 Task 3 完成记录
+
+- 任务：Task 3 - 确定性拟人速度、步频和 GPS 抖动
+- 状态：`completed`
+- 分支与基线：`feat/manual-running-routes`，源码基线 `15e229ad0928bcc056d0dc90575be20e71136e12`
+- 修改文件：
+  - `RoamControl/Features/Routes/Models/RunProfile.swift`
+  - `RoamControl/Features/Routes/Core/HumanizedMotionModel.swift`
+  - `RoamControlTests/HumanizedMotionModelTests.swift`
+  - `Documentation/ImplementationStatus.md`
+- 接口：`RunProfileValidationError`（`invalidSpeed`、`invalidCadence`、`invalidVariation`、`invalidJitter`）、`RunProfile`（六个字段、`static let running`、`validate()`）、`HumanizedMotionModel(seed:)` 及其 `speedMetersPerSecond(at:profile:)`、`cadenceStepsPerMinute(at:profile:)`、`reportedCoordinate(for:at:profile:)`
+- 取值范围：速度 `0.5...10.0` m/s、步频 `60...240` spm、变化比例 `0...0.35`、抖动半径 `0...10` m；`ClosedRange.contains` 同时拒绝 NaN 和 ±∞，边界值本身合法
+- 算法：由 `noiseSeed` 经 SplitMix64 生成 12 个固定相位；速度、步频、抖动南北轴、抖动东西轴各用三个低频正弦（权重 0.5/0.3/0.2）加权求和，按权重和归一化并夹到 `-1...1`，输出因此被解析地限制在 `target × (1 ± variation)`；抖动两轴各限制在 `radius / √2`，合矢量必然不超过半径，不需要事后截断；米制偏移用保守的每度米数（纬度 111700、经度 111320·cos(latitude)）换算，真实大圆距离恒不大于配置半径；半径为 0 时函数第一步直接返回地面坐标，逐位相同
+- 测试覆盖：8 个用例，含边界合法性（0.5/10.0、60/240、0/0.35、0/10）、NaN 与 ±∞ 拒绝、0/0.25/1/7.25/61/600/3600/86400 秒采样、抖动半径 0.5/1.5/10 米全时段扫描、1 秒步进 12 秒平滑性（阈值取独立随机点平均间距 `128R/(45π) ≈ 0.905R` 的 30%）
+- 红灯命令：`xcodebuild test -project RoamControl.xcodeproj -scheme RoamControl -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' -only-testing:RoamControlTests/HumanizedMotionModelTests CODE_SIGNING_ALLOWED=NO`
+- 红灯结果：run `41055509171`（提交 `fb91b3f`）在 `HumanizedMotionModelTests.swift:6` 以 `cannot find 'RunProfile' in scope` 失败，失败原因正是类型尚不存在
+- 绿灯命令：`xcodebuild test -project RoamControl.xcodeproj -scheme RoamControl -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' -only-testing:RoamControlTests CODE_SIGNING_ALLOWED=NO`
+- 绿灯结果：run `41055798306`、Xcode 27.1（build `27A9275`）；`HumanizedMotionModelTests` 8 个用例逐个通过（0.001–0.015 秒），全量 `RoamControlTests` 19 个用例 0 失败，`** TEST SUCCEEDED **`
+- 构建命令：`xcodebuild build -project RoamControl.xcodeproj -scheme RoamControl -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO`
+- 构建结果：同一 run 的 `Build Debug` 步骤 `** BUILD SUCCEEDED **`
+- 定向测试取证方式：本地为 Windows 且没有 `xcodebuild`，CI 工作流固定执行 `-only-testing:RoamControlTests`，因此只跑子集的命令没有实际执行；`HumanizedMotionModelTests` 的结果从 run 日志逐条用例提取，工作流文件未改动
+- 静态检查：`git diff --check` 通过；`HumanizedMotionModel` 只导入 Foundation，不依赖 SwiftUI、MapKit、`AppModel` 或 CoreLocation
+- 未验证内容：不涉及真机与真实定位；未验证后续运行器接入后的实际轨迹外观（本任务只产出纯函数）
+- 已知风险：平滑阈值与 1e-6 米半径容差依赖当前正弦周期、权重和保守的每度米数换算；若后续调整这些常数，需要重新核对阈值余量。实测最大抖动幅度为 `0.845R`，相邻一秒位移约 `0.06R`，余量充足
+- Task 4 前置状态：`RouteRunner` 可直接用 `HumanizedMotionModel(seed: profile.noiseSeed)` 取速度与步频，用 `reportedCoordinate(for:at:profile:)` 生成上报坐标；模型不推进行程、不改地面坐标，保存设置前可调用 `RunProfile.validate()`
+- 验证提交：`35a879f`；同任务另含 `fb91b3f`（红灯测试）与 `fed5ca9`（测试辅助方法重命名）
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41055798306
+- 下一步第一条命令或动作：下一窗口先核对 Git 状态与本文件，再读取 Task 4 章节并把 Task 4 标记为 `in_progress`
 - 更新时间：2026-10-30
