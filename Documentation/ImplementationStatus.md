@@ -10,8 +10,8 @@
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
 - 当前任务：Task 2 - 路线坐标与闭环几何
-- 任务状态：`pending`
-- 当前执行窗口：未认领
+- 任务状态：`in_progress`
+- 当前执行窗口：Codex Task 2
 - 最近完成：Task 1 - XCTest 目标和最小基线测试
 - 已完成工程修改：
   - `RoamControl.xcodeproj/project.pbxproj`
