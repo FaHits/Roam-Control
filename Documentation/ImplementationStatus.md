@@ -9,11 +9,13 @@
 - 源码基线：`b68dac0`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 6 - 路线库状态模型
-- 任务状态：`completed`
-- 当前执行窗口：DSH Task 6 窗口，认领于 2026-10-30 22:10，完成于 2026-10-30 22:27（Asia/Shanghai）
-- 最近完成：Task 6 - 路线库状态模型
+- 当前任务：Task 8 - 手动路线编辑界面
+- 任务状态：`pending`
+- 当前执行窗口：待认领（Task 7 于 2026-10-30 22:58 完成并推送）
+- 最近完成：Task 7 - 路线编辑器状态模型
 - 已完成工程修改：
+  - `RoamControl/Features/Routes/State/RouteEditorModel.swift`
+  - `RoamControlTests/RouteEditorModelTests.swift`
   - `RoamControl/Features/Routes/State/RouteLibraryModel.swift`
   - `RoamControlTests/RouteLibraryModelTests.swift`
   - `RoamControl/Features/Routes/Storage/RouteStore.swift`
@@ -44,8 +46,10 @@
 - Task 5 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - Task 6 测试结果：GitHub Actions `Xcode 27 verification` run `41070257714` 通过；Xcode 27.1 下 `RouteLibraryModelTests` 的 12 个用例全部通过，`RoamControlTests` 全量 57 个用例 0 失败，结果为 `TEST SUCCEEDED`
 - Task 6 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
+- Task 7 测试结果：GitHub Actions `Xcode 27 verification` run `41075730246` 通过；Xcode 27.1 下 `RouteEditorModelTests` 的 21 个用例全部通过，`RoamControlTests` 全量 78 个用例 0 失败，结果为 `TEST SUCCEEDED`
+- Task 7 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：执行 Task 7 - 路线编辑器状态模型（未认领，先读实施计划 Task 7 并把状态改为 `in_progress`）
+- 下一步：执行 Task 8 - 手动路线编辑界面（未认领，先读实施计划 Task 8 并把状态改为 `in_progress`）
 
 ## 自动完成规则
 
@@ -65,8 +69,8 @@
 | Task 4：纯 Swift 路线运行器 | `completed` | Xcode 27.1 下 18 个运行器测试与全量 37 个测试通过 |
 | Task 5：路线库原子持久化 | `completed` | Xcode 27.1 下 8 个存储测试与全量 45 个测试通过 |
 | Task 6：路线库状态模型 | `completed` | Xcode 27.1 下 12 个状态模型测试与全量 57 个测试通过 |
-| Task 7：路线编辑器状态模型 | `pending` | 等待 Task 7 窗口；前置条件已满足 |
-| Task 8：手动路线编辑界面 | `pending` | 等待 Task 7 |
+| Task 7：路线编辑器状态模型 | `completed` | Xcode 27.1 下 21 个编辑器测试与全量 78 个测试通过 |
+| Task 8：手动路线编辑界面 | `pending` | Task 7 已完成，可认领 |
 | Task 9：路线库和运行设置界面 | `pending` | 等待 Task 8 |
 | Task 10：恢复模型与设备会话基础 | `pending` | 等待 Task 9 |
 | Task 11：运行中进度持久化 | `pending` | 等待 Task 10 |
@@ -289,4 +293,58 @@
 - 验证提交：`f15353b`（实现）；同任务另含 `016046f`（红灯测试）
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41070257714
 - 下一步第一条命令或动作：下一窗口先核对 Git 状态与本文件，再读取 Task 7 章节并把 Task 7 标记为 `in_progress`
+- 更新时间：2026-10-30
+
+### 2026-10-30 Task 7 完成记录
+
+- 任务：Task 7 - 路线编辑器状态模型
+- 状态：`completed`
+- 分支与基线：`feat/manual-running-routes`，源码基线 `9786ced4caed200710f43981d2fc232213a081ca`
+- 修改文件：
+  - `RoamControl/Features/Routes/State/RouteEditorModel.swift`
+  - `RoamControlTests/RouteEditorModelTests.swift`
+  - `Documentation/ImplementationStatus.md`
+- 接口：`@MainActor @Observable final class RouteEditorModel`；`name`、`isClosed` 可写，`points`、`errorMessage` 为 `private(set)`；`init(route: RouteDefinition? = nil)`、`appendPoint(_:)`、`undoLastPoint()`、`clear()`、`throws -> RouteDefinition` 的 `makeRoute(existing:)`；派生属性 `canSave`、`effectivePointCount`、`totalDistance`、`canUndo`。只导入 `Foundation` 与 `Observation`
+- 初始化规则：`route` 为 `nil` 时名称为 `New Route`、点为空、`isClosed = true`、无错误；传入路线时复制 `name`、`points`、`isClosed`，不持有 `RouteDefinition` 引用，也不修改入参
+- 派生规则：`canSave` 与 `totalDistance` 共用一个私有探针 `temporaryGeometry`，成功构造 `RouteGeometry(points:isClosed:)` 才算可保存，失败时距离为 0；`effectivePointCount` 复用 `RouteGeometry.duplicateDistanceThreshold` 折叠连续点、闭环再去掉与首点过近的末点，因为点数不足时 `RouteGeometry` 会抛错而不能拿它来数点数；`canUndo` 等于 `points` 非空
+- 加点规则：非有限坐标、纬度越 `±90`、经度越 `±180` 时拒绝并把错误设为 `Point is outside valid coordinates.`；与最后一个点距离小于阈值时静默忽略且不动已有错误，只与末点比较、不与更早顶点比较；成功追加后清空错误
+- 撤销与清空：`undoLastPoint()` 非空时移除末点并清空错误，空数组直接返回；`clear()` 清空点与错误，保留名称和闭环开关
+- 保存规则：`makeRoute(existing:)` 先 `trimmingCharacters(in: .whitespacesAndNewlines)`，为空则写 `Route name cannot be empty.` 并抛 `RouteEditorError.emptyName`，点保持不变；否则回写清洗后的名称、构造几何，几何失败先写展示文案再原样 `throw` 该 `RouteGeometryError`；存储点用 `geometry.points.dropLast()`（闭环）或 `geometry.points`（开放），因此不写重复首点，闭合只由 `isClosed` 表达；`id`、`createdAt`、`source` 有 `existing` 时保留，否则 `UUID()`、`Date.now`、`.drawn`；`updatedAt` 始终为 `Date.now`；成功返回并清空错误，全程不触碰 `RouteStore`、`RouteLibraryModel` 或任何持久化代码
+- 错误类型与文案：`enum RouteEditorError: Error, Equatable, Sendable { case emptyName }`；几何错误仍用 `RouteGeometryError`。文案集中在私有静态常量：`Route name cannot be empty.`、`Point is outside valid coordinates.`、`A route needs at least 2 points.`、`A closed route needs at least 3 points.`、`A route must have a non-zero length.`、`The route could not be built.`（非几何错误的兜底）。`.zeroLength` 时会额外判断有效点数是否仍不足最小要求，不足则改报点数文案，避免“1 个点的闭环”显示长度错误
+- 测试覆盖：21 个用例
+  - `testNewEditorStartsWithClosedModeAndDefaultName`：新编辑器断言名称、`isClosed`、空点、`canSave == false`、`effectivePointCount == 0`、`totalDistance == 0`、`canUndo == false`、`errorMessage == nil`
+  - `testEditingInitializesFromRouteWithoutLosingFields`：从现有路线进入后名称、点、闭环开关一致
+  - `testAppendPointIgnoresConsecutivePointsCloserThanHalfMetre`：先加一点，再加相距 0.2 米的点，点数不变；再加相距 30 米的点，点数增加
+  - `testAppendPointRejectsInvalidCoordinates`：`NaN`、纬度 `91`、经度 `181` 三种坐标都不追加并设置错误文案
+  - `testDuplicatePointRejectionKeepsExistingError`：先制造坐标错误，再加过近点，错误文案保持不变
+  - `testAppendAfterInvalidCoordinateClearsError`：之后一次成功追加清空错误
+  - `testUndoRemovesOnlyLastPoint`：三点 undo 后剩两点，连续 undo 到空数组不崩溃
+  - `testUndoClearsError`：有错误且有可移除点时，undo 后错误清空
+  - `testClearRemovesAllPoints`：清空后点为 0、`canUndo == false`，名称与 `isClosed` 不变
+  - `testCanSaveRequiresMinimumEffectivePoints`：开放路线 1 点不可保存、2 点可保存
+  - `testClosedRouteRequiresThreeEffectivePoints`：闭环 2 点不可保存、3 点可保存
+  - `testEffectivePointCountCollapsesConsecutiveDuplicates`：4 个原始点（含 1 个连续重复）折叠为 3 个有效点
+  - `testClosedDistanceIncludesClosingSegment`：同顶点闭环与开放路线比较，闭环总长更大，证明闭合段被计入
+  - `testClosedSaveStoresVerticesWithoutDuplicateClosingPoint`：闭环三点保存后 `points.count == 3`，不等于 4，也不含重复首点
+  - `testSaveCollapsesConsecutiveDuplicatePoints`：含连续重复点的路线保存后重复点被折叠
+  - `testSavePreservesExistingIDAndCreationDate`：`id` 与 `createdAt` 精确保留，`updatedAt` 更新为当前时间
+  - `testSavePreservesImportedSource`：`existing` 为 `.gpx` 与 `.appleMaps` 时 `source` 保留
+  - `testNewRouteSaveUsesDrawnSource`：新路线 `source == .drawn`
+  - `testSaveRejectsBlankName`：纯空白名称抛 `RouteEditorError.emptyName`，错误文案精确匹配，点未被修改
+  - `testGeometryFailureThrowsAndLeavesMessage`：闭环只有 2 点时抛 `RouteGeometryError.tooFewPoints(minimum: 3)` 且留下非空文案
+  - `testSuccessfulSaveClearsPreviousError`：先制造错误，成功保存后 `errorMessage == nil`
+- 测试数据：`@MainActor final class RouteEditorModelTests: XCTestCase`；上海附近基准坐标，用 `point(north:east:)` 辅助方法按 `1 纬度 ≈ 111 320 米`、经度按 `cos(纬度)` 缩放构造指定米级偏移，距离断言用 `GeoCoordinate.distance(to:)`，不依赖真实地图或网络
+- 红灯命令：工作流固定执行 `xcodebuild test -project RoamControl.xcodeproj -scheme RoamControl -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' -only-testing:RoamControlTests CODE_SIGNING_ALLOWED=NO`
+- 红灯结果：run `41074597846`（提交 `e4d0638`）编译期失败，唯一错误是 `RouteEditorModelTests.swift:45:58: error: cannot find type 'RouteEditorModel' in scope`，结果为 `** TEST FAILED **`
+- 绿灯结果：run `41075730246`（提交 `c1be8b2`）、job `124131262022`、Xcode 27.1；`RouteEditorModelTests` 21 个用例逐个通过（0.000–1.308 秒，最慢 `testAppendAfterInvalidCoordinateClearsError`），全量 `RoamControlTests` 78 个用例、`Test case … failed` 计数为 0，结果为 `** TEST SUCCEEDED **`
+- 构建命令：`xcodebuild build -project RoamControl.xcodeproj -scheme RoamControl -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO`
+- 构建结果：同一 run 的 `Build Debug` 步骤 `** BUILD SUCCEEDED **`
+- 定向测试取证方式：本地为 Windows 且没有 `xcodebuild`，CI 工作流固定执行 `-only-testing:RoamControlTests`，因此只跑 `-only-testing:RoamControlTests/RouteEditorModelTests` 的命令没有实际执行；21 个用例的通过记录是从 run 日志逐条提取并按测试类计数（`Test case 'RouteEditorModelTests.…'` 共 21 行、`failed` 0 行），工作流文件未改动
+- 静态检查：`git diff --check` 通过；实现只导入 `Foundation` 与 `Observation`，不含 SwiftUI、MapKit、`UserDefaults`、第三方依赖、`try!`、`as!`、`precondition` 或静默 `try?`；`temporaryGeometry` 用显式 `do/catch` 返回 `nil`，不用 `try?`
+- 未验证内容：没有 UI、没有设备会话、没有真实磁盘写入；`RouteEditorModel` 与 `RouteLibraryModel` 的串联（保存后入库、排序、落盘）留到后续任务
+- 已知风险：`points` 保留的是原始点击点（含被折叠的近重复点），`makeRoute` 才折叠，因此保存前界面上的点数可能多于保存后的顶点数，Task 8 若显示计数应以 `effectivePointCount` 为准；`appendPoint` 只与末点比较，先画远点再折返贴到早期顶点附近不会被拦截，这是任务约定的行为，几何层会自行折叠；`errorMessage` 在成功操作前不会自动消失，界面需要展示并允许下一次操作覆盖
+- Task 8 前置状态：`RouteEditorView(existingRoute:onSave:onCancel:)` 可以直接持有 `RouteEditorModel(route:)`，把点击映射到 `appendPoint(_:)`、撤销映射到 `undoLastPoint()`、清空映射到 `clear()`，用 `canSave`、`canUndo`、`effectivePointCount`、`totalDistance` 驱动按钮与文案；保存按钮调用 `makeRoute(existing:)` 后把结果交给上层，由上层调用 `RouteLibraryModel.upsert(_:)`，编辑器本身不写存储；错误展示读 `errorMessage`，几何错误与空名称都会同时以文案和抛出的错误两种形式出现
+- 验证提交：`c1be8b2`（实现）；同任务另含 `e4d0638`（红灯测试）
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41075730246
+- 下一步第一条命令或动作：下一窗口先核对 Git 状态与本文件，再读取 Task 8 章节并把 Task 8 标记为 `in_progress`
 - 更新时间：2026-10-30
