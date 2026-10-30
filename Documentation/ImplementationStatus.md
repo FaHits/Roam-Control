@@ -10,10 +10,11 @@
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
 - 当前任务：Task 8 - 手动路线编辑界面
-- 任务状态：`in_progress`
-- 当前执行窗口：DSH-Agent（2026-10-30 23:20 认领）
-- 最近完成：Task 7 - 路线编辑器状态模型
+- 任务状态：`completed`
+- 当前执行窗口：DSH-Agent（2026-10-30 23:20 认领，2026-10-30 23:27 完成）
+- 最近完成：Task 8 - 手动路线编辑界面
 - 已完成工程修改：
+  - `RoamControl/Features/Routes/Views/RouteEditorView.swift`
   - `RoamControl/Features/Routes/State/RouteEditorModel.swift`
   - `RoamControlTests/RouteEditorModelTests.swift`
   - `RoamControl/Features/Routes/State/RouteLibraryModel.swift`
@@ -48,8 +49,10 @@
 - Task 6 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - Task 7 测试结果：GitHub Actions `Xcode 27 verification` run `41075730246` 通过；Xcode 27.1 下 `RouteEditorModelTests` 的 21 个用例全部通过，`RoamControlTests` 全量 78 个用例 0 失败，结果为 `TEST SUCCEEDED`
 - Task 7 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
+- Task 8 测试结果：GitHub Actions `Xcode 27 verification` run `41079471220` 通过；Xcode 27.1 下 `RoamControlTests` 全量 78 个用例 0 失败，结果为 `TEST SUCCEEDED`（本任务只新增视图，未新增测试）
+- Task 8 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：执行 Task 8 - 手动路线编辑界面（未认领，先读实施计划 Task 8 并把状态改为 `in_progress`）
+- 下一步：执行 Task 9 - 接入 Home 与路线库（未认领，先读实施计划 Task 9 并把状态改为 `in_progress`）
 
 ## 自动完成规则
 
@@ -70,7 +73,7 @@
 | Task 5：路线库原子持久化 | `completed` | Xcode 27.1 下 8 个存储测试与全量 45 个测试通过 |
 | Task 6：路线库状态模型 | `completed` | Xcode 27.1 下 12 个状态模型测试与全量 57 个测试通过 |
 | Task 7：路线编辑器状态模型 | `completed` | Xcode 27.1 下 21 个编辑器测试与全量 78 个测试通过 |
-| Task 8：手动路线编辑界面 | `pending` | Task 7 已完成，可认领 |
+| Task 8：手动路线编辑界面 | `completed` | Xcode 27.1 全量 78 个测试与 Debug 构建均通过 |
 | Task 9：路线库和运行设置界面 | `pending` | 等待 Task 8 |
 | Task 10：恢复模型与设备会话基础 | `pending` | 等待 Task 9 |
 | Task 11：运行中进度持久化 | `pending` | 等待 Task 10 |
@@ -347,4 +350,25 @@
 - 验证提交：`c1be8b2`（实现）；同任务另含 `e4d0638`（红灯测试）
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41075730246
 - 下一步第一条命令或动作：下一窗口先核对 Git 状态与本文件，再读取 Task 8 章节并把 Task 8 标记为 `in_progress`
+- 更新时间：2026-10-30
+
+### 2026-10-30 Task 8 完成记录
+
+- 任务：Task 8 - 手动路线编辑界面
+- 状态：`completed`；实现提交 `6daa6b1`（`feat(routes): add manual route editor UI`），本条记录单独提交 `docs(routes): record Task 8 completion`
+- 新增文件：`RoamControl/Features/Routes/Views/RouteEditorView.swift`；未修改 `RoamControl.xcodeproj/project.pbxproj`（工程使用 `PBXFileSystemSynchronizedRootGroup`，新文件自动进入 App target）
+- 对外接口：`struct RouteEditorView` 只持有 `existingRoute: RouteDefinition?`、`onSave: (RouteDefinition) -> Void`、`onCancel: () -> Void`；内部用 `@State` 持有 `RouteEditorModel(route: existingRoute)`，用 `@Bindable` 绑定 `name` 与 `isClosed`
+- 地图行为：全屏 `MapReader` + `Map`，`cameraPosition` 为 `@State`；`existingRoute` 多于一个点时按经纬度 min/max 取中心、`padding = 1.4`、最小 span `0.002`，否则 `.userLocation(fallback: .automatic)`；每个点一个 12pt 蓝色 `Circle` `Annotation`，点间 `MapPolyline(lineWidth: 5)`；预览线优先 `try? RouteGeometry(points:isClosed:)` 的 `points`（闭环自动含闭合段），几何无效时退回 `model.points`，未复制 `0.5` 米折叠逻辑
+- 加点路径：`onTapGesture` → `proxy.convert(location, from: .local)` → `GeoCoordinate` → `model.appendPoint(_:)`；未调用 `MapViewModel.selectDroppedPin`，未改动 `MapViewModel`；`GeoCoordinate` 没有 `coordinate` 属性，视图内用 `clCoordinate` 扩展转换
+- 浮层：顶部 `TextField("Route name")`；底部面板显示 `effectivePointCount` 与 `totalDistance`（`< 1000` 米显示 `m`，否则 `km`）、`Toggle("Closed loop")`、`model.errorMessage` 红字、`Undo`/`Clear`/`Cancel`/`Save`；`Undo` 在 `!canUndo` 时禁用，`Clear` 在 `points.isEmpty` 时禁用且非空时先走 `confirmationDialog` 确认，`Save` 在 `!canSave` 时禁用并调用 `try model.makeRoute(existing:)` 后把结果交给 `onSave`，编辑器不写 `RouteStore`/`RouteLibraryModel`
+- 无障碍与 Dynamic Type：六个 accessibilityLabel（`Route name`、`Closed loop`、`Undo last point`、`Clear route`、`Cancel route editing`、`Save route`）；`dynamicTypeSize.isAccessibilitySize` 时底部面板包进 `ScrollView` 并限制 `maxHeight: 460`；卡片沿用 `.padding(18)` + `.regularMaterial` + 连续圆角 24 + 阴影，与 `WalkingRoutePreviewCard` 一致
+- 文案与样式：全英文；直接 `.mapStyle(.standard(elevation: .realistic))`，未依赖 `HomeView.swift` 里的 private `roamControlMapStyle`
+- 测试命令：`xcodebuild test -project RoamControl.xcodeproj -scheme RoamControl -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' CODE_SIGNING_ALLOWED=NO`
+- 测试结果：GitHub Actions `Xcode 27 verification` run `41079471220`、job `124144408266`，8 分 30 秒通过；日志 `Test case … passed` 78 行、`Test case … failed` 0 行，`** TEST SUCCEEDED **`。本任务只新增视图，没有新增测试，78 与 Task 7 全量一致
+- 构建结果：同一 run 的 `Build Debug` 步骤 `** BUILD SUCCEEDED **`
+- 本地无法验证的事实：本机是 Windows 且没有 `xcodebuild`，全量测试与 Debug 构建都在 `xcode-27` runner 上完成；没有提交任何本地验证通过的结论
+- 未完成的界面手工检查：模拟器里画四个点形成矩形、开闭环看闭合段、Undo 后计数与折线同步、Clear 弹确认、空名称时 Save 禁用、保存后 `onSave` 收到 `RouteDefinition`。Windows 环境无法运行模拟器，这些检查留给 Task 9 接入后的真机/模拟器验收
+- 遗留限制：视图尚未接入 `HomeView`，`onSave`/`onCancel` 的调用方是 Task 9；相机只在初始化时按 `existingRoute` 定一次，编辑中加点不会自动跟随；无自由手绘笔刷、无路线库列表，均按任务边界不做
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41079471220
+- 下一步第一条命令或动作：下一窗口先核对 Git 状态与本文件，再读取 Task 9 章节并把 Task 9 标记为 `in_progress`
 - 更新时间：2026-10-30
