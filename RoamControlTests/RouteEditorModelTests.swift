@@ -219,6 +219,32 @@ final class RouteEditorModelTests: XCTestCase {
         XCTAssertGreaterThan(model.totalDistance, 0)
     }
 
+    /// Task 8 acceptance: a saved route needs a name, so the editor must not enable saving without one.
+    func testCanSaveRequiresNonBlankName() {
+        let model = makeThreePointEditor(isClosed: true)
+        XCTAssertEqual(model.effectivePointCount, 3)
+        XCTAssertTrue(model.canSave)
+
+        model.name = ""
+        XCTAssertFalse(model.canSave)
+
+        model.name = "   \n"
+        XCTAssertFalse(model.canSave)
+    }
+
+    func testCanSaveRecoversAfterNameIsRestored() {
+        let model = makeThreePointEditor(isClosed: true)
+        model.name = "Riverside loop"
+        XCTAssertTrue(model.canSave)
+
+        model.name = ""
+        XCTAssertFalse(model.canSave)
+
+        model.name = "Riverside loop"
+        XCTAssertTrue(model.canSave)
+        XCTAssertNil(model.errorMessage)
+    }
+
     func testEffectivePointCountCollapsesConsecutiveDuplicates() {
         let points = [point(north: 0), nearPoint(), point(north: 30), point(north: 30, east: 30)]
         let existing = makeRoute(points: points, isClosed: true)

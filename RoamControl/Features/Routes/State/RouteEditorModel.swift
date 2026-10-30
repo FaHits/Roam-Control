@@ -28,8 +28,12 @@ final class RouteEditorModel {
 
     // MARK: - Derived state
 
-    /// Saving needs a route geometry that fits the current points and mode.
-    var canSave: Bool { temporaryGeometry != nil }
+    /// Saving needs a route geometry that fits the current points and mode, plus a name that survives
+    /// trimming. The name check trims exactly like `makeRoute`, so the button can never be enabled for
+    /// a draft that saving would reject.
+    var canSave: Bool {
+        temporaryGeometry != nil && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     /// Same collapse rule as `RouteGeometry`, computed without constructing one: the editor still
     /// has to show a count for drafts that are too short to form a geometry.
