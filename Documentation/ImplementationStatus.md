@@ -10,10 +10,12 @@
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
 - 当前任务：Task 5 - 路线库原子持久化
-- 任务状态：`in_progress`
-- 当前执行窗口：DSH Task 5 窗口，认领于 2026-10-30 21:38（Asia/Shanghai）
-- 最近完成：Task 4 - 纯 Swift 路线运行器
+- 任务状态：`completed`
+- 当前执行窗口：DSH Task 5 窗口，认领于 2026-10-30 21:38，完成于 2026-10-30 21:57（Asia/Shanghai）
+- 最近完成：Task 5 - 路线库原子持久化
 - 已完成工程修改：
+  - `RoamControl/Features/Routes/Storage/RouteStore.swift`
+  - `RoamControlTests/RouteStoreTests.swift`
   - `RoamControl/Features/Routes/Models/RouteRunMode.swift`
   - `RoamControl/Features/Routes/Core/RouteRunner.swift`
   - `RoamControlTests/RouteRunnerTests.swift`
@@ -36,8 +38,10 @@
 - Task 3 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - Task 4 测试结果：GitHub Actions `Xcode 27 verification` run `41061243835` 通过；Xcode 27.1 下 `RouteRunnerTests` 的 18 个用例全部通过，`RoamControlTests` 全量 37 个用例 0 失败，结果为 `TEST SUCCEEDED`
 - Task 4 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
+- Task 5 测试结果：GitHub Actions `Xcode 27 verification` run `41066742147` 通过；Xcode 27.1 下 `RouteStoreTests` 的 8 个用例全部通过，`RoamControlTests` 全量 45 个用例 0 失败，结果为 `TEST SUCCEEDED`
+- Task 5 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：执行 Task 5 - 路线库原子持久化（DSH Task 5 窗口已认领，先生成 RED 测试）
+- 下一步：执行 Task 6 - 路线库状态模型（未认领，先读实施计划 Task 6 并把状态改为 `in_progress`）
 
 ## 自动完成规则
 
@@ -55,8 +59,8 @@
 | Task 2：路线坐标与闭环几何 | `completed` | Xcode 27.1 下 10 个几何测试与 Debug 构建均通过 |
 | Task 3：确定性拟人速度、步频和 GPS 抖动 | `completed` | Xcode 27.1 下 8 个运动模型测试与全量 19 个测试通过 |
 | Task 4：纯 Swift 路线运行器 | `completed` | Xcode 27.1 下 18 个运行器测试与全量 37 个测试通过 |
-| Task 5：路线库原子持久化 | `in_progress` | DSH Task 5 窗口执行中（2026-10-30 21:38 认领） |
-| Task 6：路线库状态模型 | `pending` | 等待 Task 5 |
+| Task 5：路线库原子持久化 | `completed` | Xcode 27.1 下 8 个存储测试与全量 45 个测试通过 |
+| Task 6：路线库状态模型 | `pending` | 等待 Task 6 窗口；前置条件已满足 |
 | Task 7：路线编辑器状态模型 | `pending` | 等待 Task 6 |
 | Task 8：手动路线编辑界面 | `pending` | 等待 Task 7 |
 | Task 9：路线库和运行设置界面 | `pending` | 等待 Task 8 |
@@ -197,4 +201,45 @@
 - 验证提交：`72334e5`（红绿灯实现）；同任务另含 `93a31c4`（红灯测试）
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41061243835
 - 下一步第一条命令或动作：下一窗口先核对 Git 状态与本文件，再读取 Task 5 章节并把 Task 5 标记为 `in_progress`
+- 更新时间：2026-10-30
+
+### 2026-10-30 Task 5 完成记录
+
+- 任务：Task 5 - 路线库原子持久化
+- 状态：`completed`
+- 分支与基线：`feat/manual-running-routes`，源码基线 `2a1dca05f892713ab6aecfe87622993efe8c7404`
+- 修改文件：
+  - `RoamControl/Features/Routes/Storage/RouteStore.swift`
+  - `RoamControlTests/RouteStoreTests.swift`
+  - `Documentation/ImplementationStatus.md`
+- 接口：`RouteStoreError`（`unsupportedSchema(Int)`、`corruptedFile`、`writeFailed`，`Error`、`Equatable`）、`RouteStore`（`Sendable`，`currentSchemaVersion = 1`、`liveFileURL`、`fileURL`、`init(fileURL:)`、`load()`、`save(_:)`）；文件级私有 `RouteLibraryDocument`（`schemaVersion`、`routes`，`Codable`）
+- 路径解析：`liveFileURL` 取 `FileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first`，取不到时退回 `NSHomeDirectory()/Library/Application Support`，再追加 `RoamControl/routes.json`；`liveFileURL` 是 `static var`，不缓存，测试与宿主进程各取各的沙盒
+- 读取行为：文件不存在直接返回空数组，不建目录、不建文件；存在时用 `.iso8601` 解码策略解码，解码失败（语法错误、字段缺失、类型错误、日期格式错误）统一抛 `corruptedFile`；`schemaVersion > currentSchemaVersion` 抛 `unsupportedSchema(该版本号)`；`schemaVersion < 1` 当前接受（迁移留给后续任务）；文件读取本身的 IO 错误（如权限不足）原样抛出，不伪装成数据损坏；整个 `load()` 不写任何字节，损坏文件保持原样
+- 写入行为：先编码，后建目录，再以 `Data.WriteOptions.atomic` 写盘；编码失败、目录创建失败、写盘失败都映射为 `writeFailed`，错误不被吞掉；编码器用 `.iso8601` 日期策略加 `[.sortedKeys]` 输出，键顺序稳定；每次 `save` 写整份文档，`routes` 为空数组时也写成 `{"routes":[],"schemaVersion":1}`
+- 精度约定：`JSONEncoder.DateEncodingStrategy.iso8601` 不写小数秒，`Date` 往返后截断到整秒；测试夹具全部使用整秒时间戳，Task 6 之后的比较也要按秒
+- 测试隔离：每个用例在 `FileManager.default.temporaryDirectory` 下建 `RouteStoreTests-<UUID>` 目录，`tearDownWithError` 删除；所有用例只通过注入的 `fileURL` 访问磁盘，不触碰真实 `liveFileURL`
+- 测试覆盖：8 个用例
+  - `testMissingFileLoadsAsEmptyLibrary`：空库返回 `[]`，且 load 后目录仍不存在
+  - `testSaveAndLoadRoundTripsRoutes`：开放路线（`.gpx`）与闭环路线（`.drawn`）各一条，逐字段断言 `id`、`name`、`points`（每个坐标的 `latitude`、`longitude`）、`isClosed`、`source`、`createdAt`、`updatedAt`，并额外断言第 0 条开放、第 1 条闭环
+  - `testSaveCreatesParentDirectory`：写 `<UUID>/route/library/nested/routes.json` 这条尚不存在的三级父目录，save 后用 `FileManager.fileExists(atPath:isDirectory:)` 确认目录已建且是目录，再 load 回读比对
+  - `testCorruptedFileThrowsAndRemainsUnchanged`：四个坏样本（截断 JSON、缺字段、`routes` 类型错误、日期非法）逐个写入后 `load()`，断言错误等于 `.corruptedFile`，并逐字节比较文件内容与写入前完全一致
+  - `testUnsupportedSchemaThrows`：写入 `schemaVersion = 2`，断言错误等于 `.unsupportedSchema(2)`，字节不变
+  - `testSaveUsesAtomicReplacement`：先保存一条旧路线，再保存两条新路线，断言只有新内容、旧 `id` 不残留，且目录里只有 `routes.json`、没有残留临时文件
+  - `testSaveAndLoadEmptyLibrary`：保存 `[]` 后重新 `load()` 得到 `[]`，并直接解析 JSON 断言 `schemaVersion == currentSchemaVersion`、`routes` 为空
+  - `testLiveFileURLPointsAtRoutesJSON`：断言 `liveFileURL` 最后两个路径分量是 `RoamControl` 与 `routes.json`
+- 断言方式：错误一律用 `XCTAssertEqual(error as? RouteStoreError, …)`（经测试内的 `errorThrown(by:)` 辅助方法取错误），不只判断是否抛错
+- 红灯命令：`xcodebuild test -project RoamControl.xcodeproj -scheme RoamControl -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' -only-testing:RoamControlTests CODE_SIGNING_ALLOWED=NO`
+- 红灯结果：run `41065883068`（提交 `4997259`）、job `124097039283`，编译期失败 `RouteStoreTests.swift:28:21: error: cannot find 'RouteStore' in scope`、`RouteStoreTests.swift:221:61: error: cannot find type 'RouteStoreError' in scope`，共 12 处 `cannot find 'RouteStore' in scope`，全部报错都指向尚不存在的存储类型，结果为 `** TEST FAILED **`
+- 绿灯结果：run `41066742147`（提交 `1ae3e98`）、job `124099979698`、Xcode 27.1（build `27A9275`）；`RouteStoreTests` 8 个用例逐个通过（最慢 `testSaveUsesAtomicReplacement` 0.078 秒），全量 `RoamControlTests` 45 个用例 0 失败，`** TEST SUCCEEDED **`
+- 构建命令：`xcodebuild build -project RoamControl.xcodeproj -scheme RoamControl -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO`
+- 构建结果：同一 run 的 `Build Debug` 步骤 `** BUILD SUCCEEDED **`
+- 定向测试取证方式：本地为 Windows 且没有 `xcodebuild`、没有 `swiftc`，CI 工作流固定执行 `-only-testing:RoamControlTests`，因此只跑 `-only-testing:RoamControlTests/RouteStoreTests` 的命令没有实际执行；8 个用例的通过记录是从 run 日志逐条提取的，工作流文件未改动
+- 日志取证限制：失败 job 的日志归档首次请求返回 `403`，随后一次返回 `ServerBusy`（`Egress is over the account limit`），重试后才取到；同一时段 `test` 步骤的 check-run 注解只有 `Process completed with exit code 65`，编译错误文本来自 job 日志本身
+- 静态检查：`git diff --check` 通过；实现只导入 Foundation，不含第三方依赖、`UserDefaults`、`try!`、`as!`、`precondition` 或静默 `try?`；测试文件同样没有这些写法
+- 未验证内容：不涉及真实设备会话、真实定位、后台恢复与 UI；`unsupportedSchema` 只覆盖“更新的 schema”，更旧的版本迁移尚未实现
+- 已知风险：`liveFileURL` 依赖宿主进程的 `Application Support` 容器，测试与真机路径不同，只有注入 `fileURL` 的用例能本地验证；ISO-8601 整秒截断会让两次修改落在同一秒内的 `updatedAt` 变化不可见；`save` 在目录创建成功后、写盘失败时可能留下空目录，属于可接受的部分成功状态
+- Task 6 前置状态：`load()` 返回 `[RouteDefinition]`、`save(_:)` 接收整份数组，状态模型可以直接持有路线数组并整体落盘；错误枚举已经区分“文件损坏”“版本过新”“写失败”三种可展示状态，无需再包一层；空库语义已定（缺失文件等于空库），首启动不需要预置文件
+- 验证提交：`1ae3e98`（实现）；同任务另含 `4997259`（红灯测试）
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41066742147
+- 下一步第一条命令或动作：下一窗口先核对 Git 状态与本文件，再读取 Task 6 章节并把 Task 6 标记为 `in_progress`
 - 更新时间：2026-10-30
