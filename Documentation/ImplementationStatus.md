@@ -9,11 +9,13 @@
 - 源码基线：`b68dac0`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 5 - 路线库原子持久化
+- 当前任务：Task 6 - 路线库状态模型
 - 任务状态：`completed`
-- 当前执行窗口：DSH Task 5 窗口，认领于 2026-10-30 21:38，完成于 2026-10-30 21:57（Asia/Shanghai）
-- 最近完成：Task 5 - 路线库原子持久化
+- 当前执行窗口：DSH Task 6 窗口，认领于 2026-10-30 22:10，完成于 2026-10-30 22:27（Asia/Shanghai）
+- 最近完成：Task 6 - 路线库状态模型
 - 已完成工程修改：
+  - `RoamControl/Features/Routes/State/RouteLibraryModel.swift`
+  - `RoamControlTests/RouteLibraryModelTests.swift`
   - `RoamControl/Features/Routes/Storage/RouteStore.swift`
   - `RoamControlTests/RouteStoreTests.swift`
   - `RoamControl/Features/Routes/Models/RouteRunMode.swift`
@@ -40,8 +42,10 @@
 - Task 4 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - Task 5 测试结果：GitHub Actions `Xcode 27 verification` run `41066742147` 通过；Xcode 27.1 下 `RouteStoreTests` 的 8 个用例全部通过，`RoamControlTests` 全量 45 个用例 0 失败，结果为 `TEST SUCCEEDED`
 - Task 5 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
+- Task 6 测试结果：GitHub Actions `Xcode 27 verification` run `41070257714` 通过；Xcode 27.1 下 `RouteLibraryModelTests` 的 12 个用例全部通过，`RoamControlTests` 全量 57 个用例 0 失败，结果为 `TEST SUCCEEDED`
+- Task 6 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：执行 Task 6 - 路线库状态模型（未认领，先读实施计划 Task 6 并把状态改为 `in_progress`）
+- 下一步：执行 Task 7 - 路线编辑器状态模型（未认领，先读实施计划 Task 7 并把状态改为 `in_progress`）
 
 ## 自动完成规则
 
@@ -60,8 +64,8 @@
 | Task 3：确定性拟人速度、步频和 GPS 抖动 | `completed` | Xcode 27.1 下 8 个运动模型测试与全量 19 个测试通过 |
 | Task 4：纯 Swift 路线运行器 | `completed` | Xcode 27.1 下 18 个运行器测试与全量 37 个测试通过 |
 | Task 5：路线库原子持久化 | `completed` | Xcode 27.1 下 8 个存储测试与全量 45 个测试通过 |
-| Task 6：路线库状态模型 | `pending` | 等待 Task 6 窗口；前置条件已满足 |
-| Task 7：路线编辑器状态模型 | `pending` | 等待 Task 6 |
+| Task 6：路线库状态模型 | `completed` | Xcode 27.1 下 12 个状态模型测试与全量 57 个测试通过 |
+| Task 7：路线编辑器状态模型 | `pending` | 等待 Task 7 窗口；前置条件已满足 |
 | Task 8：手动路线编辑界面 | `pending` | 等待 Task 7 |
 | Task 9：路线库和运行设置界面 | `pending` | 等待 Task 8 |
 | Task 10：恢复模型与设备会话基础 | `pending` | 等待 Task 9 |
@@ -242,4 +246,47 @@
 - 验证提交：`1ae3e98`（实现）；同任务另含 `4997259`（红灯测试）
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41066742147
 - 下一步第一条命令或动作：下一窗口先核对 Git 状态与本文件，再读取 Task 6 章节并把 Task 6 标记为 `in_progress`
+- 更新时间：2026-10-30
+
+### 2026-10-30 Task 6 完成记录
+
+- 任务：Task 6 - 路线库状态模型
+- 状态：`completed`
+- 分支与基线：`feat/manual-running-routes`，源码基线 `0a6c0a548c891daddd3f3fd7af2922e1e0a91354`
+- 修改文件：
+  - `RoamControl/Features/Routes/State/RouteLibraryModel.swift`
+  - `RoamControlTests/RouteLibraryModelTests.swift`
+  - `Documentation/ImplementationStatus.md`
+- 接口：`@MainActor @Observable final class RouteLibraryModel`，`routes`、`isLoading`、`errorMessage` 均为 `private(set)`；`init(store: RouteStore = RouteStore())`、`load()`、`upsert(_:)`、`delete(id:)`、`route(id:)`、`clearError()`。store 用 `@ObservationIgnored` 持有，不进入观察图
+- 加载规则：`init` 保存 store 后 `routes = []`、`isLoading = false` 并调用一次 `load()`；`load()` 用 `defer` 在结束时恢复 `isLoading = false`；成功时替换为排序后的 `store.load()` 结果并清空错误；失败只写 `errorMessage`，不调用 `save`、不改动已有 `routes`，因此首次失败保持空数组、已有数据后失败保留旧数组
+- 排序规则：私有 `sorted(_:)` 按 `updatedAt` 降序，相同时按 `id.uuidString` 升序，`load`、`upsert`、`delete` 成功后共用
+- 写入规则：`upsert` 先 `trimmingCharacters(in: .whitespacesAndNewlines)` 清洗名称并写回候选；为空则设 `Route name cannot be empty.` 直接返回，不入库、不改 `routes`；否则从当前 `routes` 复制候选，同 `id` 替换、无 `id` 追加；`delete` 对不存在的 `id` 直接返回且不写盘；两者都先 `store.save(候选)`，成功后才用排序后的候选替换 `routes` 并清空错误，失败保留原数组。模型不改 `id`、`createdAt`、`updatedAt`
+- 错误文案：`Route name cannot be empty.`（精确）、`Could not save routes.`（保存与删除失败）、`Routes file is corrupted.`、`Routes file uses unsupported schema version \(version).`、`Could not load routes.`（其他加载失败）；映射集中在私有 `loadErrorMessage(for:)`，没有为文案引入协议或抽象层
+- 测试覆盖：12 个用例
+  - `testLoadSortsRoutesByUpdatedAtDescending`：三条路线断言条数与 `["Newest", "Middle", "Oldest"]` 顺序，另断言 `isLoading == false`、`errorMessage == nil`
+  - `testLoadBreaksUpdatedAtTiesByIdentifier`：两条 `updatedAt` 相同、UUID 为 `…00AA` 与 `…00BB` 的路线，断言按 `id.uuidString` 升序，并断言第二次加载顺序一致
+  - `testUpsertAddsAndReplacesByStableID`：新路线使条数 0→1→2；同 `id` 替换后仍为 1 条，断言 `id`、`createdAt` 不变而 `name`、`points`、`isClosed`、`source`、`updatedAt` 取新值，并回读文件确认只存新名称
+  - `testUpsertTrimsNameAndRejectsEmptyName`：`"  Riverside loop \n"` 存成 `"Riverside loop"`（内存与文件都对）；纯空白名称被拒，`routes` 与文件条数不变，错误文案精确匹配
+  - `testDeleteRemovesOnlyRequestedRoute`：三条中删一条，内存与文件都只剩另外两条的 `id`
+  - `testDeleteOfUnknownIdentifierLeavesFileAndStateAlone`：随机 `id` 删除后 `routes` 不变，文件字节完全相同
+  - `testFailedSaveKeepsPreviousInMemoryState`：先成功加载一条，把父目录替换成普通文件使 `createDirectory` 失败，断言 `routes` 仍等于旧数组、错误为 `Could not save routes.`
+  - `testDeleteFailureKeepsPreviousInMemoryState`：同样的父路径破坏方式覆盖删除失败路径
+  - `testCorruptedStoreExposesErrorWithoutClearingRoutes`：初始化即损坏时 `routes == []` 且错误可见；先正常加载再写入非法 JSON 并 `load()`，断言 `routes` 保留旧数组、错误非空、`isLoading` 回到 false、文件字节未被改写
+  - `testUnsupportedSchemaMessageNamesVersion`：`schemaVersion = 2` 时错误为 `Routes file uses unsupported schema version 2.`，文件字节不变
+  - `testSuccessfulOperationsClearPreviousError`：先制造空名称错误，再成功 upsert 与 delete，两步后 `errorMessage` 均为 `nil`
+  - `testRouteLookupAndClearError`：`route(id:)` 命中与未命中、`clearError()` 只清错误不改 `routes`
+- 测试隔离：每个用例用 `addTeardownBlock` 创建并删除自己的 `temporaryDirectory/RouteLibraryModelTests-<UUID>/library/routes.json`，不共用文件，也不触碰真实 `liveFileURL`；没有引入一方法的存储协议
+- 红灯命令：工作流固定执行 `xcodebuild test -project RoamControl.xcodeproj -scheme RoamControl -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' -only-testing:RoamControlTests CODE_SIGNING_ALLOWED=NO`
+- 红灯结果：run `41069921430`（提交 `016046f`）编译期失败，唯一错误是 `RouteLibraryModelTests.swift:27:46: error: cannot find type 'RouteLibraryModel' in scope`，结果为 `** TEST FAILED **`
+- 绿灯结果：run `41070257714`（提交 `f15353b`）、Xcode 27.1；`RouteLibraryModelTests` 12 个用例逐个通过（0.002–0.329 秒），全量 `RoamControlTests` 57 个用例、`Test case … failed` 计数为 0，结果为 `** TEST SUCCEEDED **`
+- 构建命令：`xcodebuild build -project RoamControl.xcodeproj -scheme RoamControl -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO`
+- 构建结果：同一 run 的 `Build Debug` 步骤 `** BUILD SUCCEEDED **`
+- 定向测试取证方式：本地为 Windows 且没有 `xcodebuild`，CI 工作流固定执行 `-only-testing:RoamControlTests`，因此只跑 `-only-testing:RoamControlTests/RouteLibraryModelTests` 的命令没有实际执行；12 个用例的通过记录是从 run 日志逐条提取的，工作流文件未改动
+- 静态检查：`git diff --check` 通过；实现只导入 `Foundation` 与 `Observation`，不含 SwiftUI、MapKit、`AppModel`、`UserDefaults`、第三方依赖、`try!`、`as!`、`precondition` 或静默 `try?`
+- 未验证内容：没有 UI、路线编辑器和设备会话；`isLoading` 只在同步加载期间变化，尚未验证真实磁盘慢速读取下的界面表现
+- 已知风险：`load()` 失败后 `errorMessage` 会一直保留，直到下一次成功操作或 `clearError()`，界面需要主动展示并允许清除；保存失败一律显示 `Could not save routes.`，不区分磁盘满、权限或编码问题，后续如需要更细分类再扩展映射；`updatedAt` 相同时依赖 `UUID` 字符串升序，跨平台稳定性取决于字符串形式而非 UUID 字节序
+- Task 7 前置状态：`RouteEditorModel` 可以直接构造 `RouteDefinition` 后调用 `RouteLibraryModel.upsert(_:)`，由模型负责清洗名称、排序与落盘；`route(id:)` 可用于编辑前取现有路线，`errorMessage` 与 `clearError()` 可直接复用于编辑器错误展示；编辑器不得自行写 `RouteStore`，也不要重复实现排序
+- 验证提交：`f15353b`（实现）；同任务另含 `016046f`（红灯测试）
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41070257714
+- 下一步第一条命令或动作：下一窗口先核对 Git 状态与本文件，再读取 Task 7 章节并把 Task 7 标记为 `in_progress`
 - 更新时间：2026-10-30
