@@ -6,17 +6,20 @@
 
 - 功能：手绘闭环路线与拟人跑步模拟
 - 当前分支：`feat/manual-running-routes`
-- 源码基线：`b68dac0`
+- 源码基线：`38c0d80`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 8 - 手动路线编辑界面
+- 当前任务：Task 9 - 路线库和运行设置界面
 - 任务状态：`completed`
-- 当前执行窗口：DSH-Agent（2026-10-30 23:20 认领，2026-10-30 23:27 完成）
-- 最近完成：Task 8 - 手动路线编辑界面（含 2026-10-31 验收修正：`canSave` 同时要求名称非空）
+- 当前执行窗口：DSH-Agent（2026-10-31 完成）
+- 最近完成：Task 9 - 路线库和运行设置界面
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Views/RouteEditorView.swift`
+  - `RoamControl/Features/Routes/Views/RouteLibraryView.swift`
+  - `RoamControl/Features/Routes/Views/RouteRunSetupView.swift`
   - `RoamControl/Features/Routes/State/RouteEditorModel.swift`
   - `RoamControlTests/RouteEditorModelTests.swift`
+  - `RoamControlTests/RouteProfileStoreTests.swift`
   - `RoamControl/Features/Routes/State/RouteLibraryModel.swift`
   - `RoamControlTests/RouteLibraryModelTests.swift`
   - `RoamControl/Features/Routes/Storage/RouteStore.swift`
@@ -53,8 +56,10 @@
 - Task 8 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - Task 8 验收修正测试结果：GitHub Actions run `41088976344` 通过；`RoamControlTests` 全量 80 个用例 0 失败（新增 2 个 `canSave` 名称测试），结果为 `TEST SUCCEEDED`
 - Task 8 验收修正构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
+- Task 9 测试结果：GitHub Actions `Xcode 27 verification` run `41095688833` 通过；Xcode 27.1 下 `RouteProfileStoreTests` 的 3 个用例全部通过，`RoamControlTests` 全量 83 个用例 0 失败，结果为 `TEST SUCCEEDED`
+- Task 9 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：执行 Task 9 - 接入 Home 与路线库（未认领，先读实施计划 Task 9 并把状态改为 `in_progress`）
+- 下一步：执行 Task 10 - 恢复模型与设备会话基础（未认领，先读实施计划 Task 10 并把状态改为 `in_progress`）
 
 ## 自动完成规则
 
@@ -76,8 +81,8 @@
 | Task 6：路线库状态模型 | `completed` | Xcode 27.1 下 12 个状态模型测试与全量 57 个测试通过 |
 | Task 7：路线编辑器状态模型 | `completed` | Xcode 27.1 下 21 个编辑器测试与全量 78 个测试通过 |
 | Task 8：手动路线编辑界面 | `completed` | Xcode 27.1 全量 78 个测试与 Debug 构建均通过 |
-| Task 9：路线库和运行设置界面 | `pending` | 等待 Task 8 |
-| Task 10：恢复模型与设备会话基础 | `pending` | 等待 Task 9 |
+| Task 9：路线库和运行设置界面 | `completed` | Xcode 27.1 全量 83 个测试（新增 3 个 `RunProfileStore` 测试）与 Debug 构建均通过 |
+| Task 10：恢复模型与设备会话基础 | `pending` | 等待 Task 9 完成，现可认领 |
 | Task 11：运行中进度持久化 | `pending` | 等待 Task 10 |
 | Task 12：运行卡片与主页整合 | `pending` | 等待 Task 11 |
 | Task 13：中断路线恢复 | `pending` | 等待 Task 12 |
@@ -393,4 +398,64 @@
 - 本地无法验证的事实：本机是 Windows 且没有 `xcodebuild`，全量测试与 Debug 构建都在 `xcode-27` runner 上完成
 - 验收状态：`空名称时 Save 禁用` 现由模型测试保证，不再依赖模拟器手工确认；模拟器侧其余手工检查（四点矩形、闭环闭合段、Undo 同步、Clear 确认、`onSave` 收包）仍留给 Task 9 接入后验证
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41088976344
+- 更新时间：2026-10-31
+
+### 2026-10-31 Task 9 完成记录
+
+- 新增文件：`RoamControl/Features/Routes/Views/RouteLibraryView.swift`、`RoamControl/Features/Routes/Views/RouteRunSetupView.swift`、`RoamControlTests/RouteProfileStoreTests.swift`
+- 修改文件：仅 `Documentation/ImplementationStatus.md`。未改 `HomeView.swift`、`AppModel.swift`、`RouteEditorView.swift`、`RouteLibraryModel.swift` 和 `RoamControl.xcodeproj/project.pbxproj`；工程使用 `PBXFileSystemSynchronizedRootGroup`，新文件自动进入 App 与测试 target
+- `RouteLibraryView` 接口：
+  ```swift
+  struct RouteLibraryView: View {
+      let isRouteActive: Bool
+      let isPaired: Bool
+      let onRun: (RouteRunConfiguration) -> Void
+      let onClose: () -> Void
+      let onEditActiveRoute: () -> Void
+  }
+  ```
+  内部用 `@State private var model` 持有 `RouteLibraryModel()`，所有读写都经 `model.upsert`、`model.delete`、`model.clearError`，不直接访问 `RouteStore`
+- `RouteRunSetupView` 接口：
+  ```swift
+  struct RouteRunSetupView: View {
+      let route: RouteDefinition
+      let isPaired: Bool
+      let onRun: (RouteRunConfiguration) -> Void
+      let onCancel: () -> Void
+  }
+
+  struct RouteRunConfiguration: Equatable, Sendable {
+      let route: RouteDefinition
+      let profile: RunProfile
+      let mode: RouteRunMode
+  }
+  ```
+- `RunProfileStore` 接口与行为：
+  ```swift
+  struct RunProfileStore {
+      static let storageKey = "routeRunProfile"
+      let defaults: UserDefaults
+      init(defaults: UserDefaults = .standard)
+      func load() -> RunProfile
+      func save(_ profile: RunProfile)
+  }
+  ```
+  只使用一个 `Data` key `routeRunProfile`。`load()` 先取 `Data` 再 `JSONDecoder` 解码，随后调用 `profile.validate()`；缺值、解码失败或字段越界任一发生都回退 `.running`。`save()` 先 `validate()` 再编码，校验或编码失败直接返回、不抛错，也不覆盖已有值。没有引入协议
+- 路线库界面：`NavigationStack` + `List`，标题 `Routes`；顶部关闭按钮调 `onClose`，工具栏 `New Route` 以 sheet 打开 `RouteEditorView(existingRoute: nil)`。每行显示路线名、格式化距离、`Closed`/`Open`、最后更新时间；距离由 `RouteGeometry(points:isClosed:)` 的 `totalDistance` 计算，几何失败显示 `—`，小于 1000 米用米，否则公里保留一位小数。空状态精确为 `Draw a route to start a repeatable run.`
+- 重命名与删除：左滑 `Rename` / `Delete`；删除先弹 `confirmationDialog` 再 `model.delete`；重命名用带 `TextField` 的 alert，复制原路线、只改 `name` 并把 `updatedAt` 设为 `.now`，保留 `id`、`createdAt`、`source` 后 `model.upsert`
+- 编辑器保存：回调先 `model.upsert(route)`，仅当 `model.errorMessage == nil` 才关闭编辑器；失败时编辑器保持打开，库错误条同时内嵌在编辑器 sheet 顶部展示原因。库页错误条带 `Dismiss`，调用 `model.clearError()`
+- 活跃路线限制：`isRouteActive` 为 `true` 时统一禁用所有行的点按、`Rename` 和 `Delete`，顶部显示精确文案 `Stop the active run before changing this route.`，并提供 `View active run` 按钮调用 `onEditActiveRoute`；因接口没有 `activeRouteID`，未新增该参数，也未尝试识别具体活跃路线
+- 运行设置页面：初始化时用 `RunProfileStore().load()` 填入 `@State profile`；闭环默认 `.continuous`，开放路线强制 `.once`。标题 `Run Setup`，`Cancel` 调 `onCancel`，内容用始终可滚动的 `ScrollView`，样式为 `.padding(18)`、`.regularMaterial`、连续圆角 `24`、`.borderedProminent`、`.controlSize(.large)`
+- 参数范围：速度 `1.0...6.0 m/s`（步进 `0.1`）、步频 `120...210 spm`（步进 `1`）、速度波动 `0...15%`（步进 `1%`）、步频波动 `0...15%`（步进 `1%`）、GPS 抖动 `0...5 m`（步进 `0.1`）
+- 模式规则：闭环显示 `Once` / `Continuous` / `Laps`，选 `Laps` 时出现 `1...100` 的步进器；开放路线只显示 `Once`
+- 开始禁用条件：开始按钮要求路线几何有效、`isPaired == true`、`profile.validate()` 通过、`mode.validated()` 通过，任一不满足即禁用并显示原因。未配对为 `Pair this iPhone before starting a run.`；几何无效为 `This route cannot be run.`；另外 profile 校验失败显示 `These run settings are invalid.`，模式校验失败显示 `This run mode is invalid.`
+- 开始行为：点击开始只调用 `RunProfileStore().save(profile)`，再调用 `onRun(RouteRunConfiguration(route:profile:mode:))`；不调用 `AppModel`，不启动设备会话。页面消失时再保存一次 profile，避免调完参数直接返回时丢设置
+- 新增测试：`RoamControlTests/RouteProfileStoreTests.swift` 共 3 个用例，`testLoadReturnsRunningWhenNothingWasSaved`、`testSaveAndLoadRoundTripsAllProfileFields`、`testLoadFallsBackToRunningForInvalidStoredData`。每个用例使用唯一的 `UserDefaults(suiteName: "RouteProfileStoreTests-\(UUID().uuidString)")`，在 `addTeardownBlock` 里 `removePersistentDomain(forName:)`，不访问 `.standard`。测试数从 80 增至 83
+- 红灯：提交 `8d74c7a`（`test(routes): define run profile store behavior`），run `41095140153` 编译失败，错误为 `cannot find 'RunProfileStore' in scope`，符合预期
+- 实现提交：`91c4bb2`（`feat(routes): add route library and run setup`）
+- CI：run `41095688833`、job `124200712117`，Xcode 27.1，7 分 35 秒；日志 `Test case … passed` 83 行、`failed` 0 行，`** TEST SUCCEEDED **`，同一 run 的 `Build Debug` 为 `** BUILD SUCCEEDED **`；3 个新用例逐条通过
+- 本地无法验证的事实：本机是 Windows 且没有 `xcodebuild`，全量测试与 Debug 构建都在 `xcode-27` runner 上完成，没有本地测试通过的结论
+- 未验证项：`HomeView` 尚未接入任何路线库或运行设置回调；模拟器手工检查（空状态、新建路线、重命名、删除、闭环默认 `Continuous`、开放路线强制 `Once`、开始按钮禁用状态）留到 Task 12 集成验收
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41095688833
+- 下一步：Task 10 - 恢复模型与设备会话基础
 - 更新时间：2026-10-31
