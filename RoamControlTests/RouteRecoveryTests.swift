@@ -1,6 +1,7 @@
 import XCTest
 @testable import RoamControl
 
+@MainActor
 final class RouteRecoveryTests: XCTestCase {
     private let startLatitude = 31.2304
     private let startLongitude = 121.4737
@@ -184,4 +185,122 @@ final class RouteRecoveryTests: XCTestCase {
         let decoded = try JSONDecoder().decode(SessionRecoveryRecord.self, from: JSONEncoder().encode(record))
         XCTAssertEqual(decoded, record)
     }
+
+    // MARK: - Active route runs
+
+    private static let recoveryKey = "activeSessionRecovery"
+
+    private func makeAppModel(
+        recovery: SessionRecoveryRecord
+    ) -> (appModel: AppModel, preferences: UserDefaults) {
+        let suiteName = "RouteRecoveryTests.\(UUID().uuidString)"
+        let preferences = UserDefaults(suiteName: suiteName)!
+        preferences.removePersistentDomain(forName: suiteName)
+        let appModel = AppModel(
+            pairingService: RouteRecoveryStubPairingService(),
+            preferences: preferences
+        )
+        appModel.debugActiveSessionRecovery = recovery
+        return (appModel, preferences)
+    }
+
+    private func storedRecovery(in preferences: UserDefaults) throws -> SessionRecoveryRecord {
+        let data = try XCTUnwrap(preferences.data(forKey: Self.recoveryKey))
+        return try JSONDecoder().decode(SessionRecoveryRecord.self, from: data)
+    }
+
+    func testUpdatingProgressPreservesRouteSnapshot() throws {
+        let source = route()
+        let (appModel, preferences) = makeAppModel(recovery: savedRecord(mode: .laps(3)))
+        let nextProgress = RouteRunProgress(
+            distanceInLap: 240.25,
+            completedLaps: 3,
+            elapsedTime: 900.5
+        )
+        let nextTarget = LocationTarget(
+            name: "Running \(source.name)",
+            subtitle: "3 laps · 2.4 m/s · 168 spm",
+            latitude: startLatitude + 0.002,
+            longitude: startLongitude + 0.002
+        )
+
+        appModel.updateActiveRouteRecovery(at: nextTarget, progress: nextProgress)
+
+        let stored = try storedRecovery(in: preferences)
+        XCTAssertEqual(stored.kind, .savedRoute)
+        XCTAssertEqual(stored.savedRoute, source)
+        XCTAssertEqual(stored.runProfile, .running)
+        XCTAssertEqual(stored.runMode, .laps(3))
+        XCTAssertEqual(stored.routeProgress, nextProgress)
+        XCTAssertEqual(stored.lastReportedLocation, nextTarget)
+    }
+
+    func testCompletedRunConvertsRecoveryToFinalFixedLocation() throws {
+        let (appModel, preferences) = makeAppModel(recovery: savedRecord(mode: .laps(3)))
+        let finishTarget = LocationTarget(
+            name: "Running \(route().name)",
+            subtitle: "3 laps · 0 m/s · 0 spm",
+            latitude: startLatitude + 0.0034,
+            longitude: startLongitude + 0.005
+        )
+
+        appModel.finishActiveRouteRecovery(at: finishTarget)
+
+        let stored = try storedRecovery(in: preferences)
+        XCTAssertEqual(stored.kind, .fixedLocation)
+        XCTAssertEqual(stored.lastReportedLocation, finishTarget)
+        XCTAssertNil(stored.savedRoute)
+        XCTAssertNil(stored.routeProgress)
+        XCTAssertNil(stored.runProfile)
+        XCTAssertNil(stored.runMode)
+    }
+
+    func testFailedRunRetainsSavedRouteRecovery() throws {
+        let source = route()
+        let (appModel, preferences) = makeAppModel(recovery: savedRecord(mode: .laps(3)))
+
+        appModel.deviceSession.onPhaseChange?(
+            .failed("Roam Control could not update the active location.")
+        )
+
+        let stored = try storedRecovery(in: preferences)
+        XCTAssertEqual(stored.kind, .savedRoute)
+        XCTAssertEqual(stored.savedRoute, source)
+        XCTAssertEqual(stored.routeProgress, progress)
+        XCTAssertEqual(stored.runMode, .laps(3))
+        XCTAssertEqual(stored.lastReportedLocation, fixedTarget)
+    }
+
+    func testRouteNameMatchingDestinationDoesNotConvertSavedRoute() throws {
+        var namedRoute = route()
+        namedRoute.name = fixedTarget.name
+        let record = SessionRecoveryRecord.savedRoute(
+            route: namedRoute,
+            at: fixedTarget,
+            progress: progress,
+            profile: .running,
+            mode: .continuous
+        )
+        let (appModel, preferences) = makeAppModel(recovery: record)
+
+        appModel.deviceSession.onPhaseChange?(.active(fixedTarget))
+
+        let stored = try storedRecovery(in: preferences)
+        XCTAssertEqual(stored.kind, .savedRoute)
+        XCTAssertEqual(stored.savedRoute?.name, fixedTarget.name)
+        XCTAssertNil(stored.destination)
+        XCTAssertEqual(stored.routeProgress, progress)
+    }
+}
+
+private struct RouteRecoveryStubPairingService: PairingService {
+    func storedRecord() async throws -> PairingRecordSummary? { nil }
+    func importRecord(from url: URL) async throws -> PairingRecordSummary {
+        throw PairingServiceError.corruptStoredRecord
+    }
+    func storeGeneratedRecord(_ data: Data, hostAltIRK: Data?) async throws -> PairingRecordSummary {
+        throw PairingServiceError.corruptStoredRecord
+    }
+    func pairingRecordData() async throws -> Data? { nil }
+    func removeRecord() async throws {}
 }
