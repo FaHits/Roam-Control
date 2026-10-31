@@ -11,9 +11,9 @@
 - 源码基线：`0f63d1f`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 19 - 移除匿名统计/共享数据全链路 —— 待开始
-- 任务状态：Task 9R `implemented`（CI 与产物齐备，7 项真机行为登记在交接文档第 7 节，随 Task 14 批量验证）；Task 14 `fail`、Task 16 返工；Task 17/18/20 待做；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
-- 当前执行窗口：等待 Task 19 执行
+- 当前任务：Task 19 - 移除匿名统计/共享数据全链路 —— `implemented`（提交 `4b64a38`，CI run `41219908233` 三 job 全绿）
+- 任务状态：Task 19 `implemented`（本地无 Xcode，测试/构建/产物均来自 GitHub Actions）；Task 9R `implemented`（CI 与产物齐备，7 项真机行为登记在交接文档第 7 节，随 Task 14 批量验证）；Task 14 `fail`、Task 16 返工；Task 17/18/20 待做；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
+- 当前执行窗口：Task 19 已收尾，下一步按交接文档进入 Task 20
 - 并行任务：Task 16 简体中文本地化与语言切换 —— 返工（语言弹窗与英文残留未通过）
 - 最近完成：Task 9R 代码与 CI（删除确认期间行不消失、微信输入法 marked text 可重命名），最终 HEAD CI run `41215787777` 三 job 全绿
 - 已完成工程修改：
@@ -137,6 +137,7 @@
 | Task 13：中断路线恢复 | `completed` | Xcode 27.1 下新增 2 个测试、全量 98 个测试与 Debug 构建均通过；手工强制退出恢复未验证 |
 | Task 14：完整验证 | `implemented_unverified` | 0.10.0 / 62 版本已生效（pbxproj Debug+Release，`61` 与 `0.9.2` 0 残留）；架构边界两条 rg 无输出、`check_localizations.py` 611/611；CI run `41203728405` 119 用例 0 失败、Debug/Release 构建均通过，Release IPA artifact `13043941317`（3,138,686 字节）与 Debug IPA `13044041974`（4,707,863 字节）；模拟器与真机手工清单、15 张截图全部 not_run
 | Task 15：统一中国大陆坐标域 | `implemented_unverified` | 方向已由真机 A/B 实测确定：MapKit raw 为 GCJ-02、DVT 期望 WGS-84，`DeviceCoordinateAdapter.swift:36` 取 `.gcj02ToWGS84`，只转换一次且仅在注入边界；CI run `41186642773` 113 用例 0 失败、Debug/Release 构建通过，产 Release IPA `13037307005` 与 Debug IPA `13037142318`；真机回归（天安门城楼、田径场、路线、Update、Stop & Restore）未做 |
+| Task 19：移除匿名统计/共享数据全链路 | `implemented` | 删除 `UsageAnalyticsService.swift`（643 行）与 `UsageStatisticsPrivacyView.swift`，诊断类型迁入新文件 `RoamControl/Services/FailureDiagnostics.swift`；`rg -n "UsageAnalytics|sharesAnonymousUsageStatistics|AnonymousUsage|Telemetry|What Is Shared|Share Anonymous" RoamControl RoamControlTests` 只剩 4 处允许的 `BackgroundSessionTelemetry` 后台诊断命名（`BackgroundLocationKeepAlive.swift:5`、`LocalDeviceSessionCoordinator.swift:70-71`、`ConnectionHealthView.swift:339`）；`PrivacyInfo.xcprivacy` 的 `NSPrivacyCollectedDataTypes` 变空数组，`plistlib` 解析通过；`check_localizations.py` 607 keys（原 611，删 4）exit 0；CI run `41219908233`（head `4b64a38`）三 job success，123 用例 0 失败（未删未增用例）；Release IPA artifact `13050340159`（3,103,305 字节）、Debug IPA `13049224691`（4,631,895 字节） |
 
 ## 交接记录
 
@@ -818,3 +819,25 @@
 - 已知风险：`text(in: beginningOfDocument..<endOfDocument)` 在第三方输入法 marked text 阶段的返回值依赖系统文本输入栈，已按最接近输入法的 API 取值，但 iOS 27 真机未跑；若某输入法不把 marked text 暴露给 `UITextInput`，仍可能读不到未提交文字，需要真机确认
 - 下一步：安装 Release 产物到已配对真机，准备至少 3 条路线，按上面 6 项完成截图并把 Task 9R 升为 `completed`；Task 14 继续保持 `fail`，返工顺序按交接文档进入 Task 19
 - 更新时间：2026-10-31
+
+### 2026-11-01 Task 19 完成记录：移除匿名统计/共享数据全链路
+
+- 任务：Task 19 - 移除匿名统计/共享数据全链路
+- 状态：`implemented`（CI 三 job 全绿 + 两端 IPA 产物齐备；真机表现登记在下方待验清单）
+- 分支与基线：`feat/manual-running-routes`，改前 HEAD `88170fede50219a78ebb99e6e2f0f21e40ceeee9`，版本仍 `0.10.0` / `62`；`RoamControl/Services/Location/DeviceCoordinateAdapter.swift:37` 仍为 `static let live = DeviceCoordinateAdapter(conversion: .gcj02ToWGS84)`
+- 提交：`4b64a3850c39b2e141d75b9161b14bdc62f1dfe6`（`refactor(privacy): remove anonymous usage statistics end to end`）、本文档提交（`docs(privacy): record Task 19 removal`）
+- 删除文件：`RoamControl/Services/UsageAnalyticsService.swift`（643 行）、`RoamControl/Features/Settings/UsageStatisticsPrivacyView.swift`（71 行）
+- 新增文件：`RoamControl/Services/FailureDiagnostics.swift`，只保留连接检查实际使用的四个诊断类型（`FailureDiagnosticSnapshot`、`FailureStage`、`FailureDisposition`、`SchedulerFailureReason`），头部注明不携带坐标、搜索、配对数据与错误原文；`import Foundation` 满足 `Bundle`/`NSError` 依赖
+- 修改文件：`RoamControl/App/AppModel.swift`（-153 行：删 `sharesAnonymousUsageStatistics`、`setSharesAnonymousUsageStatistics`、`anonymousUsageStatisticsKey`、`pendingSessionAnalyticsEvent`、`usageAnalytics`、`initialUsageStatisticsPreference`、`analyticsEvent(forLocationStartFailure:)`、`appBecameActive()` 与全部上报调用）、`RoamControl/App/RoamControlApp.swift`（删 `scenePhase` 环境值与 `appBecameActive()` 调用）、`RoamControl/Features/Settings/SettingsView.swift`（删整段 Privacy Section 与 `anonymousUsageStatisticsBinding`）、`RoamControl/Features/Onboarding/OnboardingView.swift`（删共享卡与第 4 页）、`RoamControl/Services/Tunnel/LocalDeviceSessionCoordinator.swift`（-22 行：删 `onBackgroundEvent`、`onConnectionEvent`、`retryTelemetry` 与 6 处上报点）、`RoamControl/Services/BackgroundLocationKeepAlive.swift`（删已成为统计专用钩子的 `onChange`）、`RoamControl/Resources/Localizable.xcstrings`（-4 key / -64 行）、`RoamControl/Resources/PrivacyInfo.xcprivacy`（`NSPrivacyCollectedDataTypes` 变空数组）
+- Onboarding 选择：删整页，"Private by design" 第 4 页整页只为共享卡服务；页数由 `pages.count` 派生（4 → 3），TabView、页点与 `Page N of M` 无障碍标签自动跟随，无需额外改动
+- 保留决定：`BackgroundSessionTelemetry`（`BackgroundLocationKeepAlive.swift:5`）保留为后台调度诊断，`LocalDeviceSessionCoordinator.swift:70-71` 的 `backgroundTelemetry` 与 `ConnectionHealthView.swift:339` 继续使用；`LocalDeviceSessionCoordinator.onFailure` / `onRecoveryNeeded` 与 `OnDevicePairingCoordinator.onFailure` 保留为诊断缝，不再有统计消费者；`PrivacyInfo.xcprivacy` 的 `NSPrivacyAccessedAPICategoryUserDefaults` / `CA92.1` 保留
+- 验收命令与结果：`rg -n "UsageAnalytics|sharesAnonymousUsageStatistics|AnonymousUsage|Telemetry|What Is Shared|Share Anonymous" RoamControl RoamControlTests` 只剩上述 4 处 `BackgroundSessionTelemetry` 命中；`rg -n "UsageStatisticsPrivacyView" RoamControl RoamControlTests` 无输出；`rg -n "ProductInteraction|DeviceID|PurposeAnalytics" RoamControl/Resources/PrivacyInfo.xcprivacy` exit 1；`python -c "plistlib.load(...)"` 输出 `NSPrivacyCollectedDataTypes: []`；`rg -n "seanhowarthdev/Roam-Control" RoamControl` 仍为既有 3 处（`ReleaseUpdateChecker.swift:36`、`SettingsView.swift:5`、`:8`）
+- 本地化：`python scripts/check_localizations.py` → `Localizable.xcstrings: 605/605 keys translated (100.0%)`、`InfoPlist.xcstrings: 2/2`、`All 607 keys have non-empty zh-Hans values.`，exit 0；删除的 4 个 key 为 `Share Anonymous Usage Statistics`、`What Is Shared`、两条保留期/发送说明长串
+- 测试：总数 123 / 删除 0 / 新增 0 / 失败 0。`RoamControlTests` 内原本 0 处统计关键词命中，没有仅测统计的用例，也没有用例断言统计字段，因此不需要改写断言
+- CI：run [41219908233](https://github.com/FaHits/Roam-Control/actions/runs/41219908233)（head `4b64a3850c39b2e141d75b9161b14bdc62f1dfe6`）`conclusion=success`；`test` success（123 用例全 passed，`** TEST SUCCEEDED **`，`Build Debug` 与 `Build Release` 均 `** BUILD SUCCEEDED **`，`Check localization catalogs` 通过）、`unsigned-ipa` success、`unsigned-ipa-debug` success
+- 产物：Release IPA artifact `RoamControl-unsigned-ipa` id `13050340159` / 3,103,305 字节；Debug IPA artifact `RoamControl-unsigned-debug-ipa` id `13049224691` / 4,631,895 字节
+- 本地无法验证：本机为 Windows，无 `xcodebuild`、无 iOS 模拟器、无配对真机；测试、Debug/Release 构建与产物全部来自 `xcode-27` GitHub Actions
+- 未验证项（真机）：① Settings 页不再出现 Privacy 分区与 Share Anonymous Usage Statistics 开关；② Onboarding 只有 3 页且页点为 3，第 4 页 Private by design 不存在；③ 配对流程失败时 Connection Health 仍能显示失败阶段与调度原因（诊断缝未被破坏）
+- 已知风险：`LocalDeviceSessionCoordinator.onFailure` / `onRecoveryNeeded` 与 `OnDevicePairingCoordinator.onFailure` 现在没有消费者，失败诊断只在 Connection Health 的属性快照上体现；若后续要恢复上报，需要新增独立服务，不能复用已删的 `UsageAnalyticsService`
+- 下一步：进入 Task 20，不要在本分支继续改 Privacy 相关文件
+- 更新时间：2026-11-01
