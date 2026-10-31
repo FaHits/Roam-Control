@@ -11,11 +11,11 @@
 - 源码基线：`0f63d1f`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 14 - 完整验证路线系统 —— `fail`（用户已完成全量真机测试，存在不通过项；返工计划见交接文档）
-- 任务状态：`fail`；Task 9 / Task 16 返工，Task 17–20 新增；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
-- 当前执行窗口：交接给下一个“策划 + 验收”会话
+- 当前任务：Task 9R - 路线库删除动画与微信输入法重命名 —— `implemented_unverified`（代码与 CI 通过；真机 6 项截图未做）
+- 任务状态：Task 9R `implemented_unverified`；Task 14 `fail`、Task 16 返工；Task 17–20 待做；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
+- 当前执行窗口：Task 9R 返工完成，等待真机验收
 - 并行任务：Task 16 简体中文本地化与语言切换 —— 返工（语言弹窗与英文残留未通过）
-- 最近完成：Task 15 / 10 / 12 / 13 按用户全量真机测试口径通过；Task 14 整体仍未通过
+- 最近完成：Task 9R 代码与 CI（删除确认期间行不消失、微信输入法 marked text 可重命名）；真机截图未做
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Views/RouteRunCard.swift`
   - `RoamControl/Features/Map/MapViewModel.swift`
@@ -31,6 +31,7 @@
   - `RoamControl/Features/Routes/State/RouteEditorModel.swift`
   - `RoamControlTests/RouteEditorModelTests.swift`
   - `RoamControlTests/RouteProfileStoreTests.swift`
+  - `RoamControl/Features/Routes/State/RouteNameValidator.swift`
   - `RoamControl/Features/Routes/State/RouteLibraryModel.swift`
   - `RoamControlTests/RouteLibraryModelTests.swift`
   - `RoamControl/Features/Routes/Storage/RouteStore.swift`
@@ -69,6 +70,10 @@
 - Task 8 验收修正构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - Task 9 测试结果：GitHub Actions `Xcode 27 verification` run `41095688833` 通过；Xcode 27.1 下 `RouteProfileStoreTests` 的 3 个用例全部通过，`RoamControlTests` 全量 83 个用例 0 失败，结果为 `TEST SUCCEEDED`
 - Task 9 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
+- Task 9R 红灯：run `41214550560`（head `2be0f25`）`Run RoamControlTests` 失败，`RouteLibraryModelTests.swift:158` 报 `cannot find 'RouteNameValidator' in scope`，确认 4 条新测试先于实现存在
+- Task 9R 测试结果：run `41214754177`（head `b50fe68`）`conclusion=success`；`RouteLibraryModelTests` 16 个用例（新增 4 个名称规范化用例）全部通过，`RoamControlTests` 全量 123 个用例 0 失败，结果为 `** TEST SUCCEEDED **`
+- Task 9R 构建结果：同一 run 的 `Build Debug` 与 `Build Release` 均通过，结果为 `** BUILD SUCCEEDED **`
+- Task 9R 产物：Release IPA artifact `RoamControl-unsigned-ipa` id `13048490403` / 3,146,349 字节；Debug IPA artifact `RoamControl-unsigned-debug-ipa` id `13048205807` / 4,731,525 字节
 - Task 10 测试结果：GitHub Actions `Xcode 27 verification` run `41102340345` 通过；Xcode 27.1 下新增 `RouteRecoveryTests` 6 个用例、`RouteSessionModelTests` 3 个用例全部通过，`RoamControlTests` 全量 92 个用例 0 失败，结果为 `TEST SUCCEEDED`
 - Task 10 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - Task 11 测试结果：GitHub Actions `Xcode 27 verification` run `41156408775` 通过；Xcode 27.1 下新增 `RouteRecoveryTests` 4 个用例全部通过，`RoamControlTests` 全量 96 个用例 0 失败，结果为 `TEST SUCCEEDED`
@@ -122,7 +127,8 @@
 | Task 6：路线库状态模型 | `completed` | Xcode 27.1 下 12 个状态模型测试与全量 57 个测试通过 |
 | Task 7：路线编辑器状态模型 | `completed` | Xcode 27.1 下 21 个编辑器测试与全量 78 个测试通过 |
 | Task 8：手动路线编辑界面 | `completed` | Xcode 27.1 全量 78 个测试与 Debug 构建均通过 |
-| Task 9：路线库和运行设置界面 | `completed` | Xcode 27.1 全量 83 个测试（新增 3 个 `RunProfileStore` 测试）与 Debug 构建均通过 |
+| Task 9：路线库和运行设置界面 | `completed` | Xcode 27.1 全量 83 个测试（新增 3 个 `RunProfileStore` 测试）与 Debug 构建均通过；2026-10-31 因删除动画与微信输入法重命名返工，见 Task 9R |
+| Task 9R：路线库删除动画与微信输入法重命名 | `implemented_unverified` | 删除 swipe 改为普通红色按钮，确认前不动列表数据；重命名改用 UIKit `UITextField` 读取 marked text，点击时校验并写入；新增 `RouteNameValidator` 4 个测试，全量 123 个 0 失败；CI run `41214754177` 三 job 全绿，Release artifact `13048490403`（3,146,349 字节）、Debug artifact `13048205807`（4,731,525 字节）；真机 6 项截图未做 |
 | Task 10：恢复模型与设备会话基础 | `implemented_unverified` | 返工修复路线启动污染 Saved Places 地点历史：`startLocationSession` 的 `historyTarget` 改为 `LocationTarget?`，只有非 `nil` 才 `addToHistory`，路线传 `nil`（`AppModel.swift:366`、`:380`、`:393-395`）；新增 `RouteHistoryTests` 2 例；CI run `41195528908` 116 用例 0 失败、Debug/Release 构建与两个 unsigned IPA 均成功（Release artifact `13040706415`、Debug artifact `13040422834`）；真机 6 步验收与截图 `Task10-saved-places-history.png`、`Task10-home-routes-icon.png` 未做 |
 | Task 11：运行中进度持久化 | `completed` | Xcode 27.1 下 4 个新测试与全量 96 个测试通过 |
 | Task 12：运行卡片与主页整合 | `implemented_unverified` | 返工修复 Routes 按钮空图标（`RouteSymbol.library`，无效符号名全仓 0 命中）；CI run `41193407036` 114 用例 0 失败、Debug/Release 构建通过，Release IPA artifact `13039403715`；真机截图 `Task12-routes-icon.png` 未做 |
@@ -788,4 +794,25 @@
 - 状态判定：自动化门禁 + 单元测试 + Debug + Release 全过，但真机手工清单与截图未做，按任务书不得写 `completed` → Task 14 保持 `implemented_unverified`。Task 15 / 10 / 12 / 16 同样保持 `implemented_unverified`，未因 CI 绿而升级；Task 13 保持 `completed`（其真机强制退出恢复项仍属未验证）
 - 已知风险：版本号已标 0.10.0 / 62，但该版本没有任何真机运行证据，产物 IPA 只有 14 天保留期；版本升级本身没有改动任何路线、恢复、设备会话代码，所以 CI 绿不代表四项真机验收已过
 - 下一步：按顺序补真机项 —— Task 15 坐标与 Stop 五项、Task 10/11/12/13 路线系统 11 项、Task 16 语言三项；每项截图入库后再把对应任务升为 `completed`
+- 更新时间：2026-10-31
+
+### 2026-10-31 Task 9R 返工记录：删除动画与微信输入法重命名
+
+- 任务：Task 9R - 路线库删除动画与微信输入法重命名
+- 状态：`implemented_unverified`（代码与 CI 通过；真机 6 项截图未做）
+- 分支与基线：`feat/manual-running-routes`，返工前 HEAD `0f63d1f195eae66da0b193d862e7bef75b1dddb5`，版本仍 `0.10.0` / `62`；改前工作树只有交接文档与状态文件待提交
+- 提交：`ad08d1ad5dff2f628bd7e1538b719481da85da7e`（`docs(handoff): record the 2026-10-31 rework handoff`，单独提交既有交接文档）、`2be0f2510eabaaf89e35b11ee2faced135fe5fa6`（`test(routes): cover route name normalization`，红灯）、`b50fe688697482dd9072565bcc120ea7c6b4c310`（`fix(routes): stabilize delete swipe and accept marked rename text`，绿灯）、本文档提交（`docs(routes): record Task 9R rework`）
+- 修改文件：新增 `RoamControl/Features/Routes/State/RouteNameValidator.swift`；修改 `RoamControl/Features/Routes/State/RouteLibraryModel.swift`、`RoamControl/Features/Routes/Views/RouteLibraryView.swift`、`RoamControlTests/RouteLibraryModelTests.swift`、`Documentation/ImplementationStatus.md`。未改 `RouteRunSetupView.swift`、`RouteEditorView.swift`、`AppModel.swift`、`DeviceCoordinateAdapter.swift`、`project.pbxproj`；`RoamControl/Services/Location/DeviceCoordinateAdapter.swift:37` 仍为 `.gcj02ToWGS84`
+- 删除动画（Fix A）：根因是 `RouteLibraryView` 的 swipeActions 使用了 `Button("Delete", role: .destructive)`，SwiftUI 在点击 destructive swipe action 时立即播放行移除/折叠动画，即使数据只是标记为待删除。现改为普通 `Button("Delete") { routePendingDeletion = route }.tint(.red)`，不提前调用 `model.delete`，也不改 `RouteLibraryModel.delete(id:)` 语义；确认弹窗里的 `Delete Route` 仍保留 `role: .destructive`，只负责按钮样式。因此确认框打开期间列表数据与行数不变，取消不快排，确认后才删除
+- 重命名（Fix B）：根因是 Rename 的可用状态绑定 `renameText`，微信输入法未提交的 marked text 不进入 SwiftUI binding，字段显示“神秘”时 binding 仍为空，按钮被 `trimmingCharacters(in: .whitespacesAndNewlines).isEmpty` 置灰。现改为自定义 `RouteRenameSheet`：Rename 按钮始终可点，点击时通过 `RouteRenameTextFieldHandle.currentText` 读取 `UITextField` 的 `text(in: beginningOfDocument..<endOfDocument)`（包含 marked text），再交给 `RouteNameValidator` 校验；有效名称才写入。Apple 输入法走同一 `UITextField`，行为未改
+- 名称规则：新增纯函数 `RouteNameValidator.normalizedName(from:)`，先 `trimmingCharacters(in: .whitespacesAndNewlines)`，空串返回 `nil`，否则返回 trim 后的值；`RouteLibraryModel.upsert` 改为复用该函数，模型与视图不再各自复制规则。空名称或纯空白点击 Rename 时按钮保持可点，但显示 `Route name cannot be empty.` 且不写入路线，不出现空名路线
+- 新增测试：`RoamControlTests/RouteLibraryModelTests.swift` 增加 4 例 —— `testNormalizedNameRejectsEmptyName`、`testNormalizedNameRejectsWhitespaceAndNewlines`、`testNormalizedNameAcceptsOrdinaryName`、`testNormalizedNameTrimsSurroundingWhitespace`。测试总数 119 → 123，0 失败；119 条既有测试全部保留并通过
+- 红灯证据：run `41214550560`（head `2be0f25`，job `124576223538`）`Run RoamControlTests` 失败，`RouteLibraryModelTests.swift:158:22: error: cannot find 'RouteNameValidator' in scope`（4 处引用），说明测试先于实现存在
+- 绿灯证据：run [41214754177](https://github.com/FaHits/Roam-Control/actions/runs/41214754177)（head `b50fe68`）`conclusion=success`，三个 job 全 success：`test` 8m56s（`RouteLibraryModelTests` 16 例通过，全量 123 例通过 / 0 失败，`** TEST SUCCEEDED **`，`Build Debug` 与 `Build Release` 均 `** BUILD SUCCEEDED **`，`Check localization catalogs` 通过）、`unsigned-ipa` 43s、`unsigned-ipa-debug` 42s。唯一注解是 actions/checkout@v4 的 Node.js 20 弃用提示
+- 产物：Release IPA artifact `RoamControl-unsigned-ipa` id `13048490403` / 3,146,349 字节；Debug IPA artifact `RoamControl-unsigned-debug-ipa` id `13048205807` / 4,731,525 字节
+- 本地无法验证：本机为 Windows，无 `xcodebuild`、无 iOS 模拟器、无配对真机；测试、Debug/Release 构建与产物全部来自 `xcode-27` GitHub Actions，本文件不声称本地通过
+- 未验证项（真机，逐项 `not_run`）：① 右滑 Delete 后等待 2 秒，确认框打开期间行仍在原位、不折叠、不塌陷；② 点 Cancel 后行仍在、顺序与滚动位置不变；③ 再次 swipe + 确认后路线消失，其余路线顺序稳定；④ 微信输入法在空字段输入“神秘”，marked text 未提交时 Rename 仍可点，点击后列表显示“神秘”；⑤ Apple 输入法重复同样重命名，行为不回归；⑥ 空名称或纯空白时 Rename 可点但点击不写入，并显示 `Route name cannot be empty.`。对应截图 `Task9R-delete-hold.png`、`Task9R-delete-cancel.png`、`Task9R-delete-confirm.png`、`Task9R-wechat-ime.png`、`Task9R-apple-ime.png`、`Task9R-empty-name.png` 均未产出
+- 自动化边界：删除动画与 UIKit `UITextField` marked text 读取无法在当前 Windows 环境单元测试，只能真机验证；本次 XCTest 只覆盖 `RouteNameValidator` 的 4 条纯函数规则，不构成 UI 证据
+- 已知风险：`text(in: beginningOfDocument..<endOfDocument)` 在第三方输入法 marked text 阶段的返回值依赖系统文本输入栈，已按最接近输入法的 API 取值，但 iOS 27 真机未跑；若某输入法不把 marked text 暴露给 `UITextInput`，仍可能读不到未提交文字，需要真机确认
+- 下一步：安装 Release 产物到已配对真机，准备至少 3 条路线，按上面 6 项完成截图并把 Task 9R 升为 `completed`；Task 14 继续保持 `fail`，返工顺序按交接文档进入 Task 19
 - 更新时间：2026-10-31
