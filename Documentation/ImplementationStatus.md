@@ -86,11 +86,11 @@
 - Task 15 实测结论（2026-10-31，天安门-城楼，用户真机）：raw `39.908717, 116.397488`，高德蓝点在城楼东侧约 500 m；`wgs84ToGCJ02` 得 `39.910120, 116.403732`，蓝点更东；`gcj02ToWGS84` 得 `39.907316, 116.391247`，蓝点落在城楼上。三次 Probe 的 Readback 与注入值完全一致，`Simulated=yes`、`Accuracy=5.0 m`。判定：MapKit raw = GCJ-02，DVT 期望 WGS-84，`.live` 取 `.gcj02ToWGS84`
 - Task 15 剩余待办：真机回归 ① 装 Release 包搜「天安门-城楼」Start Location，高德蓝点与 Apple Maps pin 应在城楼；② 「岭南师范学院田径场」同样；③ 经过田径场的路线起点与轨迹不偏；④ Update Location 换目标蓝点跟随；⑤ Stop & Restore 恢复真实位置
 - Task 15 真机回归操作单：Release 包即可（Probe 只在 Debug 包）；同一地标截图用同一缩放级别，两地图不一致时两个都报
-- Task 15 CI 结果（当前 HEAD）：GitHub Actions run `41184102255`（`https://github.com/FaHits/Roam-Control/actions/runs/41184102255`）`conclusion=success`；`test` job 13m46s，111 个用例通过、0 失败，`** TEST SUCCEEDED **`；`Build Debug` 与 `Build Release` 均 `** BUILD SUCCEEDED **`
-- Task 15 Debug IPA：同一 run 的 `unsigned-ipa-debug` job（1m14s）产出 `RoamControl-unsigned-debug.ipa`，artifact `RoamControl-unsigned-debug-ipa`，id `13036955794`，4,652,037 字节；archive 配置为 `CONFIGURATION = Debug` / `SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG` / `SWIFT_OPTIMIZATION_LEVEL = -Onone`，`ENABLE_DEBUG_DYLIB=NO`
-- Task 15 Debug IPA 自检：job 内 `strings -a …/RoamControl.app/RoamControl | grep -cF 'Probe (Debug)'` 输出 `hits: 2`，命中行 `Probe (Debug) inject single candidate`（Probe 区 accessibilityIdentifier）与 `Probe (Debug)`（Probe section 标题），命中为 0 则 job 失败；Release 包不含 Probe，真机 A/B 必须装 Debug 包
-- Task 15 artifact：run `41184102255` 的 `unsigned-ipa` job 1m16s 成功，artifact `RoamControl-unsigned-ipa`，id `13036642763`，3,092,238 字节
-- Task 15 历史 CI：run `41181841011`（111 用例）、`41176205058`（107 用例）、`41176782498`（仅文档）
+- Task 15 CI 结果（当前 HEAD）：GitHub Actions run `41186642773`（`https://github.com/FaHits/Roam-Control/actions/runs/41186642773`）`conclusion=success`；`test` job 9m23s，113 个用例通过、0 失败，`** TEST SUCCEEDED **`；`Build Debug` 与 `Build Release` 均 `** BUILD SUCCEEDED **`
+- Task 15 Debug IPA：run `41186642773` 的 `unsigned-ipa-debug` job（41s）产出 `RoamControl-unsigned-debug.ipa`，artifact `RoamControl-unsigned-debug-ipa`，id `13037142318`，4,652,079 字节；archive 配置为 `CONFIGURATION = Debug` / `SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG` / `SWIFT_OPTIMIZATION_LEVEL = -Onone`，`ENABLE_DEBUG_DYLIB=NO`
+- Task 15 Debug IPA 自检：job 内 `strings -a …/RoamControl.app/RoamControl | grep -cF 'Probe (Debug)'` 输出 `hits: 2`，命中行 `Probe (Debug) inject single candidate`（Probe 区 accessibilityIdentifier）与 `Probe (Debug)`（Probe section 标题），命中为 0 则 job 失败；Release 包不含 Probe
+- Task 15 artifact：run `41186642773` 的 `unsigned-ipa` job（1m6s）产物 `RoamControl-unsigned-ipa`，id `13037307005`，3,092,232 字节
+- Task 15 历史 CI：run `41184102255`（111 用例 + Debug IPA）、`41181841011`（111 用例）、`41176205058`（107 用例）、`41176782498`（仅文档）
 - Task 15 新增测试：`DeviceInjectionBoundaryTests` 4 例（适配器输出即注入值、`.none` 透传、注入不改 target、源码断言两个 FFI 调用点只用 `injected`），`ChinaCoordinateTransformTests` 往返用例补 1e-6 度断言
 - Task 15 转换算法核对：独立 Python 实现复算固定算例，天安门 `39.908722,116.397499 → 39.91012550007891,116.4037425752605`（554.93 m）、岭南师范 `21.27122,110.34213 → 21.268808687690072,110.34659102093997`（534.39 m）、湛江田径场 `21.2585,110.3025 → 21.25601589175258,110.30687415389694`（530.82 m），与计划给定值逐位一致
 
@@ -120,7 +120,7 @@
 | Task 12：运行卡片与主页整合 | `completed` | Xcode 27.1 全量 96 个测试与 Debug 构建均通过 |
 | Task 13：中断路线恢复 | `completed` | Xcode 27.1 下新增 2 个测试、全量 98 个测试与 Debug 构建均通过；手工强制退出恢复未验证 |
 | Task 14：完整验证 | `implemented_unverified` | 架构边界与 98 个测试、Debug/Release 构建均通过（CI run `41166020073`）；模拟器与真机手工清单未验证 |
-| Task 15：统一中国大陆坐标域 | `in_progress` | 转换工具、注入适配器、只读诊断页、DEBUG 探针与 111 用例已就位；CI run `41184102255` 全绿，并产出带 `Probe (Debug)` 自检的 Debug IPA（artifact `13036955794`）；`live` 仍为 `.none`，等天安门城楼与岭南师范学院田径场 A/B 实测数据后改一行并重跑 CI |
+| Task 15：统一中国大陆坐标域 | `implemented_unverified` | 方向已由真机 A/B 实测确定：MapKit raw 为 GCJ-02、DVT 期望 WGS-84，`DeviceCoordinateAdapter.swift:36` 取 `.gcj02ToWGS84`，只转换一次且仅在注入边界；CI run `41186642773` 113 用例 0 失败、Debug/Release 构建通过，产 Release IPA `13037307005` 与 Debug IPA `13037142318`；真机回归（天安门城楼、田径场、路线、Update、Stop & Restore）未做 |
 
 ## 交接记录
 
