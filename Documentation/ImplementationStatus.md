@@ -9,11 +9,14 @@
 - 源码基线：`38c0d80`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 11 - 运行中进度持久化
+- 当前任务：Task 12 - 运行卡片与主页整合
 - 任务状态：`completed`
 - 当前执行窗口：DSH-Agent（2026-10-31 完成）
-- 最近完成：Task 11 - 运行中进度持久化
+- 最近完成：Task 12 - 运行卡片与主页整合
 - 已完成工程修改：
+  - `RoamControl/Features/Routes/Views/RouteRunCard.swift`
+  - `RoamControl/Features/Map/MapViewModel.swift`
+  - `RoamControl/Features/Home/HomeView.swift`
   - `RoamControl/Features/Routes/State/RouteSessionModel.swift`
   - `RoamControl/Models/SessionRecoveryRecord.swift`
   - `RoamControl/App/AppModel.swift`
@@ -67,8 +70,10 @@
 - Task 10 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - Task 11 测试结果：GitHub Actions `Xcode 27 verification` run `41156408775` 通过；Xcode 27.1 下新增 `RouteRecoveryTests` 4 个用例全部通过，`RoamControlTests` 全量 96 个用例 0 失败，结果为 `TEST SUCCEEDED`
 - Task 11 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
+- Task 12 测试结果：GitHub Actions `Xcode 27 verification` run `41160737660` 通过；Xcode 27.1 下 `RoamControlTests` 全量 96 个用例 0 失败，结果为 `TEST SUCCEEDED`（本任务只新增视图与接线，未新增测试）
+- Task 12 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：执行 Task 12 - 运行卡片与主页整合（未认领，先读实施计划 Task 12 并把状态改为 `in_progress`）
+- 下一步：执行 Task 13 - 中断路线恢复（未认领，先读实施计划 Task 13 并把状态改为 `in_progress`）
 
 ## 自动完成规则
 
@@ -93,8 +98,8 @@
 | Task 9：路线库和运行设置界面 | `completed` | Xcode 27.1 全量 83 个测试（新增 3 个 `RunProfileStore` 测试）与 Debug 构建均通过 |
 | Task 10：恢复模型与设备会话基础 | `completed` | Xcode 27.1 下 9 个新测试与全量 92 个测试通过 |
 | Task 11：运行中进度持久化 | `completed` | Xcode 27.1 下 4 个新测试与全量 96 个测试通过 |
-| Task 12：运行卡片与主页整合 | `pending` | 等待 Task 11 |
-| Task 13：中断路线恢复 | `pending` | 等待 Task 12 |
+| Task 12：运行卡片与主页整合 | `completed` | Xcode 27.1 全量 96 个测试与 Debug 构建均通过 |
+| Task 13：中断路线恢复 | `pending` | 等待认领 |
 | Task 14：完整验证 | `pending` | 等待 Task 13 |
 
 ## 交接记录
@@ -590,4 +595,29 @@
 - 未验证项：真实设备会话（配对、Local DevVPN 连接、`updateLocation` 逐秒回传）、真机后台长跑的 5 秒节流节奏、`HomeView` 与 `RouteRunCard` 展示运行进度（Task 12）、中断后从 `.savedRoute` 恢复继续跑（Task 13）、模拟器/真机手工验收
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41156408775
 - 下一步：Task 12 - 运行卡片与主页整合
+- 更新时间：2026-10-31
+
+### 2026-10-31 Task 12 完成记录
+
+- 修改文件：`RoamControl/Features/Routes/Views/RouteRunCard.swift`（新建，354 行）、`RoamControl/Features/Map/MapViewModel.swift`（+46）、`RoamControl/Features/Home/HomeView.swift`（+144/-3）、`Documentation/ImplementationStatus.md`。未改 `RoamControl.xcodeproj/project.pbxproj`（工程用 `PBXFileSystemSynchronizedRootGroup`，新 Swift 文件自动纳入编译）、未改 `RouteSessionModel.swift`、`RouteRunner.swift`、`RouteGeometry.swift`、`RouteLibraryView.swift`、`RouteRunSetupView.swift`、`RouteEditorView.swift`、`AppModel.swift`、`SessionRecoveryRecord.swift`，未改版本号与 build number
+- 实现提交：`45b439a`（`feat(routes): add route run card`）、`072ee7e`（`feat(routes): integrate manual routes into home`）
+- 相机：`MapViewModel.show(_ geometry: RouteGeometry)` 用 `geometry.points` 的经纬度 min/max 求中心，`padding` 通过 `× 1.5`（即四周各 25%）实现，`minimumSpan` 为 `0.002`；空点集或任一 delta 非有限时退回 `.automatic`，不产生 NaN
+  ```swift
+  let latitudeDelta = max((maximumLatitude - minimumLatitude) * 1.5, minimumSpan)
+  cameraPosition = .region(MKCoordinateRegion(center: centre, span: MKCoordinateSpan(...)))
+  ```
+- 卡片：`RouteRunCard(route:session:isPaired:onStart:onTogglePause:onStop:onDone:)` 只读 `RouteSessionModel`，不持有运行逻辑。header 显示路线名与 phase 标题，`ProgressView(value: session.lapProgress)`，六个 metric（Laps、Lap 百分比、Distance、Speed m/s、Cadence spm、Elapsed）。按钮按 phase 分派：`.idle`→Start，`.failed`→Try Again（同样调用 `onStart`），`.preparing`→ProgressView 文案并禁用，`.running`→Pause + Stop，`.paused`→Resume + Stop，`.finished`→Done，`.stopping`→恢复真实位置文案并禁用。Stop 走 `confirmationDialog`（"Stop & Restore" destructive / "Keep Running" cancel），Done 只在 `.finished` 出现
+- 卡片样式：`@Environment(\.dynamicTypeSize)`，`isAccessibilitySize` 时 `ScrollView` + `.frame(maxHeight: 460)`，卡片 `.padding(18).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))`，主按钮 `.borderedProminent` + `.controlSize(.large)`，与 `WalkingRoutePreviewCard` 一致。Start、Pause、Resume、Stop、Done 均设置 `accessibilityLabel`
+- 主页入口：`HomeView` 新增 `routeSession`/`isShowingRouteLibrary`/`routeLibraryError` 三个 `@State`，Favourites 左侧新增 `point.topleft.down.to.point.right.curvepath` 按钮（`accessibilityLabel("Routes")`）；`Favourites` 按钮在 `routeSession.locksRouteInput` 时禁用
+- onRun 顺序（`startRouteRun(_:)`）：关库 → `walkingSimulation.reset()` + `walkingRoutePlanner.clear()` → `mapModel.clearSelectedLocation()` → `routeSession.prepare(route:profile:mode:progress:)`（progress 全零）→ 成功后 `mapModel.show(try RouteGeometry(...))` → `Task { await routeSession.start(using: appModel) }`；`prepare` 或几何构造抛错时设置 `routeLibraryError` 并 `return`，不启动设备、不碰 `deviceSession`
+- 地图：`activeRouteGeometry` 由 `routeSession.route` 用 `try?` 构造，`MapPolyline(coordinates:)` 蓝色 `lineWidth 6`；`routeSession.snapshot` 存在时用 `reportedCoordinate` 画 `figure.run.circle.fill` 的 "Running location" 标注，样式与 "Walking location" 相同。固定点 `Marker` 增加 `routeSession.route == nil` 条件；Apple `MKRoute` 与手绘路线不会同时出现，因为开跑前已 `walkingRoutePlanner.clear()`
+- 互斥：地图点击 `onTapGesture` 增加 `guard !routeSession.locksRouteInput`，搜索栏 `.disabled` 与建议列表条件都并入 `locksRouteInput`，`SavedPlacesView.onSelect` 同样加 guard；`LocationSelectionCard.onStart` 先 `routeSession.reset()`。卡片优先级为 RestoringRealLocationCard → RouteRunCard（`routeSession.route != nil`）→ WalkingRoutePreviewCard → LocationSelectionCard，因此路线运行期间不会出现固定位置卡
+- 设备阶段：`.onChange(of: appModel.deviceSession.phase)` 里在 `walkingSimulation.handleDeviceSessionPhase` 之后加 `routeSession.handleDeviceSessionPhase(newPhase, appModel: appModel)`，两个流程各自按 phase guard 只处理自己的运行；`routeSession` 的 `.idle`/`.failed` 不触碰 `selectedLocation`，固定位置 UI 仍由既有 `LocationSelectionCard` 驱动
+- Done 与重入：`onDone` 先 `routeSession.reset()` 再 `mapModel.clearSelectedLocation()`，随后仅当 `deviceSession.phase` 为 `.active`/`.stopping` 才设置 `shouldClearLocationAfterRestoration = true` 并调用 `appModel.stopLocationSession()`，`.idle` 等状态直接跳过；`.finished` 状态下卡片只提供 Done，没有再启动入口
+- 新增测试：无。本任务只新增视图并调用 Task 10/11 已覆盖的 `RouteSessionModel` 与 `AppModel` 接口，未新增可失败的逻辑；测试数维持 96
+- CI：run `41160737660`，head `072ee7e`，`conclusion=success`，`Test case … passed` 96 行、`failed` 0 行，`** TEST SUCCEEDED **`，同一 run 的 `Build Debug` 为 `** BUILD SUCCEEDED **`；run `41160737660` 对应实现提交，文档提交由后续 run 验证
+- 本地无法验证的事实：本机是 Windows 且没有 `xcodebuild`，全量测试与 Debug 构建都在 `xcode-27` runner 上完成，没有本地测试通过的结论；也没有 iOS 模拟器，未做手工交互验收
+- 未验证项：真实设备会话下的路线运行（`updateLocation` 逐秒回传、暂停后坐标确实不再变化、Stop 后真实位置恢复）、有限圈完成到 Done 的动画与折线消失、固定位置与路线之间连续切换的实际表现、Dynamic Type accessibility 尺寸下的卡片滚动、`onEditActiveRoute` 在路线库仍展示时设置的错误提示要等 sheet 关闭后才可见
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41160737660
+- 下一步：Task 13 - 中断路线恢复
 - 更新时间：2026-10-31
