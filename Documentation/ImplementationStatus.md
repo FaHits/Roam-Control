@@ -9,10 +9,10 @@
 - 源码基线：`38c0d80`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 10 - 恢复模型与设备会话基础
+- 当前任务：Task 11 - 运行中进度持久化
 - 任务状态：`completed`
 - 当前执行窗口：DSH-Agent（2026-10-31 完成）
-- 最近完成：Task 10 - 恢复模型与设备会话基础
+- 最近完成：Task 11 - 运行中进度持久化
 - 已完成工程修改：
   - `RoamControl/Features/Routes/State/RouteSessionModel.swift`
   - `RoamControl/Models/SessionRecoveryRecord.swift`
@@ -65,8 +65,10 @@
 - Task 9 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - Task 10 测试结果：GitHub Actions `Xcode 27 verification` run `41102340345` 通过；Xcode 27.1 下新增 `RouteRecoveryTests` 6 个用例、`RouteSessionModelTests` 3 个用例全部通过，`RoamControlTests` 全量 92 个用例 0 失败，结果为 `TEST SUCCEEDED`
 - Task 10 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
+- Task 11 测试结果：GitHub Actions `Xcode 27 verification` run `41156408775` 通过；Xcode 27.1 下新增 `RouteRecoveryTests` 4 个用例全部通过，`RoamControlTests` 全量 96 个用例 0 失败，结果为 `TEST SUCCEEDED`
+- Task 11 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：执行 Task 11 - 运行中进度持久化（未认领，先读实施计划 Task 11 并把状态改为 `in_progress`）
+- 下一步：执行 Task 12 - 运行卡片与主页整合（未认领，先读实施计划 Task 12 并把状态改为 `in_progress`）
 
 ## 自动完成规则
 
@@ -90,7 +92,7 @@
 | Task 8：手动路线编辑界面 | `completed` | Xcode 27.1 全量 78 个测试与 Debug 构建均通过 |
 | Task 9：路线库和运行设置界面 | `completed` | Xcode 27.1 全量 83 个测试（新增 3 个 `RunProfileStore` 测试）与 Debug 构建均通过 |
 | Task 10：恢复模型与设备会话基础 | `completed` | Xcode 27.1 下 9 个新测试与全量 92 个测试通过 |
-| Task 11：运行中进度持久化 | `pending` | 等待 Task 10 |
+| Task 11：运行中进度持久化 | `completed` | Xcode 27.1 下 4 个新测试与全量 96 个测试通过 |
 | Task 12：运行卡片与主页整合 | `pending` | 等待 Task 11 |
 | Task 13：中断路线恢复 | `pending` | 等待 Task 12 |
 | Task 14：完整验证 | `pending` | 等待 Task 13 |
@@ -547,4 +549,45 @@
 - 未验证项：真实设备会话（配对、Local DevVPN 连接、`updateLocation` 逐秒回传）、失败后恢复记录的跨启动恢复、后台长跑与每 tick 进度持久化（Task 11）、`HomeView` 与 `RouteRunCard` 整合（Task 12）、模拟器/真机手工验收
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41102340345
 - 下一步：Task 11 - 运行中进度持久化
+- 更新时间：2026-10-31
+
+### 2026-10-31 Task 11 完成记录
+
+- 修改文件：`RoamControl/Features/Routes/State/RouteSessionModel.swift`（+2）、`RoamControl/App/AppModel.swift`（+17，`#if DEBUG` 测试入口）、`RoamControlTests/RouteRecoveryTests.swift`、`Documentation/ImplementationStatus.md`。未改 `RoamControl.xcodeproj/project.pbxproj`，未改 `HomeView.swift`、`RouteRunCard.swift`、`RouteLibraryView.swift`、`RouteRunSetupView.swift`，未改版本号与 build number
+- 每 tick 持久化：`advance(by:using:)` 仍在最前面 `guard appModel.deviceSession.updateLocation(target) == .updated`，失败保持原 `fail(...)` 路径且不写进度；设备接受后只在 `next.phase != .finished` 时调用 `appModel.updateActiveRouteRecovery(at: target, progress: progress(of: next))`。写入的 `target` 就是设备接受的那一个，进度取自 `advance` 之后的 `next` 快照，不是上一帧
+  ```swift
+  if next.phase == .finished {
+      finish(at: target, using: appModel)
+  } else {
+      appModel.updateActiveRouteRecovery(at: target, progress: progress(of: next))
+  }
+  ```
+- 不写进度的路径：移动循环只在 `phase == .running` 时推进（`beginMovement` 的 switch），`togglePause()` 不碰恢复记录，`.preparing` 阶段的唯一写入是 `start` 里已有的种子调用，`.finished` 分支直接走 `finish(at:using:)`，`.failed` 走取消路径。没有新增第二个定时器，仍是原来的 1 秒 `movementTask` + `saveActiveSessionRecoveryIfDue` 的 5 秒节流
+- 完成转 fixed：`finish(at: target, using:)` → `appModel.finishActiveRouteRecovery(at: target)`，内部 guard `recovery.kind == .savedRoute` 后替换成 `.fixed(at: target)`，同步 `lastRecoverySaveDate = .now` 并立即编码写盘，`savedRoute`/`routeProgress`/`runProfile`/`runMode` 全部变 `nil`
+- 停止与失败：`stop(using:)` 仍只取消循环、设 `.stopping`、调用 `deviceSession.stop()`，设备回到 `.idle` 时由 `applyDeviceSessionPhase(.idle)` 里既有的 `clearActiveSessionRecovery()` 清理，没有新增清理路径；`.failed` 分支的 `activeSessionRecovery?.isSavedRoute != true` 例外保持不变，路线运行失败时保留 `.savedRoute` 记录
+- 名称撞车：`persistActiveSessionRecovery` 只把 `kind == .walkingRoute` 且 `destination.id == target.id` 的记录转成 `.fixed`，且 `savedRoute` 记录的 `destination` 恒为 `nil`，所以路线名等于目的地名也不会被转成 fixed
+- `AppModel` 新增（仅 `#if DEBUG`，不改变生产路径、不扩大公开 API）：
+  ```swift
+  var debugActiveSessionRecovery: SessionRecoveryRecord? {
+      get { activeSessionRecovery }
+      set {
+          activeSessionRecovery = newValue
+          lastRecoverySaveDate = nil
+          guard let newValue, let data = try? JSONEncoder().encode(newValue) else {
+              preferences.removeObject(forKey: Self.activeSessionRecoveryKey)
+              return
+          }
+          preferences.set(data, forKey: Self.activeSessionRecoveryKey)
+      }
+  }
+  ```
+  写入口把 `lastRecoverySaveDate` 置空，等价于“刚从磁盘恢复、下一次保存仍然到期”，否则 5 秒节流会吞掉测试里的第一次断言
+- 新增测试（`RouteRecoveryTests`，类上加 `@MainActor`，`StubPairingService` 在本文件内最小实现）4 个：`testUpdatingProgressPreservesRouteSnapshot`、`testCompletedRunConvertsRecoveryToFinalFixedLocation`、`testFailedRunRetainsSavedRouteRecovery`、`testRouteNameMatchingDestinationDoesNotConvertSavedRoute`。断言统一用 `UserDefaults(suiteName:)` 的 `"activeSessionRecovery"` 键读回并解码，与生产同一个 key
+- 红灯：提交 `78ea0b5`（`test(routes): define route progress recovery`），run `41156364350` 编译失败，错误为 `RoamControlTests/RouteRecoveryTests.swift:203:18: error: value of type 'AppModel' has no member 'debugActiveSessionRecovery'`，失败原因是符号缺失而不是测试逻辑
+- 实现提交：`0c32526`（`feat(routes): persist route progress during runs`）
+- CI：run `41156408775`，Xcode 27.1，`Test case … passed` 96 行、`failed` 0 行，`** TEST SUCCEEDED **`，同一 run 的 `Build Debug` 为 `** BUILD SUCCEEDED **`；4 个新用例逐条通过，测试数从 92 增至 96
+- 本地无法验证的事实：本机是 Windows 且没有 `xcodebuild`，全量测试与 Debug 构建都在 `xcode-27` runner 上完成，没有本地测试通过的结论
+- 未验证项：真实设备会话（配对、Local DevVPN 连接、`updateLocation` 逐秒回传）、真机后台长跑的 5 秒节流节奏、`HomeView` 与 `RouteRunCard` 展示运行进度（Task 12）、中断后从 `.savedRoute` 恢复继续跑（Task 13）、模拟器/真机手工验收
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41156408775
+- 下一步：Task 12 - 运行卡片与主页整合
 - 更新时间：2026-10-31
