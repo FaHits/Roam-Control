@@ -11,11 +11,11 @@
 - 源码基线：`0f63d1f`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 9R - 路线库删除动画与微信输入法重命名 —— `implemented_unverified`（代码与 CI 通过；真机 6 项截图未做）
-- 任务状态：Task 9R `implemented_unverified`；Task 14 `fail`、Task 16 返工；Task 17–20 待做；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
-- 当前执行窗口：Task 9R 返工完成，等待真机验收
+- 当前任务：Task 19 - 移除匿名统计/共享数据全链路 —— 待开始
+- 任务状态：Task 9R `implemented`（CI 与产物齐备，7 项真机行为登记在交接文档第 7 节，随 Task 14 批量验证）；Task 14 `fail`、Task 16 返工；Task 17/18/20 待做；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
+- 当前执行窗口：等待 Task 19 执行
 - 并行任务：Task 16 简体中文本地化与语言切换 —— 返工（语言弹窗与英文残留未通过）
-- 最近完成：Task 9R 代码与 CI（删除确认期间行不消失、微信输入法 marked text 可重命名）；真机截图未做
+- 最近完成：Task 9R 代码与 CI（删除确认期间行不消失、微信输入法 marked text 可重命名），最终 HEAD CI run `41215787777` 三 job 全绿
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Views/RouteRunCard.swift`
   - `RoamControl/Features/Map/MapViewModel.swift`
@@ -73,7 +73,8 @@
 - Task 9R 红灯：run `41214550560`（head `2be0f25`）`Run RoamControlTests` 失败，`RouteLibraryModelTests.swift:158` 报 `cannot find 'RouteNameValidator' in scope`，确认 4 条新测试先于实现存在
 - Task 9R 测试结果：run `41214754177`（head `b50fe68`）`conclusion=success`；`RouteLibraryModelTests` 16 个用例（新增 4 个名称规范化用例）全部通过，`RoamControlTests` 全量 123 个用例 0 失败，结果为 `** TEST SUCCEEDED **`
 - Task 9R 构建结果：同一 run 的 `Build Debug` 与 `Build Release` 均通过，结果为 `** BUILD SUCCEEDED **`
-- Task 9R 产物：Release IPA artifact `RoamControl-unsigned-ipa` id `13048490403` / 3,146,349 字节；Debug IPA artifact `RoamControl-unsigned-debug-ipa` id `13048205807` / 4,731,525 字节
+- Task 9R 产物：最终 HEAD `a873844` 的 run `41215787777` 产出 Release IPA artifact `RoamControl-unsigned-ipa` id `13048681679` / 3,146,361 字节；Debug IPA artifact `RoamControl-unsigned-debug-ipa` id `13048498113` / 4,731,549 字节。中间 run `41214754177` 的 `13048490403` / `13048205807` 仅作过程记录
+- Task 9R 真机项：执行方无法接触 iOS 真机，7 项行为改由用户批量验证，登记在 [`Documentation/Handoffs/2026-10-31-rework-handoff.md`](Handoffs/2026-10-31-rework-handoff.md) 第 7 节，Task 14 前一次装最终 IPA 全测
 - Task 10 测试结果：GitHub Actions `Xcode 27 verification` run `41102340345` 通过；Xcode 27.1 下新增 `RouteRecoveryTests` 6 个用例、`RouteSessionModelTests` 3 个用例全部通过，`RoamControlTests` 全量 92 个用例 0 失败，结果为 `TEST SUCCEEDED`
 - Task 10 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - Task 11 测试结果：GitHub Actions `Xcode 27 verification` run `41156408775` 通过；Xcode 27.1 下新增 `RouteRecoveryTests` 4 个用例全部通过，`RoamControlTests` 全量 96 个用例 0 失败，结果为 `TEST SUCCEEDED`
@@ -114,6 +115,7 @@
 - 禁止使用 `git add .`，不得夹带其他窗口或用户的改动。
 - 推送后必须核对远端哈希，再报告提交和 CI 状态。
 - `implemented_unverified`、`blocked` 或 `in_progress` 不得由窗口自行升级为完成。
+- 2026 大返工轮的口径：执行方在 CI 上、本机无 macOS，且碰不到 iOS 真机，因此单个 Task 的验收证据为「测试通过 + CI 三 job 全绿 + 可签名 IPA 产物」，达标即 `implemented` 并推进下一项；`completed` 只在用户真机实测通过后由用户授予。只有真机能判定的项登记在交接文档第 7 节，不阻塞单项推进，也不得提前写成 `completed`。
 
 ## 任务进度
 
@@ -128,7 +130,7 @@
 | Task 7：路线编辑器状态模型 | `completed` | Xcode 27.1 下 21 个编辑器测试与全量 78 个测试通过 |
 | Task 8：手动路线编辑界面 | `completed` | Xcode 27.1 全量 78 个测试与 Debug 构建均通过 |
 | Task 9：路线库和运行设置界面 | `completed` | Xcode 27.1 全量 83 个测试（新增 3 个 `RunProfileStore` 测试）与 Debug 构建均通过；2026-10-31 因删除动画与微信输入法重命名返工，见 Task 9R |
-| Task 9R：路线库删除动画与微信输入法重命名 | `implemented_unverified` | 删除 swipe 改为普通红色按钮，确认前不动列表数据；重命名改用 UIKit `UITextField` 读取 marked text，点击时校验并写入；新增 `RouteNameValidator` 4 个测试，全量 123 个 0 失败；CI run `41214754177` 三 job 全绿，Release artifact `13048490403`（3,146,349 字节）、Debug artifact `13048205807`（4,731,525 字节）；真机 6 项截图未做 |
+| Task 9R：路线库删除动画与微信输入法重命名 | `implemented` | 删除 swipe 改为普通红色按钮，确认前不动列表数据；重命名改用 UIKit `UITextField` 读取 marked text，点击时校验并写入；新增 `RouteNameValidator` 4 个测试，全量 123 个 0 失败；最终 HEAD CI run `41215787777` 三 job 全绿，Release artifact `13048681679`（3,146,361 字节）、Debug artifact `13048498113`（4,731,549 字节）；7 项真机行为登记在交接文档第 7 节，随 Task 14 批量验证 |
 | Task 10：恢复模型与设备会话基础 | `implemented_unverified` | 返工修复路线启动污染 Saved Places 地点历史：`startLocationSession` 的 `historyTarget` 改为 `LocationTarget?`，只有非 `nil` 才 `addToHistory`，路线传 `nil`（`AppModel.swift:366`、`:380`、`:393-395`）；新增 `RouteHistoryTests` 2 例；CI run `41195528908` 116 用例 0 失败、Debug/Release 构建与两个 unsigned IPA 均成功（Release artifact `13040706415`、Debug artifact `13040422834`）；真机 6 步验收与截图 `Task10-saved-places-history.png`、`Task10-home-routes-icon.png` 未做 |
 | Task 11：运行中进度持久化 | `completed` | Xcode 27.1 下 4 个新测试与全量 96 个测试通过 |
 | Task 12：运行卡片与主页整合 | `implemented_unverified` | 返工修复 Routes 按钮空图标（`RouteSymbol.library`，无效符号名全仓 0 命中）；CI run `41193407036` 114 用例 0 失败、Debug/Release 构建通过，Release IPA artifact `13039403715`；真机截图 `Task12-routes-icon.png` 未做 |
