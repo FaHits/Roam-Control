@@ -89,7 +89,7 @@ struct SessionRecoveryView: View {
                     recoveryDetail(
                         title: "Route",
                         value: recovery.savedRoute?.name ?? "Saved route",
-                        symbol: "point.topleft.down.to.point.right.curvepath"
+                        symbol: RouteSymbol.library
                     )
 
                     if let routeProgressText {
@@ -209,7 +209,7 @@ struct SessionRecoveryView: View {
 
     private var recoveryIcon: String {
         if recovery.isSavedRoute {
-            return "point.topleft.down.to.point.right.curvepath"
+            return RouteSymbol.library
         }
         return recovery.isWalkingRoute ? "figure.walk.motion" : "location.fill"
     }

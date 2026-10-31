@@ -107,7 +107,7 @@ struct RouteLibraryView: View {
         List {
             if model.routes.isEmpty {
                 VStack(spacing: 12) {
-                    Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
+                    Image(systemName: RouteSymbol.library)
                         .font(.system(size: 36))
                         .foregroundStyle(.secondary)
                     Text("Draw a route to start a repeatable run.")

@@ -140,7 +140,7 @@ struct HomeView: View {
                             routeLibraryError = nil
                             isShowingRouteLibrary = true
                         } label: {
-                            Image(systemName: "point.topleft.down.to.point.right.curvepath")
+                            Image(systemName: RouteSymbol.library)
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.primary)
                                 .frame(width: 36, height: 36)
