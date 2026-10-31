@@ -84,6 +84,9 @@
 - Task 15 改动文件：新增 `RoamControl/Services/Location/ChinaCoordinateTransform.swift`、`RoamControl/Services/Location/DeviceCoordinateAdapter.swift`、`RoamControl/Features/Settings/CoordinateDiagnosticsView.swift`、`RoamControlTests/ChinaCoordinateTransformTests.swift`；修改 `RoamControl/Services/Tunnel/LocalDeviceSessionCoordinator.swift`（`:226`、`:576-607`）、`RoamControl/Features/Settings/SettingsView.swift`（Device 段）、`RoamControl/Models/LocationTarget.swift`（仅注释）
 - Task 15 边界：只改注入边界，`LocationTarget` / `GeoCoordinate` / `RouteGeometry` / `RouteRunner` / `RouteStore` / Rust-FFI 均未动，无数据迁移；`DeviceCoordinateAdapter.live` 仍为 `.none`，没有运行时开关
 - Task 15 待办：真机 A/B 实测（天安门、湛江田径场），确定 `.wgs84ToGCJ02` 或 `.gcj02ToWGS84` 后改 `DeviceCoordinateAdapter.swift:36` 一行，重跑 CI 取 test + unsigned-ipa 证据，再写坐标实测表
+- Task 15 CI 结果：GitHub Actions run `41176205058`（`https://github.com/FaHits/Roam-Control/actions/runs/41176205058`）`conclusion=success`；`test` job 6m55s，`Run RoamControlTests` 107 个用例通过、0 失败，`** TEST SUCCEEDED **`；`Build Debug` 与 `Build Release` 均 `** BUILD SUCCEEDED **`
+- Task 15 artifact：`unsigned-ipa` job 成功，artifact `RoamControl-unsigned-ipa`，id `13032888086`，3,092,139 字节
+- Task 15 转换算法核对：独立 Python 实现复算固定算例，天安门 `39.908722,116.397499 → 39.91012550007891,116.4037425752605`（554.93 m）、岭南师范 `21.27122,110.34213 → 21.268808687690072,110.34659102093997`（534.39 m）、湛江田径场 `21.2585,110.3025 → 21.25601589175258,110.30687415389694`（530.82 m），与计划给定值逐位一致
 
 ## 自动完成规则
 
@@ -111,7 +114,7 @@
 | Task 12：运行卡片与主页整合 | `completed` | Xcode 27.1 全量 96 个测试与 Debug 构建均通过 |
 | Task 13：中断路线恢复 | `completed` | Xcode 27.1 下新增 2 个测试、全量 98 个测试与 Debug 构建均通过；手工强制退出恢复未验证 |
 | Task 14：完整验证 | `implemented_unverified` | 架构边界与 98 个测试、Debug/Release 构建均通过（CI run `41166020073`）；模拟器与真机手工清单未验证 |
-| Task 15：统一中国大陆坐标域 | `in_progress` | 转换工具、注入适配器、只读诊断页与 10 个新测试已就位；`live` 仍为 `.none`，等天安门与湛江田径场 A/B 实测数据后改一行并重跑 CI |
+| Task 15：统一中国大陆坐标域 | `in_progress` | 转换工具、注入适配器、只读诊断页与 9 个新测试已就位（CI run `41176205058`：全量 107 用例 0 失败、Debug/Release 构建通过、unsigned IPA 已产出）；`live` 仍为 `.none`，等天安门与湛江田径场 A/B 实测数据后改一行并重跑 CI |
 
 ## 交接记录
 
