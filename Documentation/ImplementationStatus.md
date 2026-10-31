@@ -11,10 +11,10 @@
 - 源码基线：`0f63d1f`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 19 - 移除匿名统计/共享数据全链路 —— `implemented`（最终代码状态 head `3ffd834`，CI run `41223835438` 三 job 全绿，含 Task 19F 收尾补正）
-- 任务状态：Task 19 `implemented`（含 Task 19F 收尾补正；本地无 Xcode，测试/构建/产物均来自 GitHub Actions）；Task 9R `implemented`（CI 与产物齐备，7 项真机行为登记在交接文档第 7 节，随 Task 14 批量验证）；Task 14 `fail`、Task 16 返工；Task 17/18/20 待做；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
-- 当前执行窗口：Task 19 已收尾，下一步按 `Documentation/Handoffs/2026-10-31-rework-handoff.md` 第 3 节进入 Task 16R（顺序 9R → 19 → 16R → 20 → 17 → 18 → 14）
-- 并行任务：Task 16 简体中文本地化与语言切换 —— 返工（语言弹窗与英文残留未通过）
+- 当前任务：Task 16R - 语言弹窗与剩余英文残留返工 —— `implemented`（代码 head `b7797d1`，CI run `41227597504` 三 job 全绿，129 用例 0 失败）
+- 任务状态：Task 19 `implemented`（含 Task 19F 收尾补正；本地无 Xcode，测试/构建/产物均来自 GitHub Actions）；Task 16R `implemented`（Task 16 的返工，CI 与产物齐备，6 项真机行为待 Task 14 批量验证）；Task 9R `implemented`；Task 14 `fail`；Task 17/18/20 待做；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
+- 当前执行窗口：Task 16R 已收尾，下一步按 `Documentation/Handoffs/2026-10-31-rework-handoff.md` 第 3 节进入 Task 20（顺序 9R → 19 → 16R → 20 → 17 → 18 → 14）
+- 并行任务：无。Task 16 的返工已在 Task 16R 内完成，语言弹窗与英文残留项以 Task 16R 记录为准
 - 最近完成：Task 9R 代码与 CI（删除确认期间行不消失、微信输入法 marked text 可重命名），最终 HEAD CI run `41215787777` 三 job 全绿
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Views/RouteRunCard.swift`
@@ -138,6 +138,7 @@
 | Task 14：完整验证 | `implemented_unverified` | 0.10.0 / 62 版本已生效（pbxproj Debug+Release，`61` 与 `0.9.2` 0 残留）；架构边界两条 rg 无输出、`check_localizations.py` 611/611；CI run `41203728405` 119 用例 0 失败、Debug/Release 构建均通过，Release IPA artifact `13043941317`（3,138,686 字节）与 Debug IPA `13044041974`（4,707,863 字节）；模拟器与真机手工清单、15 张截图全部 not_run
 | Task 15：统一中国大陆坐标域 | `implemented_unverified` | 方向已由真机 A/B 实测确定：MapKit raw 为 GCJ-02、DVT 期望 WGS-84，`DeviceCoordinateAdapter.swift:36` 取 `.gcj02ToWGS84`，只转换一次且仅在注入边界；CI run `41186642773` 113 用例 0 失败、Debug/Release 构建通过，产 Release IPA `13037307005` 与 Debug IPA `13037142318`；真机回归（天安门城楼、田径场、路线、Update、Stop & Restore）未做 |
 | Task 19：移除匿名统计/共享数据全链路 | `implemented` | Task 19F 收尾补正完成：删三处死回调（`LocalDeviceSessionCoordinator.onFailure` / `onRecoveryNeeded`、`OnDevicePairingCoordinator.onFailure`）与两个私有 `failureSnapshot(...)` 工厂，`FailureDiagnosticSnapshot` 随之删除，`FailureDiagnostics.swift` 收敛为 `FailureStage` / `FailureDisposition` / `SchedulerFailureReason` 三个类型（131 行）；删孤儿本地化 key `Privacy`，`check_localizations.py` 604/604 + 2/2、`All 606 keys` exit 0；`rg -n "UsageAnalytics|sharesAnonymousUsageStatistics|AnonymousUsage|What Is Shared|Share Anonymous"` exit 1，`Telemetry` 只剩 4 处 `BackgroundSessionTelemetry`；`rg -n "failureSnapshot\(|FailureDiagnosticSnapshot"` 无输出；123 用例 0 失败（未删未增）；最终代码状态 CI run `41223835438`（head `3ffd834`）三 job 全绿，Release IPA artifact `13050992072`（3,101,262 字节）、Debug IPA `13051995426`（4,623,883 字节）
+| Task 16R：语言弹窗与剩余英文残留返工 | `implemented` | 语言切换只在生效语言真正改变时写入并弹窗：`AppLanguage.effective(...)` 由 `AppleLanguages` 覆盖值推导（无覆盖回落到系统偏好），`requiresRestart(comparedTo:)` 供 `SettingsView` 判定；Onboarding 三页 `title/message`、`PairingSetupView` 的 `requirementRow` / `instructionRow` / `pairingDetail(title:)`、`ConnectionHealthView.healthRow(title:)` 改 `LocalizedStringKey`；`ConnectionHealthView.restorationText(for:)` 把四个内部英文状态映射成本地化文案（内部值不变），`"None"` 两处显示改 `String(localized:)`；`Localizable.xcstrings` 604 → 609 key（+4 恢复状态、+1 a11y 逗号），合计 611；新增 6 例 AppLanguage/映射测试，全量 129 用例 0 失败；head `b7797d1`，CI run `41227597504` 三 job 全绿，Release artifact `13052626294`（3,104,532 字节）、Debug artifact `13053106037`（4,626,145 字节）；6 项真机行为登记在交接文档第 7 节，随 Task 14 批量验证 |
 
 ## 交接记录
 
@@ -848,4 +849,33 @@
 - 本地无法验证：本机为 Windows，无 `xcodebuild`、无 iOS 模拟器、无配对真机；测试、Debug/Release 构建与产物全部来自 `xcode-27` GitHub Actions
 - 未验证项（真机，沿用 Task 19 登记，未新增）：① Settings 页不再出现 Privacy 分区与 Share Anonymous Usage Statistics 开关；② Onboarding 只有 3 页且页点为 3，第 4 页 Private by design 不存在；③ 配对失败与后台调度失败时 Connection Health 仍能显示失败阶段与调度原因（属性快照路径未破坏）
 - 下一步：按 `Documentation/Handoffs/2026-10-31-rework-handoff.md` 第 3 节进入 **Task 16R**，顺序为 9R → 19 → 16R → 20 → 17 → 18 → 14
+- 更新时间：2026-11-01
+
+### 2026-11-01 Task 16R 实现记录：语言弹窗与剩余英文残留
+
+- 任务：Task 16R - 语言与英文残留返工（Task 16 的返工任务）
+- 状态：`implemented`（按交接文档约定，Task 14 批量真机验收前不得标 `completed`）
+- 分支与基线：`feat/manual-running-routes`，起点 HEAD `f6b990b`；代码提交 `b7797d1`
+- 逐项结果
+
+| 项 | 结论 | 证据 |
+| --- | --- | --- |
+| 1.1 只在生效语言真正改变时弹窗 | pass | `RoamControl/Features/Settings/AppLanguage.swift:36-70` 的 `effective(from:systemIdentifiers:)` / `effective(overrideIdentifiers:systemIdentifiers:)` / `matching(identifiers:)` / `requiresRestart(comparedTo:)`；`SettingsView.swift:49-53` 的 `onChange` 先 `guard newLanguage.requiresRestart(comparedTo: AppLanguage.effective())` 再 `apply()` 与弹窗 |
+| 1.2 Onboarding 三页文案 | pass | `OnboardingView.swift:188-205` 的 `OnboardingPage.title/message` 与 init 参数均为 `LocalizedStringKey`；6 条文案 `:210-223`；页点与 `Page N of M` 仍由 `pages.count` 派生（`:65-76`、`:98`） |
+| 1.3 PairingSetupView 行文案 | pass | `PairingSetupView.swift:240` `requirementRow(number:text: LocalizedStringKey)`、`:257` `instructionRow(_ text: LocalizedStringKey)`、`:271-273` `pairingDetail(title: LocalizedStringKey, value: String, ...)`；`value`（指纹、日期）仍 `String` |
+| 1.4 连接检查页不再渲染内部英文状态 | pass | `ConnectionHealthView.swift:36-40` 改为 `Text(Self.restorationText(for:))`；映射函数 `ConnectionHealthView.swift:132-149` 覆盖四个内部状态并原样透传未知值；`LocalDeviceSessionCoordinator.swift:79/159/330/650/656` 的内部英文取值未改；`"None"` 显示点 `:43`、`:158` 改 `String(localized: "None")`；`healthRow(title: LocalizedStringKey)`（`:277`） |
+| 1.5 白名单保持英文 | pass | `ROAM CONTROL`、`LocalDevVPN`、`GCJ-02 → WGS-84`、`WGS-84 → GCJ-02`、罗盘 `N/E/S/W` 未进 catalog |
+
+- 设计要点（复核用）：iOS 只在启动时解析 `Bundle.main` 本地化，因此「当前生效语言」不能从 bundle 读取，只能由 `AppleLanguages` 覆盖值推导；没有覆盖时用系统偏好列表，映射规则为 `zh-hans*`/`zh-cn`/`zh-sg` → 简体中文，`en*` → English，其它 → `system`。因此「系统英文 + 选择 English」判为未变更，不写 key、不弹窗。
+- 本地化资源：`RoamControl/Resources/Localizable.xcstrings` 604 → 609 key，新增 `Not requested`、`Stop requested; awaiting device response`、`Stop not confirmed; real location unverified`、`Stop command acknowledged; real location reacquisition unverified` 四条恢复状态文案与 `%@, %@`（辅助功能标签的逗号）；`InfoPlist.xcstrings` 仍 2 条，合计 611
+- 检查脚本：`python scripts/check_localizations.py` → `609/609 keys translated (100.0%)`、`2/2 keys translated (100.0%)`、`All 611 keys have non-empty zh-Hans values.`，exit 0；CI 上同一输出（`Check localization catalogs` 步骤）
+- 静态证据：`rg -n 'title: "[A-Za-z]|message: "[A-Za-z]' RoamControl --glob '*.swift'` 在 Onboarding 与 PairingSetup 的命中均为已声明为 `LocalizedStringKey` 的字面量（源码类型证据即上表 1.2 / 1.3），其余命中为既有的 `.localized` 或 `LocalizedStringKey` 调用；`rg -n ""None"" RoamControl --glob '*.swift'` 可见 UI 归零，剩余 7 处全在 `diagnosticsText` 与 `permittedBackgroundTasks` 默认值内
+- 测试：新增 6 例（`testEffectiveLanguageFollowsSystemPreferenceWhenNoOverride`、`testEffectiveLanguagePrefersStoredOverride`、`testEnglishSelectionUnderEnglishSystemIsNotAChange`、`testSelectingAnotherLanguageRequiresRestartAndWritesOverride`、`testSelectingCurrentSimplifiedChineseIsNotAChange`、`testRestorationStatusMapsToNonEmptyCopy`）。基线 123 + 新增 6 = 129，CI 实测 129 例通过、0 失败
+- CI：run [41227597504](https://github.com/FaHits/Roam-Control/actions/runs/41227597504)（head `b7797d1`）—— `test` 5m48s（`** TEST SUCCEEDED **`，含 `Build Debug` / `Build Release`）、`unsigned-ipa` 1m37s、`unsigned-ipa-debug` 56s，`Check localization catalogs` 通过
+- 产物（该 run 实测）：`RoamControl-unsigned-ipa` artifact `13052626294`，3,104,532 字节；`RoamControl-unsigned-debug-ipa` artifact `13053106037`，4,626,145 字节。IPA 未签名，可自行签名用于 Task 14 装机
+- 版本：未改动，仍 `0.10.0` / `62`（`project.pbxproj:248/253/273/278`）
+- 坐标未动：`RoamControl/Services/Location/DeviceCoordinateAdapter.swift:37` 仍 `.gcj02ToWGS84`，该文件不在本次 diff 内
+- 保留英文及理由：`diagnosticsText`（`ConnectionHealthView.swift:325-` 起）整段保持英文——它是开发者诊断快照，供贴到 issue 里比对，翻成中文会让同一份报告在不同语言下无法对照；其可见入口「Run Connection Check」按钮、`Copy Diagnostics` 等文案已本地化。另：单位与格式串（`%.0f m`、`%.1f m/s`、`%.0f spm` 等）、`AppleLanguages` 等内部标识、`Probe (Debug)` 仍保持英文
+- 真机待验（登记到交接文档第 7 节，随 Task 14 批量验证）：① 英文系统下 Settings → Language 选 English 不弹重启提示；② 切到简体中文弹一次，重启后界面中文；③ 重启后再进该页不重复弹窗；④ 中文下 Onboarding 3 页全中文、页点 3 个；⑤ 中文下配对设置页 Requirements/Instructions 全中文，指纹与日期正常；⑥ 中文下 Connection Health 的 Restoration 行与 Place 空值不再是英文 `Not requested` / `None`
+- 下一步：按交接文档第 3 节进入 **Task 20**（更新/反馈仓库地址）
 - 更新时间：2026-11-01

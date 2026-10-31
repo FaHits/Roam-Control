@@ -191,14 +191,14 @@
 - `OnboardingView` 的 `title/message` 改为 `LocalizedStringKey` 或 `String(localized:)`。
 - `PairingSetupView` 的 `requirementRow` / `instructionRow` 改为本地化 key，或让调用方传 `LocalizedStringKey`。
 - `ConnectionHealthView` 的 `restorationStatus` 与 `"None"` 改为本地化；`LocalDeviceSessionCoordinator` 可保留英文内部状态，但显示层必须映射，不要把内部诊断字符串直接当 UI 文案。
-- 更新 `Localizable.xcstrings`，确保 611+ keys 的 zh-Hans 非空；`check_localizations.py` 的覆盖范围说明要改成实际能力，别声称检查所有 Swift 引用。
+- 更新 `Localizable.xcstrings`：每个 key 的 zh-Hans 非空。本次实际口径为 `Localizable.xcstrings` 609 + `InfoPlist.xcstrings` 2 = 611。`check_localizations.py` 的说明写成它真实能做的事：校验 sourceLanguage、每个 key 的 en 与 zh-Hans 非空、`variations` 里的 plural 变体逐个递归、两种语言的格式占位符集合一致，以及 `String(localized: "…")` / `NSLocalizedString("…")` 直接引用的 key 是否存在于 catalog；不覆盖 `.localized` 在渲染边界的运行时查表。
 
 验收证据：
 
 - 单测：语言选择“相同不弹窗/不同弹窗”、system 移除 override、英文/中文写入。
 - 本地化脚本：所有 key 非空，exit 0。
 - CI 三 job 全绿。
-- 真机：英文→中文→英文不重复弹窗；中文下 Onboarding 四页、设备设置、连接检查全中文；英文下这些页面全英文；截图至少 6 张。
+- 真机（3–6 条短清单，只写现象与判定标准，按本文件第 1 节不要求截图）：① 英文系统下由 English 选 English 不弹重启提示；② 切到简体中文弹一次，重启后界面为中文；③ 重启后再次进入该页不重复弹窗；④ 中文下 Onboarding 3 页全中文、页点为 3 个（第 4 页已在 Task 19 删除）；⑤ 中文下配对设置页 Requirements/Instructions 全中文，指纹与日期正常显示；⑥ 中文下连接检查页 Restoration 行与 Place 空值不再是英文 `Not requested` / `None`。
 - 报告：列出仍保留英文的项及理由。
 
 ### Task 20 — 更新/反馈仓库地址
