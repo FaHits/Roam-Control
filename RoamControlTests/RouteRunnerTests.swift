@@ -378,6 +378,171 @@ final class RouteRunnerTests: XCTestCase {
         XCTAssertEqual(runner.snapshot.elapsedTime, Double(ticks), accuracy: 1e-9)
     }
 
+    // MARK: - Out and back
+
+    private func outAndBackRunner(trips: Int, speed: Double = 2.0) throws -> RouteRunner {
+        let geometry = try openGeometry()
+        return try RouteRunner(
+            geometry: geometry,
+            profile: steadyProfile(speed: speed),
+            mode: .outAndBack(trips: trips)
+        )
+    }
+
+    private func runToFinish(_ runner: inout RouteRunner, limit: Int = 400_000) -> RouteRunSnapshot {
+        var ticks = 0
+        while runner.phase != .finished && ticks < limit {
+            _ = runner.advance(by: 1)
+            ticks += 1
+        }
+        return runner.snapshot
+    }
+
+    func testOutAndBackFirstTripLandsOnTheLastPoint() throws {
+        let geometry = try openGeometry()
+        let lapLength = geometry.totalDistance
+        let speed = 2.0
+        var runner = try outAndBackRunner(trips: 3, speed: speed)
+        runner.start()
+
+        // Just short of the seam: the first trip is nearly complete.
+        _ = runner.advance(by: (lapLength - 0.5) / speed)
+        XCTAssertEqual(runner.snapshot.completedLaps, 0)
+        XCTAssertEqual(runner.snapshot.distanceInLap, lapLength - 0.5, accuracy: 1e-6)
+        XCTAssertEqual(
+            runner.snapshot.groundCoordinate,
+            geometry.coordinate(atDistance: lapLength - 0.5)
+        )
+
+        // Half a metre more at 2 m/s completes the trip and lands on the last point exactly.
+        let snapshot = runner.advance(by: 0.25)
+        XCTAssertEqual(snapshot.completedLaps, 1)
+        XCTAssertEqual(snapshot.distanceInLap, 0, accuracy: 1e-9)
+        XCTAssertEqual(snapshot.groundCoordinate, geometry.points.last)
+        XCTAssertEqual(snapshot.phase, .running)
+    }
+
+    func testOutAndBackSecondTripRunsBackwards() throws {
+        let geometry = try openGeometry()
+        let lapLength = geometry.totalDistance
+        let speed = 2.0
+        let half = lapLength / 4
+        var runner = try outAndBackRunner(trips: 3, speed: speed)
+        runner.start()
+
+        _ = runner.advance(by: lapLength / speed)
+        let snapshot = runner.advance(by: half / speed)
+
+        XCTAssertEqual(snapshot.completedLaps, 1)
+        XCTAssertEqual(snapshot.distanceInLap, half, accuracy: 1e-6)
+        XCTAssertEqual(snapshot.groundCoordinate, geometry.coordinate(atDistance: lapLength - half))
+        XCTAssertNotEqual(snapshot.groundCoordinate, geometry.coordinate(atDistance: half))
+    }
+
+    func testEvenTripCountFinishesAtTheStartPoint() throws {
+        let geometry = try openGeometry()
+        var runner = try outAndBackRunner(trips: 2)
+        runner.start()
+
+        let snapshot = runToFinish(&runner)
+
+        XCTAssertEqual(snapshot.phase, .finished)
+        XCTAssertEqual(snapshot.completedLaps, 2)
+        XCTAssertEqual(snapshot.groundCoordinate, geometry.points.first)
+    }
+
+    func testOddTripCountFinishesAtTheFinishPoint() throws {
+        let geometry = try openGeometry()
+        var runner = try outAndBackRunner(trips: 3)
+        runner.start()
+
+        let snapshot = runToFinish(&runner)
+
+        XCTAssertEqual(snapshot.phase, .finished)
+        XCTAssertEqual(snapshot.completedLaps, 3)
+        XCTAssertEqual(snapshot.groundCoordinate, geometry.points.last)
+    }
+
+    func testOutAndBackTotalDistanceIsMonotonicAcrossTrips() throws {
+        let geometry = try openGeometry()
+        let lapLength = geometry.totalDistance
+        var runner = try outAndBackRunner(trips: 2)
+        runner.start()
+
+        var previous = runner.snapshot.totalDistance
+        var ticks = 0
+        while runner.phase != .finished && ticks < 400_000 {
+            let snapshot = runner.advance(by: 1)
+            XCTAssertGreaterThanOrEqual(snapshot.totalDistance, previous)
+            XCTAssertEqual(
+                snapshot.totalDistance,
+                Double(snapshot.completedLaps) * lapLength + snapshot.distanceInLap,
+                accuracy: 1e-6
+            )
+            previous = snapshot.totalDistance
+            ticks += 1
+        }
+
+        XCTAssertEqual(runner.phase, .finished)
+        XCTAssertEqual(previous, 2 * lapLength, accuracy: 1e-6)
+    }
+
+    func testSingleTripMatchesOnceOnAnOpenRoute() throws {
+        let geometry = try openGeometry()
+        var single = try RouteRunner(
+            geometry: geometry,
+            profile: steadyProfile(),
+            mode: .outAndBack(trips: 1)
+        )
+        var once = try RouteRunner(geometry: geometry, profile: steadyProfile(), mode: .once)
+        single.start()
+        once.start()
+
+        // `.once` keeps `distanceInLap` at the full length once finished while a trip rolls over
+        // into the next one, so the shared contract is position, distance and phase.
+        for _ in 0..<400 {
+            let tripSnapshot = single.advance(by: 1)
+            let onceSnapshot = once.advance(by: 1)
+            XCTAssertEqual(tripSnapshot.groundCoordinate, onceSnapshot.groundCoordinate)
+            XCTAssertEqual(tripSnapshot.totalDistance, onceSnapshot.totalDistance)
+            XCTAssertEqual(tripSnapshot.completedLaps, onceSnapshot.completedLaps)
+            XCTAssertEqual(tripSnapshot.phase, onceSnapshot.phase)
+        }
+        XCTAssertEqual(single.phase, .finished)
+        XCTAssertEqual(once.phase, .finished)
+    }
+
+    func testOutAndBackRejectsZeroTrips() throws {
+        XCTAssertThrowsError(try RouteRunMode.outAndBack(trips: 0).validated()) { error in
+            XCTAssertEqual(error as? RouteRunModeError, .invalidTripCount)
+        }
+
+        let geometry = try openGeometry()
+        XCTAssertThrowsError(
+            try RouteRunner(geometry: geometry, profile: steadyProfile(), mode: .outAndBack(trips: 0))
+        ) { error in
+            XCTAssertEqual(error as? RouteRunModeError, .invalidTripCount)
+        }
+
+        XCTAssertEqual(try RouteRunMode.outAndBack(trips: 1).validated(), .outAndBack(trips: 1))
+    }
+
+    func testClosedRouteRejectsOutAndBack() throws {
+        let geometry = try closedGeometry()
+        XCTAssertThrowsError(
+            try RouteRunner(geometry: geometry, profile: steadyProfile(), mode: .outAndBack(trips: 2))
+        ) { error in
+            XCTAssertEqual(error as? RouteRunModeError, .requiresOpenRoute)
+        }
+    }
+
+    func testOutAndBackSurvivesAnEncodingRoundTrip() throws {
+        for mode in [RouteRunMode.outAndBack(trips: 3), .once, .laps(2), .continuous] {
+            let data = try JSONEncoder().encode(mode)
+            XCTAssertEqual(try JSONDecoder().decode(RouteRunMode.self, from: data), mode)
+        }
+    }
+
     // MARK: - Mode validation
 
     func testLapsZeroIsRejected() throws {

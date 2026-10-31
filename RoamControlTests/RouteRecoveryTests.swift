@@ -342,6 +342,72 @@ final class RouteRecoveryTests: XCTestCase {
         XCTAssertNil(stored.destination)
         XCTAssertEqual(stored.routeProgress, progress)
     }
+
+    // MARK: - Out and back runs
+
+    private var steadyProfile: RunProfile {
+        RunProfile(
+            targetSpeedMetersPerSecond: 2.0,
+            targetCadenceStepsPerMinute: 170,
+            speedVariationFraction: 0,
+            cadenceVariationFraction: 0,
+            gpsJitterRadiusMeters: 0,
+            noiseSeed: 0x5255_4E31
+        )
+    }
+
+    private func openRunGeometry() throws -> RouteGeometry {
+        try RouteGeometry(points: Array(route().points.prefix(3)), isClosed: false)
+    }
+
+    func testOutAndBackRecoveryResumesInTheReturnDirection() throws {
+        let geometry = try openRunGeometry()
+        let lapLength = geometry.totalDistance
+        let offset = 100.0
+        var runner = try RouteRunner(
+            geometry: geometry,
+            profile: steadyProfile,
+            mode: .outAndBack(trips: 3),
+            progress: RouteRunProgress(distanceInLap: offset, completedLaps: 1, elapsedTime: 60)
+        )
+
+        XCTAssertEqual(runner.snapshot.completedLaps, 1)
+        XCTAssertEqual(runner.snapshot.totalDistance, lapLength + offset, accuracy: 1e-6)
+        XCTAssertEqual(
+            runner.snapshot.groundCoordinate,
+            geometry.coordinate(atDistance: lapLength - offset)
+        )
+
+        runner.start()
+        XCTAssertEqual(runner.phase, .running)
+
+        // Two more metres of the return trip move away from the far end, not towards it.
+        let snapshot = runner.advance(by: 1)
+        XCTAssertEqual(snapshot.phase, .running)
+        XCTAssertEqual(snapshot.distanceInLap, offset + 2, accuracy: 1e-9)
+        XCTAssertEqual(
+            snapshot.groundCoordinate,
+            geometry.coordinate(atDistance: lapLength - offset - 2)
+        )
+    }
+
+    func testOutAndBackRecoveryClampsTripsBeyondTheTarget() throws {
+        let geometry = try openRunGeometry()
+        var runner = try RouteRunner(
+            geometry: geometry,
+            profile: steadyProfile,
+            mode: .outAndBack(trips: 2),
+            progress: RouteRunProgress(distanceInLap: 0, completedLaps: 7, elapsedTime: 900)
+        )
+
+        XCTAssertEqual(runner.snapshot.completedLaps, 2)
+        XCTAssertEqual(runner.snapshot.totalDistance, 2 * geometry.totalDistance, accuracy: 1e-6)
+        XCTAssertEqual(runner.snapshot.groundCoordinate, geometry.points.first)
+        XCTAssertEqual(runner.phase, .idle)
+
+        runner.start()
+        XCTAssertEqual(runner.advance(by: 1).phase, .finished)
+    }
 }
 
 private struct RouteRecoveryStubPairingService: PairingService {

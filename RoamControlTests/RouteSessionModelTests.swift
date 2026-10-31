@@ -104,6 +104,48 @@ final class RouteSessionModelTests: XCTestCase {
             XCTAssertEqual(model.phase, .idle)
         }
     }
+    private var openRoute: RouteDefinition {
+        RouteDefinition(
+            id: UUID(uuidString: "3C7B1A20-5D6E-4F81-9A2B-7C4D1E0F2255")!,
+            name: "Riverside Out and Back",
+            points: Array(closedRoute.points.prefix(3)),
+            isClosed: false,
+            source: .drawn,
+            createdAt: Date(timeIntervalSinceReferenceDate: 770_000_000),
+            updatedAt: Date(timeIntervalSinceReferenceDate: 770_000_000)
+        )
+    }
+
+    func testTripCountAndIndexFollowCompletedTrips() throws {
+        let expectedIndex = [1, 2, 3, 3]
+        for completedLaps in 0..<expectedIndex.count {
+            let model = RouteSessionModel()
+            try model.prepare(
+                route: openRoute,
+                profile: steadyProfile(),
+                mode: .outAndBack(trips: 3),
+                progress: RouteRunProgress(
+                    distanceInLap: 0,
+                    completedLaps: completedLaps,
+                    elapsedTime: 0
+                )
+            )
+
+            XCTAssertEqual(model.tripCount, 3)
+            // The last trip is held once the run finished instead of counting past it.
+            XCTAssertEqual(model.tripIndex, expectedIndex[completedLaps])
+        }
+
+        let loop = RouteSessionModel()
+        try loop.prepare(
+            route: closedRoute,
+            profile: steadyProfile(),
+            mode: .once,
+            progress: RouteRunProgress(distanceInLap: 0, completedLaps: 0, elapsedTime: 0)
+        )
+        XCTAssertNil(loop.tripCount)
+        XCTAssertNil(loop.tripIndex)
+    }
 }
 
 private struct StubPairingService: PairingService {
