@@ -97,7 +97,7 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
             return
         case .invalid:
             searchSuggestions = []
-            errorMessage = "Enter latitude from −90 to 90 and longitude from −180 to 180."
+            errorMessage = String(localized: "Enter latitude from −90 to 90 and longitude from −180 to 180.")
             return
         case .notCoordinates:
             break
@@ -250,7 +250,7 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
         do {
             let response = try await MKLocalSearch(request: request).start()
             guard let item = response.mapItems.first else {
-                errorMessage = "No matching place found."
+                errorMessage = String(localized: "No matching place found.")
                 return
             }
 
@@ -273,7 +273,7 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
         } catch is CancellationError {
             return
         } catch {
-            errorMessage = "Search is unavailable right now."
+            errorMessage = String(localized: "Search is unavailable right now.")
         }
     }
 

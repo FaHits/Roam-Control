@@ -345,55 +345,55 @@ struct PairingSetupView: View {
 
     private var statusTitle: String {
         switch appModel.onDevicePairing.phase {
-        case .preparing: return "Preparing pairing"
-        case .waitingForSettings: return "Ready in Settings"
-        case .showingPIN: return "Pairing code ready"
-        case .storing: return "Finishing pairing"
-        case .cancelling: return "Stopping pairing"
-        case .failed: return "Pairing problem"
+        case .preparing: return String(localized: "Preparing pairing")
+        case .waitingForSettings: return String(localized: "Ready in Settings")
+        case .showingPIN: return String(localized: "Pairing code ready")
+        case .storing: return String(localized: "Finishing pairing")
+        case .cancelling: return String(localized: "Stopping pairing")
+        case .failed: return String(localized: "Pairing problem")
         case .idle, .success: break
         }
 
         switch appModel.pairingStatus {
-        case .checking: return "Checking this iPhone"
-        case .importing: return "Checking pairing file"
-        case .notPaired: return "Pairing required"
-        case .paired: return "Pairing file ready"
-        case .failed: return "Pairing problem"
+        case .checking: return String(localized: "Checking this iPhone")
+        case .importing: return String(localized: "Checking pairing file")
+        case .notPaired: return String(localized: "Pairing required")
+        case .paired: return String(localized: "Pairing file ready")
+        case .failed: return String(localized: "Pairing problem")
         }
     }
 
     private var statusMessage: String {
         switch appModel.onDevicePairing.phase {
         case .preparing:
-            return "Starting a private session on this iPhone."
+            return String(localized: "Starting a private session on this iPhone.")
         case .waitingForSettings:
-            return "Roam Control is visible to the iOS pairing screen."
+            return String(localized: "Roam Control is visible to the iOS pairing screen.")
         case .showingPIN:
-            return "Enter the six-digit code in Settings to confirm."
+            return String(localized: "Enter the six-digit code in Settings to confirm.")
         case .storing:
-            return "The handshake worked. Saving its keys securely."
+            return String(localized: "The handshake worked. Saving its keys securely.")
         case .cancelling:
-            return "Closing the local session and advertisement."
+            return String(localized: "Closing the local session and advertisement.")
         case .failed(let message):
-            return message
+            return message.localized
         case .idle, .success:
             break
         }
 
         switch appModel.pairingStatus {
         case .checking:
-            return "Looking for a securely stored pairing record."
+            return String(localized: "Looking for a securely stored pairing record.")
         case .importing:
-            return "Validating the record and its keys."
+            return String(localized: "Validating the record and its keys.")
         case .notPaired:
             return appModel.onDevicePairing.isAvailableOnThisDevice
-                ? "Create the pairing securely on this iPhone, or import an existing file."
-                : "Connect your physical iPhone to create the pairing, or import an existing file."
+                ? String(localized: "Create the pairing securely on this iPhone, or import an existing file.")
+                : String(localized: "Connect your physical iPhone to create the pairing, or import an existing file.")
         case .paired:
-            return "Roam Control can use this record when the LocalDevVPN session layer is connected."
+            return String(localized: "Roam Control can use this record when the LocalDevVPN session layer is connected.")
         case .failed(let message):
-            return message
+            return message.localized
         }
     }
 }

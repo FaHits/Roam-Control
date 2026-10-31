@@ -63,7 +63,7 @@ struct ConnectionHealthView: View {
                 .disabled(diagnostics.state == .running)
 
                 if let resultMessage {
-                    Label(resultMessage, systemImage: resultSymbol)
+                    Label(resultMessage.localized, systemImage: resultSymbol)
                         .font(.subheadline)
                         .foregroundStyle(resultColor)
                 }
@@ -143,11 +143,11 @@ struct ConnectionHealthView: View {
 
     private var pairingValue: String {
         switch appModel.pairingStatus {
-        case .checking: "Checking"
-        case .importing: "Importing"
-        case .notPaired: "Not paired"
-        case .paired: "Ready"
-        case .failed: "Problem"
+        case .checking: String(localized: "Checking")
+        case .importing: String(localized: "Importing")
+        case .notPaired: String(localized: "Not paired")
+        case .paired: String(localized: "Ready")
+        case .failed: String(localized: "Problem")
         }
     }
 
@@ -172,11 +172,11 @@ struct ConnectionHealthView: View {
     private var localDevVPNValue: String {
         switch diagnostics.state {
         case .notRun:
-            if case .active = appModel.deviceSession.phase { return "Connected" }
-            return "Not checked"
-        case .running: return "Checking"
-        case .passed: return "Reachable"
-        case .failed: return "Not reachable"
+            if case .active = appModel.deviceSession.phase { return String(localized: "Connected") }
+            return String(localized: "Not checked")
+        case .running: return String(localized: "Checking")
+        case .passed: return String(localized: "Reachable")
+        case .failed: return String(localized: "Not reachable")
         }
     }
 
@@ -204,13 +204,13 @@ struct ConnectionHealthView: View {
 
     private var sessionValue: String {
         switch appModel.deviceSession.phase {
-        case .idle: "Inactive"
-        case .openingLocalDevVPN: "Opening LocalDevVPN"
-        case .discovering: "Finding this iPhone"
-        case .connecting: "Connecting"
-        case .active: "Active"
-        case .stopping: "Stopping"
-        case .failed: "Failed"
+        case .idle: String(localized: "Inactive")
+        case .openingLocalDevVPN: String(localized: "Opening LocalDevVPN")
+        case .discovering: String(localized: "Finding this iPhone")
+        case .connecting: String(localized: "Connecting")
+        case .active: String(localized: "Active")
+        case .stopping: String(localized: "Stopping")
+        case .failed: String(localized: "Failed")
         }
     }
 
@@ -269,7 +269,7 @@ struct ConnectionHealthView: View {
                         .foregroundStyle(color)
                         .frame(width: 22)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(title)
+                        Text(title.localized)
                         Text(value)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -280,7 +280,7 @@ struct ConnectionHealthView: View {
                     Image(systemName: symbol)
                         .foregroundStyle(color)
                         .frame(width: 22)
-                    Text(title)
+                    Text(title.localized)
                     Spacer()
                     Text(value)
                         .foregroundStyle(.secondary)
@@ -288,7 +288,7 @@ struct ConnectionHealthView: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title), \(value)")
+        .accessibilityLabel("\(title.localized), \(value)")
     }
 
     @MainActor
@@ -348,10 +348,10 @@ struct ConnectionHealthView: View {
 
     private var diagnosticResultStatus: String {
         switch diagnostics.state {
-        case .notRun: "Not run"
-        case .running: "Running"
-        case .passed: "Passed"
-        case .failed: "Failed"
+        case .notRun: String(localized: "Not run")
+        case .running: String(localized: "Running")
+        case .passed: String(localized: "Passed")
+        case .failed: String(localized: "Failed")
         }
     }
 }

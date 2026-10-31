@@ -95,20 +95,20 @@ final class RouteLibraryModel {
 
     // MARK: - Messages
 
-    private static let emptyNameMessage = "Route name cannot be empty."
-    private static let saveFailureMessage = "Could not save routes."
+    private static var emptyNameMessage: String { String(localized: "Route name cannot be empty.") }
+    private static var saveFailureMessage: String { String(localized: "Could not save routes.") }
 
     private static func loadErrorMessage(for error: Error) -> String {
         guard let storeError = error as? RouteStoreError else {
-            return "Could not load routes."
+            return String(localized: "Could not load routes.")
         }
         switch storeError {
         case .corruptedFile:
-            return "Routes file is corrupted."
+            return String(localized: "Routes file is corrupted.")
         case .unsupportedSchema(let version):
-            return "Routes file uses unsupported schema version \(version)."
+            return String(format: String(localized: "Routes file uses unsupported schema version %lld."), version)
         case .writeFailed:
-            return "Could not load routes."
+            return String(localized: "Could not load routes.")
         }
     }
 }

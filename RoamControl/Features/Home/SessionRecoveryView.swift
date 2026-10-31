@@ -87,21 +87,21 @@ struct SessionRecoveryView: View {
             VStack(spacing: 10) {
                 if recovery.isSavedRoute {
                     recoveryDetail(
-                        title: "Route",
-                        value: recovery.savedRoute?.name ?? "Saved route",
+                        title: "Route".localized,
+                        value: recovery.savedRoute?.name ?? String(localized: "Saved route"),
                         symbol: RouteSymbol.library
                     )
 
                     if let routeProgressText {
                         recoveryDetail(
-                            title: "Progress",
+                            title: "Progress".localized,
                             value: routeProgressText,
                             symbol: "flag.checkered"
                         )
                     }
                 } else {
                     recoveryDetail(
-                        title: recovery.isWalkingRoute ? "Last saved point" : "Last location",
+                        title: (recovery.isWalkingRoute ? "Last saved point" : "Last location").localized,
                         value: recovery.lastReportedLocation.name,
                         symbol: "mappin.and.ellipse"
                     )
@@ -109,14 +109,14 @@ struct SessionRecoveryView: View {
 
                 if let destination = recovery.destination, recovery.isWalkingRoute {
                     recoveryDetail(
-                        title: "Destination",
+                        title: "Destination".localized,
                         value: destination.name,
                         symbol: "flag.checkered"
                     )
                 }
 
                 recoveryDetail(
-                    title: "Last active",
+                    title: "Last active".localized,
                     value: recovery.updatedAt.formatted(date: .abbreviated, time: .shortened),
                     symbol: "clock"
                 )
@@ -166,7 +166,7 @@ struct SessionRecoveryView: View {
             }
 
             if let errorMessage {
-                Text(errorMessage)
+                Text(errorMessage.localized)
                     .font(.caption)
                     .foregroundStyle(.red)
                     .multilineTextAlignment(.center)
@@ -183,21 +183,21 @@ struct SessionRecoveryView: View {
 
     private var summaryText: String {
         if recovery.isSavedRoute {
-            return "Roam Control closed before the saved route run ended. Resume the route from the last saved point or restore this iPhone's real location."
+            return String(localized: "Roam Control closed before the saved route run ended. Resume the route from the last saved point or restore this iPhone's real location.")
         }
 
         if let destination = recovery.destination, recovery.isWalkingRoute {
-            return "Roam Control closed before it could confirm that the simulated walk to \(destination.name) ended. Continue from the last saved point or restore this iPhone's real location."
+            return String(format: String(localized: "Roam Control closed before it could confirm that the simulated walk to %@ ended. Continue from the last saved point or restore this iPhone's real location."), destination.name)
         }
 
-        return "Roam Control closed before it could confirm that the simulated location at \(recovery.lastReportedLocation.name) ended. Choose what this iPhone should do next."
+        return String(format: String(localized: "Roam Control closed before it could confirm that the simulated location at %@ ended. Choose what this iPhone should do next."), recovery.lastReportedLocation.name)
     }
 
     private var resumeTitle: String {
         if recovery.isSavedRoute {
-            return "Resume Route Run"
+            return String(localized: "Resume Route Run")
         }
-        return recovery.isWalkingRoute ? "Resume Walking" : "Resume Location"
+        return recovery.isWalkingRoute ? String(localized: "Resume Walking") : String(localized: "Resume Location")
     }
 
     private var resumeSystemImage: String {
@@ -217,10 +217,10 @@ struct SessionRecoveryView: View {
     private var routeProgressText: String? {
         guard let progress = recovery.routeProgress else { return nil }
         guard let lapFraction else {
-            return "\(progress.completedLaps) completed laps"
+            return String(format: String(localized: "%lld completed laps"), progress.completedLaps)
         }
-        let percentage = Int((lapFraction * 100).rounded())
-        return "\(progress.completedLaps) completed · \(percentage)% of lap"
+        let percentage = "\(Int((lapFraction * 100).rounded()))%"
+        return String(format: String(localized: "%lld completed · %@ of lap"), progress.completedLaps, percentage)
     }
 
     private var lapFraction: Double? {

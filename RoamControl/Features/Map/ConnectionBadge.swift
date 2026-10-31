@@ -9,7 +9,7 @@ struct ConnectionBadge: View {
                 .fill(color)
                 .frame(width: 8, height: 8)
 
-            Text(label)
+            Text(label.localized)
                 .font(.caption.weight(.semibold))
 
             Image(systemName: "chevron.right")
@@ -22,7 +22,7 @@ struct ConnectionBadge: View {
         .background(.regularMaterial, in: Capsule())
         .shadow(color: .black.opacity(0.08), radius: 8, y: 3)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Connection status: \(label)")
+        .accessibilityLabel("Connection status: \(label.localized)")
     }
 
     private var label: String {

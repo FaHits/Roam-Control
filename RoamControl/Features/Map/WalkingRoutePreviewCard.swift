@@ -52,10 +52,10 @@ struct WalkingRoutePreviewCard: View {
                     .frame(width: 32)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(phaseTitle)
+                    Text(phaseTitle.localized)
                         .font(.headline)
 
-                    Text(phaseSubtitle)
+                    Text(phaseSubtitle.localized)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
@@ -374,11 +374,11 @@ struct WalkingRoutePreviewCard: View {
     private var phaseSubtitle: String {
         switch simulation.phase {
         case .idle, .preparing, .failed:
-            "Current Location to \(destination.name)"
+            String(format: String(localized: "Current Location to %@"), destination.name)
         case .walking, .paused:
-            "Heading to \(destination.name) · \(Int((simulation.progress * 100).rounded()))%"
+            String(format: String(localized: "Heading to %@ · %@"), destination.name, "\(Int((simulation.progress * 100).rounded()))%")
         case .arrived:
-            "Location active at \(destination.name)"
+            String(format: String(localized: "Location active at %@"), destination.name)
         case .stopping:
             "Restoring this iPhone's real location"
         }
@@ -437,7 +437,7 @@ struct WalkingRoutePreviewCard: View {
     }
 
     private var durationText: String {
-        guard simulation.phase != .arrived else { return "Complete" }
+        guard simulation.phase != .arrived else { return String(localized: "Complete") }
         let duration = simulation.totalDistance > 0
             ? simulation.remainingDuration
             : route.expectedTravelTime
@@ -445,7 +445,7 @@ struct WalkingRoutePreviewCard: View {
     }
 
     private var arrivalText: String {
-        guard simulation.phase != .arrived else { return "Now" }
+        guard simulation.phase != .arrived else { return String(localized: "Now") }
         let duration = simulation.totalDistance > 0
             ? simulation.remainingDuration
             : route.expectedTravelTime
@@ -456,13 +456,13 @@ struct WalkingRoutePreviewCard: View {
 
     private func formatDuration(_ duration: TimeInterval) -> String {
         let minutes = max(1, Int((duration / 60).rounded()))
-        guard minutes >= 60 else { return "\(minutes) min" }
+        guard minutes >= 60 else { return String(format: String(localized: "%lld min"), minutes) }
 
         let hours = minutes / 60
         let remainingMinutes = minutes % 60
         return remainingMinutes == 0
-            ? "\(hours) hr"
-            : "\(hours) hr \(remainingMinutes) min"
+            ? String(format: String(localized: "%lld hr"), hours)
+            : String(format: String(localized: "%lld hr %lld min"), hours, remainingMinutes)
     }
 }
 
@@ -473,7 +473,7 @@ private struct RouteMetric: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Label(title, systemImage: symbol)
+            Label(title.localized, systemImage: symbol)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -487,6 +487,6 @@ private struct RouteMetric: View {
         .padding(10)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title), \(value)")
+        .accessibilityLabel("\(title.localized), \(value)")
     }
 }

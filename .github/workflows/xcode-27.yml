@@ -24,6 +24,9 @@ jobs:
       - name: List project targets and schemes
         run: xcodebuild -list -project RoamControl.xcodeproj
 
+      - name: Check localization catalogs
+        run: python3 scripts/check_localizations.py
+
       - name: Run RoamControlTests
         run: |
           set -o pipefail

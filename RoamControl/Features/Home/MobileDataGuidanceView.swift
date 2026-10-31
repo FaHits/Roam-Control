@@ -60,10 +60,10 @@ struct MobileDataGuidanceView: View {
             }
 
             VStack(spacing: 10) {
-                Text(title)
+                Text(title.localized)
                     .font(.title2.bold())
 
-                Text(message)
+                Text(message.localized)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

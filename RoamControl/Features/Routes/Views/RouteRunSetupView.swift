@@ -68,7 +68,7 @@ struct RouteRunSetupView: View {
                     modeCard
 
                     if let message = startBlockingMessage {
-                        Label(message, systemImage: "exclamationmark.triangle.fill")
+                        Label(message.localized, systemImage: "exclamationmark.triangle.fill")
                             .font(.subheadline)
                             .foregroundStyle(.red)
                             .fixedSize(horizontal: false, vertical: true)
@@ -163,7 +163,7 @@ struct RouteRunSetupView: View {
             if route.isClosed {
                 Picker("Mode", selection: $modeSelection) {
                     ForEach(ModeSelection.allCases, id: \.self) { selection in
-                        Text(selection.rawValue).tag(selection)
+                        Text(LocalizedStringKey(selection.rawValue)).tag(selection)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -190,14 +190,14 @@ struct RouteRunSetupView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text(title)
+                Text(title.localized)
                 Spacer(minLength: 12)
                 Text(valueText)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
             Slider(value: value, in: range, step: step)
-                .accessibilityLabel(title)
+                .accessibilityLabel(title.localized)
                 .accessibilityValue(valueText)
         }
     }

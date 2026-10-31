@@ -73,7 +73,7 @@ struct CoordinateDiagnosticsView: View {
         return LabeledContent(title) {
             VStack(alignment: .trailing, spacing: 2) {
                 Text(Self.coordinates(coordinate.latitude, coordinate.longitude))
-                Text(String(format: "%.1f m away", distance))
+                Text(String(format: String(localized: "%.1f m away"), distance))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

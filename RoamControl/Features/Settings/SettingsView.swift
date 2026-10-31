@@ -16,6 +16,8 @@ struct SettingsView: View {
     @State private var isConfirmingReset = false
     @State private var resetError: String?
     @State private var releaseUpdateStatus: ReleaseUpdateStatus = .idle
+    @State private var isShowingRestartAlert = false
+    @AppStorage(AppLanguage.storageKey) private var appLanguage: AppLanguage = .system
 
     var body: some View {
         NavigationStack {
@@ -36,6 +38,23 @@ struct SettingsView: View {
                         mapStylePicker
                     }
                     .padding(.vertical, 4)
+                }
+
+                Section("Language") {
+                    Picker("Language", selection: $appLanguage) {
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(language.title).tag(language)
+                        }
+                    }
+                    .onChange(of: appLanguage) { _, newLanguage in
+                        newLanguage.apply()
+                        isShowingRestartAlert = true
+                    }
+                }
+                .alert("Restart Required", isPresented: $isShowingRestartAlert) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text("Close the app and open it again to apply the new language.")
                 }
 
                 Section("Device") {
@@ -171,17 +190,17 @@ struct SettingsView: View {
                 resetError = nil
             }
         } message: {
-            Text(resetError ?? "Please try again.")
+            Text(resetError ?? String(localized: "Please try again."))
         }
     }
 
     private var connectionLabel: String {
         switch appModel.connectionState {
-        case .notConfigured: "Not paired"
-        case .ready: "Ready"
-        case .connecting: "Connecting"
-        case .active: "Active"
-        case .failed: "Problem"
+        case .notConfigured: String(localized: "Not paired")
+        case .ready: String(localized: "Ready")
+        case .connecting: String(localized: "Connecting")
+        case .active: String(localized: "Active")
+        case .failed: String(localized: "Problem")
         }
     }
 
@@ -286,7 +305,7 @@ struct SettingsView: View {
 
     private var buildNumberText: String {
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
-        return build ?? "Unknown"
+        return build ?? String(localized: "Unknown")
     }
 
     private var buildDateText: String {
@@ -303,15 +322,15 @@ struct SettingsView: View {
             let executableURL = Bundle.main.executableURL,
             let values = try? executableURL.resourceValues(forKeys: [.contentModificationDateKey]),
             let buildDate = values.contentModificationDate
-        else { return "Unknown" }
+        else { return String(localized: "Unknown") }
 
         return buildDate.formatted(date: .abbreviated, time: .shortened)
     }
 
     private var updateCheckTitle: String {
         switch releaseUpdateStatus {
-        case .checking: "Checking for Updates…"
-        default: "Check for Updates"
+        case .checking: String(localized: "Checking for Updates…")
+        default: String(localized: "Check for Updates")
         }
     }
 

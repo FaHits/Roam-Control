@@ -60,7 +60,7 @@ struct LocationSelectionCard: View {
                         } else {
                             Image(systemName: primarySymbol)
                         }
-                        Text(primaryTitle)
+                        Text(primaryTitle.localized)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -104,7 +104,7 @@ struct LocationSelectionCard: View {
                         .frame(maxWidth: .infinity)
                 }
 
-                Text(statusMessage)
+                Text(statusMessage.localized)
                     .font(.caption)
                     .foregroundStyle(isFailure ? .red : .secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -343,9 +343,9 @@ struct LocationSelectionCard: View {
             return "Opening the secure location session."
         case .active(let target):
             if !isShowingActiveTarget, let location {
-                return "Currently using \(target.name). Update to move to \(location.name)."
+                return String(format: String(localized: "Currently using %@. Update to move to %@."), target.name, location.name)
             }
-            return "This iPhone is using \(target.name). Stop & Restore ends the simulation and restores its real location."
+            return String(format: String(localized: "This iPhone is using %@. Stop & Restore ends the simulation and restores its real location."), target.name)
         case .stopping:
             return "Restoring this iPhone's real location. Keep Roam Control open until this finishes."
         case .failed(let message):

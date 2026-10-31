@@ -188,25 +188,25 @@ struct SavedPlacesView: View {
 
     private var clearConfirmationTitle: String {
         switch clearTarget {
-        case .favourites: "Clear all favourites?"
-        case .history: "Clear location history?"
-        case nil: "Clear saved places?"
+        case .favourites: String(localized: "Clear all favourites?")
+        case .history: String(localized: "Clear location history?")
+        case nil: String(localized: "Clear saved places?")
         }
     }
 
     private var clearConfirmationButton: String {
         switch clearTarget {
-        case .favourites: "Clear Favourites"
-        case .history: "Clear History"
-        case nil: "Clear"
+        case .favourites: String(localized: "Clear Favourites")
+        case .history: String(localized: "Clear History")
+        case nil: String(localized: "Clear")
         }
     }
 
     private var clearConfirmationMessage: String {
         switch clearTarget {
-        case .favourites: "Every favourite will be removed. Your history will be kept."
-        case .history: "Every recently used location will be removed. Your favourites will be kept."
-        case nil: "This cannot be undone."
+        case .favourites: String(localized: "Every favourite will be removed. Your history will be kept.")
+        case .history: String(localized: "Every recently used location will be removed. Your favourites will be kept.")
+        case nil: String(localized: "This cannot be undone.")
         }
     }
 
@@ -278,7 +278,7 @@ private struct EmptySavedPlacesRow: View {
     let message: String
 
     var body: some View {
-        Label(message, systemImage: symbol)
+        Label(message.localized, systemImage: symbol)
             .font(.subheadline)
             .foregroundStyle(.secondary)
             .padding(.vertical, 8)

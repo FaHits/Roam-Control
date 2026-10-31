@@ -202,12 +202,12 @@ struct AboutRoamControlView: View {
                 .frame(width: 24, height: 24)
                 .background(.blue, in: Circle())
 
-            Text(text)
+            Text(text.localized)
                 .font(.subheadline)
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Step \(number). \(text)")
+        .accessibilityLabel(String(format: String(localized: "Step %lld. %@"), number, text.localized))
     }
 
     private func guideRow(_ title: String, symbol: String, text: String) -> some View {
@@ -219,10 +219,10 @@ struct AboutRoamControlView: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(title.localized)
                     .font(.subheadline.weight(.semibold))
 
-                Text(text)
+                Text(text.localized)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -230,7 +230,7 @@ struct AboutRoamControlView: View {
         }
         .padding(.vertical, 3)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title). \(text)")
+        .accessibilityLabel("\(title.localized). \(text.localized)")
     }
 }
 

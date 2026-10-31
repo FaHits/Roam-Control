@@ -1,0 +1,40 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSLocalNetworkUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Roam Control uses the local network to securely pair with and control this iPhone through LocalDevVPN."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Roam Control 需要使用本地网络，通过 LocalDevVPN 安全地配对并控制这台 iPhone。"
+          }
+        }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Roam Control uses location updates to keep fixed and walking sessions running in the background, and to recenter on your real position after a session stops."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Roam Control 使用位置更新，让固定位置会话和步行会话在后台持续运行，并在会话停止后回到你的真实位置。"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

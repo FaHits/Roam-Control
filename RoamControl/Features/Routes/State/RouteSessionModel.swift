@@ -268,8 +268,13 @@ final class RouteSessionModel {
         route: RouteDefinition
     ) -> LocationTarget {
         LocationTarget(
-            name: "Running \(route.name)",
-            subtitle: "\(snapshot.completedLaps) laps · \(String(format: "%.1f", snapshot.speedMetersPerSecond)) m/s · \(Int(snapshot.cadenceStepsPerMinute.rounded())) spm",
+            name: String(format: String(localized: "Running %@"), route.name),
+            subtitle: String(
+                format: String(localized: "%lld laps · %@ m/s · %lld spm"),
+                snapshot.completedLaps,
+                String(format: "%.1f", snapshot.speedMetersPerSecond),
+                Int(snapshot.cadenceStepsPerMinute.rounded())
+            ),
             latitude: coordinate.latitude,
             longitude: coordinate.longitude
         )

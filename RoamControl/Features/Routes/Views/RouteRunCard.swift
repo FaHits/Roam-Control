@@ -69,7 +69,7 @@ struct RouteRunCard: View {
                     .font(.headline)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text(phaseTitle)
+                Text(phaseTitle.localized)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -158,7 +158,7 @@ struct RouteRunCard: View {
 
     private func startButton(title: String, symbol: String) -> some View {
         Button(action: onStart) {
-            Label(title, systemImage: symbol)
+            Label(title.localized, systemImage: symbol)
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
@@ -215,7 +215,7 @@ struct RouteRunCard: View {
     private func statusRow(_ text: String) -> some View {
         HStack(spacing: 10) {
             ProgressView()
-            Text(text)
+            Text(text.localized)
                 .font(.subheadline.weight(.medium))
         }
         .frame(maxWidth: .infinity)
@@ -227,21 +227,21 @@ struct RouteRunCard: View {
         case .idle:
             footerText(
                 isPaired
-                    ? "Your location will move along this route. Keep Roam Control open during the run."
-                    : "Pair this iPhone before starting a route."
+                    ? String(localized: "Your location will move along this route. Keep Roam Control open during the run.")
+                    : String(localized: "Pair this iPhone before starting a route.")
             )
         case .preparing:
-            footerText("Follow the mobile-data guidance if it appears.")
+            footerText(String(localized: "Follow the mobile-data guidance if it appears."))
         case .running:
-            footerText("Keep Roam Control running. You can use other apps while the run continues.")
+            footerText(String(localized: "Keep Roam Control running. You can use other apps while the run continues."))
         case .paused:
-            footerText("Your simulated location is held here until you resume.")
+            footerText(String(localized: "Your simulated location is held here until you resume."))
         case .finished:
-            footerText("The route finished. Tap Done to end the session and restore your real location.")
+            footerText(String(localized: "The route finished. Tap Done to end the session and restore your real location."))
         case .stopping:
-            footerText("Keep Roam Control open until the real location has been restored.")
+            footerText(String(localized: "Keep Roam Control open until the real location has been restored."))
         case .failed(let message):
-            Text(message)
+            Text(message.localized)
                 .font(.caption)
                 .foregroundStyle(.red)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -250,7 +250,7 @@ struct RouteRunCard: View {
     }
 
     private func footerText(_ text: String) -> some View {
-        Text(text)
+        Text(text.localized)
             .font(.caption)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .center)
@@ -310,7 +310,7 @@ struct RouteRunCard: View {
         guard let snapshot = session.snapshot, snapshot.cadenceStepsPerMinute.isFinite else {
             return "—"
         }
-        return "\(Int(snapshot.cadenceStepsPerMinute.rounded())) spm"
+        return String(format: String(localized: "%lld spm"), Int(snapshot.cadenceStepsPerMinute.rounded()))
     }
 
     private var elapsedText: String {
@@ -335,7 +335,7 @@ private struct RouteRunMetric: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Label(title, systemImage: symbol)
+            Label(title.localized, systemImage: symbol)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -349,6 +349,6 @@ private struct RouteRunMetric: View {
         .padding(10)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title), \(value)")
+        .accessibilityLabel("\(title.localized), \(value)")
     }
 }

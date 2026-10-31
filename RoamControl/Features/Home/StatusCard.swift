@@ -9,8 +9,8 @@ struct StatusCard: View {
                 .foregroundStyle(tint)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline)
-                Text(detail).font(.subheadline).foregroundStyle(.secondary)
+                Text(title.localized).font(.headline)
+                Text(detail.localized).font(.subheadline).foregroundStyle(.secondary)
             }
 
             Spacer()

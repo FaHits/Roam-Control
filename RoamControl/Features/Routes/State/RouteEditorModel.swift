@@ -162,11 +162,11 @@ final class RouteEditorModel {
 
     // MARK: - Messages
 
-    private static let defaultName = "New Route"
-    private static let emptyNameMessage = "Route name cannot be empty."
-    private static let invalidCoordinateMessage = "Point is outside valid coordinates."
-    private static let openRouteMinimumMessage = "A route needs at least 2 points."
-    private static let closedRouteMinimumMessage = "A closed route needs at least 3 points."
-    private static let zeroLengthMessage = "A route must have a non-zero length."
-    private static let genericGeometryMessage = "The route could not be built."
+    private static var defaultName: String { String(localized: "New Route") }
+    private static var emptyNameMessage: String { String(localized: "Route name cannot be empty.") }
+    private static var invalidCoordinateMessage: String { String(localized: "Point is outside valid coordinates.") }
+    private static var openRouteMinimumMessage: String { String(localized: "A route needs at least 2 points.") }
+    private static var closedRouteMinimumMessage: String { String(localized: "A closed route needs at least 3 points.") }
+    private static var zeroLengthMessage: String { String(localized: "A route must have a non-zero length.") }
+    private static var genericGeometryMessage: String { String(localized: "The route could not be built.") }
 }

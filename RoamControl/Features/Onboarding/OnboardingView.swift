@@ -117,8 +117,8 @@ struct OnboardingView: View {
     }
 
     private var finalButtonTitle: String {
-        if !isLastPage { return "Continue" }
-        return isReplay ? "Done" : "Set Up This iPhone"
+        if !isLastPage { return String(localized: "Continue") }
+        return isReplay ? String(localized: "Done") : String(localized: "Set Up This iPhone")
     }
 
     private var finalButtonSymbol: String {

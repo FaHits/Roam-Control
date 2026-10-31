@@ -555,7 +555,7 @@ struct HomeView: View {
                     isShowingRouteLibrary = false
                 },
                 onEditActiveRoute: {
-                    routeLibraryError = "Stop the active run before editing this route."
+                    routeLibraryError = String(localized: "Stop the active run before editing this route.")
                 }
             )
         }
@@ -574,7 +574,7 @@ struct HomeView: View {
                 routeLibraryError = nil
             }
         } message: {
-            Text(routeLibraryError ?? "")
+            Text(routeLibraryError?.localized ?? "")
         }
     }
 
@@ -687,7 +687,7 @@ struct HomeView: View {
                 )
             )
         } catch {
-            routeLibraryError = "This route could not be started. Check its points and run settings before trying again."
+            routeLibraryError = String(localized: "This route could not be started. Check its points and run settings before trying again.")
             return
         }
 
