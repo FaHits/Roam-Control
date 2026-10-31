@@ -697,6 +697,11 @@ struct HomeView: View {
     private func resumeInterruptedSession(_ recovery: SessionRecoveryRecord) {
         recoveredWalkError = nil
 
+        if recovery.isSavedRoute {
+            resumeSavedRoute(recovery)
+            return
+        }
+
         guard recovery.isWalkingRoute, let destination = recovery.destination else {
             appModel.dismissInterruptedSessionRecovery()
             mapModel.show(recovery.lastReportedLocation)
@@ -729,6 +734,45 @@ struct HomeView: View {
             isPreparingRecoveredWalk = false
             await walkingSimulation.start(using: appModel)
         }
+    }
+
+    private func resumeSavedRoute(_ recovery: SessionRecoveryRecord) {
+        recoveredWalkError = nil
+
+        guard
+            let route = recovery.savedRoute,
+            let profile = recovery.runProfile,
+            let mode = recovery.runMode,
+            let progress = recovery.routeProgress
+        else {
+            recoveredWalkError = "The saved route run could not be restored."
+            return
+        }
+
+        routeSession.reset()
+        walkingSimulation.reset()
+        walkingRoutePlanner.clear()
+
+        do {
+            try routeSession.prepare(
+                route: route,
+                profile: profile,
+                mode: mode,
+                progress: progress
+            )
+            mapModel.show(
+                try RouteGeometry(points: route.points, isClosed: route.isClosed)
+            )
+        } catch {
+            routeSession.reset()
+            recoveredWalkError = "The saved route run could not be restored."
+            isPreparingRecoveredWalk = false
+            return
+        }
+
+        appModel.dismissInterruptedSessionRecovery()
+        isPreparingRecoveredWalk = false
+        Task { await routeSession.start(using: appModel) }
     }
 
     private func dismissInterruptedSessionRecovery() {

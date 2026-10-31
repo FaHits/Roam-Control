@@ -68,7 +68,7 @@ struct SessionRecoveryView: View {
                         height: dynamicTypeSize.isAccessibilitySize ? 66 : 78
                     )
 
-                Image(systemName: recovery.isWalkingRoute ? "figure.walk.motion" : "location.fill")
+                Image(systemName: recoveryIcon)
                     .font(.system(size: 31, weight: .semibold))
                     .foregroundStyle(.white)
             }
@@ -85,11 +85,27 @@ struct SessionRecoveryView: View {
             }
 
             VStack(spacing: 10) {
-                recoveryDetail(
-                    title: recovery.isWalkingRoute ? "Last saved point" : "Last location",
-                    value: recovery.lastReportedLocation.name,
-                    symbol: "mappin.and.ellipse"
-                )
+                if recovery.isSavedRoute {
+                    recoveryDetail(
+                        title: "Route",
+                        value: recovery.savedRoute?.name ?? "Saved route",
+                        symbol: "point.topleft.down.to.point.right.curvepath"
+                    )
+
+                    if let routeProgressText {
+                        recoveryDetail(
+                            title: "Progress",
+                            value: routeProgressText,
+                            symbol: "flag.checkered"
+                        )
+                    }
+                } else {
+                    recoveryDetail(
+                        title: recovery.isWalkingRoute ? "Last saved point" : "Last location",
+                        value: recovery.lastReportedLocation.name,
+                        symbol: "mappin.and.ellipse"
+                    )
+                }
 
                 if let destination = recovery.destination, recovery.isWalkingRoute {
                     recoveryDetail(
@@ -120,7 +136,7 @@ struct SessionRecoveryView: View {
                     .foregroundStyle(.secondary)
             } else {
                 Button(action: onResume) {
-                    Label(resumeTitle, systemImage: recovery.isWalkingRoute ? "figure.walk" : "arrow.clockwise")
+                    Label(resumeTitle, systemImage: resumeSystemImage)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -166,6 +182,10 @@ struct SessionRecoveryView: View {
     }
 
     private var summaryText: String {
+        if recovery.isSavedRoute {
+            return "Roam Control closed before the saved route run ended. Resume the route from the last saved point or restore this iPhone's real location."
+        }
+
         if let destination = recovery.destination, recovery.isWalkingRoute {
             return "Roam Control closed before it could confirm that the simulated walk to \(destination.name) ended. Continue from the last saved point or restore this iPhone's real location."
         }
@@ -174,7 +194,44 @@ struct SessionRecoveryView: View {
     }
 
     private var resumeTitle: String {
-        recovery.isWalkingRoute ? "Resume Walking" : "Resume Location"
+        if recovery.isSavedRoute {
+            return "Resume Route Run"
+        }
+        return recovery.isWalkingRoute ? "Resume Walking" : "Resume Location"
+    }
+
+    private var resumeSystemImage: String {
+        if recovery.isSavedRoute {
+            return "figure.run"
+        }
+        return recovery.isWalkingRoute ? "figure.walk" : "arrow.clockwise"
+    }
+
+    private var recoveryIcon: String {
+        if recovery.isSavedRoute {
+            return "point.topleft.down.to.point.right.curvepath"
+        }
+        return recovery.isWalkingRoute ? "figure.walk.motion" : "location.fill"
+    }
+
+    private var routeProgressText: String? {
+        guard let progress = recovery.routeProgress else { return nil }
+        guard let lapFraction else {
+            return "\(progress.completedLaps) completed laps"
+        }
+        let percentage = Int((lapFraction * 100).rounded())
+        return "\(progress.completedLaps) completed · \(percentage)% of lap"
+    }
+
+    private var lapFraction: Double? {
+        guard
+            let progress = recovery.routeProgress,
+            let route = recovery.savedRoute,
+            let geometry = try? RouteGeometry(points: route.points, isClosed: route.isClosed),
+            geometry.totalDistance > 0
+        else { return nil }
+
+        return min(max(progress.distanceInLap / geometry.totalDistance, 0), 1)
     }
 
     private func recoveryDetail(title: String, value: String, symbol: String) -> some View {
