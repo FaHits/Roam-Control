@@ -11,7 +11,6 @@ final class AppModel {
     private static let appearanceKey = "appAppearance"
     private static let mapDisplayStyleKey = "mapDisplayStyle"
     private static let activeSessionRecoveryKey = "activeSessionRecovery"
-    private static let anonymousUsageStatisticsKey = "sharesAnonymousUsageStatistics"
 
     private let preferences: UserDefaults
 
@@ -25,7 +24,6 @@ final class AppModel {
     private(set) var locationHistory: [LocationTarget]
     private(set) var appearance: AppAppearance
     private(set) var mapDisplayStyle: MapDisplayStyle
-    private(set) var sharesAnonymousUsageStatistics: Bool
     private(set) var interruptedSession: SessionRecoveryRecord?
     private(set) var isRestoringInterruptedSession = false
     private(set) var interruptedSessionError: String?
@@ -35,12 +33,10 @@ final class AppModel {
     private var restorationReachedActiveSession = false
     private var restorationWasCancelled = false
     private var isStoppingLocationSessionForRestoration = false
-    private var pendingSessionAnalyticsEvent: UsageAnalyticsEvent?
 
     let pairingService: any PairingService
     let onDevicePairing: OnDevicePairingCoordinator
     let deviceSession: LocalDeviceSessionCoordinator
-    private let usageAnalytics: UsageAnalyticsService
     let localDevVPNInstallURL = URL(string: "https://apps.apple.com/app/localdevvpn/id6755608044")!
 
     init(
@@ -50,7 +46,6 @@ final class AppModel {
         self.pairingService = pairingService
         self.onDevicePairing = .shared
         self.deviceSession = LocalDeviceSessionCoordinator()
-        self.usageAnalytics = UsageAnalyticsService(preferences: preferences)
         self.preferences = preferences
         let hasCompletedOnboarding = preferences.bool(forKey: Self.onboardingKey)
         self.hasCompletedOnboarding = hasCompletedOnboarding
@@ -63,64 +58,10 @@ final class AppModel {
         self.mapDisplayStyle = MapDisplayStyle(
             rawValue: preferences.string(forKey: Self.mapDisplayStyleKey) ?? ""
         ) ?? .standard
-        self.sharesAnonymousUsageStatistics = Self.initialUsageStatisticsPreference(
-            in: preferences
-        )
         self.interruptedSession = Self.recoveryRecord(in: preferences)
 
-        onDevicePairing.onFailure = { [weak self] diagnostic in
-            guard let self else { return }
-            self.usageAnalytics.recordFailure(
-                diagnostic,
-                context: .pairing,
-                enabled: self.sharesAnonymousUsageStatistics
-            )
-        }
-        deviceSession.onFailure = { [weak self] diagnostic in
-            guard let self else { return }
-            let restoring = self.isRestoringInterruptedSession || self.isStoppingLocationSessionForRestoration
-            self.usageAnalytics.recordFailure(
-                diagnostic,
-                context: restoring ? .restoration : .location,
-                enabled: self.sharesAnonymousUsageStatistics
-            )
-        }
-
-        deviceSession.onRecoveryNeeded = { [weak self] diagnostic in
-            guard let self else { return }
-            let restoring = self.isRestoringInterruptedSession || self.isStoppingLocationSessionForRestoration
-            self.usageAnalytics.recordFailure(
-                diagnostic,
-                context: restoring ? .restoration : .location,
-                enabled: self.sharesAnonymousUsageStatistics
-            )
-        }
-        usageAnalytics.backgroundSession = { [weak self] in
-            self?.deviceSession.backgroundTelemetry ?? BackgroundSessionTelemetry(
-                status: .idle, started: false, schedulerAvailable: false
-            )
-        }
-        deviceSession.onBackgroundEvent = { [weak self] event, _ in
-            guard let self else { return }
-            self.usageAnalytics.record(event, enabled: self.sharesAnonymousUsageStatistics)
-        }
-        deviceSession.onConnectionEvent = { [weak self] event in
-            guard let self else { return }
-            self.usageAnalytics.record(event, enabled: self.sharesAnonymousUsageStatistics)
-        }
         deviceSession.onPhaseChange = { [weak self] phase in
             self?.applyDeviceSessionPhase(phase)
-        }
-        onDevicePairing.onPhaseChange = { [weak self] phase in
-            guard case .failed = phase else { return }
-            self?.usageAnalytics.record(
-                .pairingFailed,
-                enabled: self?.sharesAnonymousUsageStatistics ?? false
-            )
-        }
-
-        if hasCompletedOnboarding {
-            usageAnalytics.recordActivation(enabled: sharesAnonymousUsageStatistics)
         }
     }
 
@@ -204,30 +145,10 @@ final class AppModel {
         preferences.set(style.rawValue, forKey: Self.mapDisplayStyleKey)
     }
 
-    func setSharesAnonymousUsageStatistics(_ enabled: Bool) {
-        sharesAnonymousUsageStatistics = enabled
-        preferences.set(enabled, forKey: Self.anonymousUsageStatisticsKey)
-
-        if enabled, hasCompletedOnboarding {
-            usageAnalytics.recordActivation(enabled: true)
-        } else if !enabled {
-            usageAnalytics.revokeLocalIdentity()
-        }
-    }
-
     func completeOnboarding() {
-        preferences.set(
-            sharesAnonymousUsageStatistics,
-            forKey: Self.anonymousUsageStatisticsKey
-        )
         preferences.set(true, forKey: Self.onboardingKey)
         shouldPresentDeviceSetup = true
         hasCompletedOnboarding = true
-        usageAnalytics.record(
-            .onboardingCompleted,
-            enabled: sharesAnonymousUsageStatistics
-        )
-        usageAnalytics.recordActivation(enabled: sharesAnonymousUsageStatistics)
     }
 
     func deviceSetupWasPresented() {
@@ -250,7 +171,6 @@ final class AppModel {
         locationHistory = []
         appearance = .automatic
         mapDisplayStyle = .standard
-        sharesAnonymousUsageStatistics = false
         interruptedSession = nil
         activeSessionRecovery = nil
         isRestoringInterruptedSession = false
@@ -260,7 +180,6 @@ final class AppModel {
         connectionState = .notConfigured
         shouldPresentDeviceSetup = false
         hasCompletedOnboarding = false
-        usageAnalytics.revokeLocalIdentity()
     }
 
     func restorePairingStatus() async {
@@ -279,8 +198,6 @@ final class AppModel {
         } catch {
             pairingStatus = .failed(message: error.localizedDescription)
             connectionState = .failed(message: error.localizedDescription)
-            usageAnalytics.record(.pairingFailed, enabled: sharesAnonymousUsageStatistics)
-            usageAnalytics.recordFailure(.pairingRead, context: .pairing, enabled: sharesAnonymousUsageStatistics)
         }
     }
 
@@ -294,8 +211,6 @@ final class AppModel {
         } catch {
             pairingStatus = .failed(message: error.localizedDescription)
             connectionState = .failed(message: error.localizedDescription)
-            usageAnalytics.record(.pairingFailed, enabled: sharesAnonymousUsageStatistics)
-            usageAnalytics.recordFailure(.pairingImport, context: .pairing, enabled: sharesAnonymousUsageStatistics)
         }
     }
 
@@ -311,10 +226,6 @@ final class AppModel {
             )
             self.pairingStatus = .paired(summary)
             self.connectionState = .ready
-            self.usageAnalytics.record(
-                .pairingCompleted,
-                enabled: self.sharesAnonymousUsageStatistics
-            )
             return summary
         }
     }
@@ -395,10 +306,6 @@ final class AppModel {
         }
         switch deviceSession.updateLocation(deviceTarget) {
         case .updated:
-            usageAnalytics.record(
-                .activeLocationUpdated,
-                enabled: sharesAnonymousUsageStatistics
-            )
             return
         case .failed:
             return
@@ -409,29 +316,14 @@ final class AppModel {
         do {
             guard let pairingRecord = try await pairingService.pairingRecordData() else {
                 activeSessionRecovery = nil
-                pendingSessionAnalyticsEvent = nil
                 pairingStatus = .notPaired
                 connectionState = .notConfigured
-                usageAnalytics.recordFailure(.locationPreparation, context: .location, enabled: sharesAnonymousUsageStatistics)
-                usageAnalytics.record(
-                    .locationPreparationFailed,
-                    enabled: sharesAnonymousUsageStatistics
-                )
                 return
             }
-            pendingSessionAnalyticsEvent = recovery.kind == .walkingRoute
-                ? .walkingStarted
-                : .fixedLocationStarted
             deviceSession.start(pairingRecord: pairingRecord, target: deviceTarget)
         } catch {
             activeSessionRecovery = nil
-            pendingSessionAnalyticsEvent = nil
             connectionState = .failed(message: error.localizedDescription)
-            usageAnalytics.recordFailure(.locationPreparation, context: .location, enabled: sharesAnonymousUsageStatistics)
-            usageAnalytics.record(
-                .locationPreparationFailed,
-                enabled: sharesAnonymousUsageStatistics
-            )
         }
     }
 
@@ -451,8 +343,6 @@ final class AppModel {
             guard let pairingRecord = try await pairingService.pairingRecordData() else {
                 isRestoringInterruptedSession = false
                 interruptedSessionError = "The saved pairing record is unavailable. Pair this iPhone again."
-                usageAnalytics.recordFailure(.locationPreparation, context: .restoration, enabled: sharesAnonymousUsageStatistics)
-                usageAnalytics.record(.locationRestoreFailed, enabled: sharesAnonymousUsageStatistics)
                 return
             }
             deviceSession.start(
@@ -462,8 +352,6 @@ final class AppModel {
         } catch {
             isRestoringInterruptedSession = false
             interruptedSessionError = error.localizedDescription
-            usageAnalytics.recordFailure(.locationPreparation, context: .restoration, enabled: sharesAnonymousUsageStatistics)
-            usageAnalytics.record(.locationRestoreFailed, enabled: sharesAnonymousUsageStatistics)
         }
     }
 
@@ -494,11 +382,6 @@ final class AppModel {
         deviceSession.handleOpenURL(url)
     }
 
-    func appBecameActive() {
-        guard hasCompletedOnboarding else { return }
-        usageAnalytics.recordActivation(enabled: sharesAnonymousUsageStatistics)
-    }
-
     func removePairingRecord() async {
         onDevicePairing.reset()
         deviceSession.reset()
@@ -522,7 +405,6 @@ final class AppModel {
     private func applyDeviceSessionPhase(_ phase: DeviceSessionPhase) {
         switch phase {
         case .idle:
-            pendingSessionAnalyticsEvent = nil
             isStoppingLocationSessionForRestoration = false
             if isRestoringInterruptedSession {
                 let didRestore = restorationReachedActiveSession && !restorationWasCancelled
@@ -544,10 +426,6 @@ final class AppModel {
         case .active(let target):
             connectionState = .active
             isStoppingLocationSessionForRestoration = false
-            if let event = pendingSessionAnalyticsEvent {
-                usageAnalytics.record(event, enabled: sharesAnonymousUsageStatistics)
-                pendingSessionAnalyticsEvent = nil
-            }
             if isRestoringInterruptedSession {
                 restorationReachedActiveSession = true
                 Task { @MainActor [weak self] in
@@ -565,13 +443,9 @@ final class AppModel {
                 persistActiveSessionRecovery(at: target)
             }
         case .failed(let message):
-            pendingSessionAnalyticsEvent = nil
             connectionState = .failed(message: message)
             if isRestoringInterruptedSession || isStoppingLocationSessionForRestoration {
                 let wasRestoringInterruptedSession = isRestoringInterruptedSession
-                if !restorationWasCancelled {
-                    usageAnalytics.record(.locationRestoreFailed, enabled: sharesAnonymousUsageStatistics)
-                }
                 isRestoringInterruptedSession = false
                 restorationReachedActiveSession = false
                 restorationWasCancelled = false
@@ -580,10 +454,6 @@ final class AppModel {
                     interruptedSessionError = message
                 }
             } else {
-                usageAnalytics.record(
-                    analyticsEvent(forLocationStartFailure: message),
-                    enabled: sharesAnonymousUsageStatistics
-                )
                 // A failed route run keeps its recovery record so the route,
                 // progress and profile stay available for the next launch.
                 if
@@ -594,17 +464,6 @@ final class AppModel {
                 }
             }
         }
-    }
-
-    private func analyticsEvent(forLocationStartFailure message: String) -> UsageAnalyticsEvent {
-        let normalizedMessage = message.lowercased()
-        if normalizedMessage.contains("localdevvpn") {
-            return .localDevVPNUnreachable
-        }
-        if normalizedMessage.contains("prepare") {
-            return .locationPreparationFailed
-        }
-        return .locationStartFailed
     }
 
     private func persistActiveSessionRecovery(at target: LocationTarget) {
@@ -699,18 +558,6 @@ final class AppModel {
             let recovery = try? JSONDecoder().decode(SessionRecoveryRecord.self, from: data)
         else { return nil }
         return recovery
-    }
-
-    private static func initialUsageStatisticsPreference(
-        in preferences: UserDefaults
-    ) -> Bool {
-        if preferences.object(forKey: Self.anonymousUsageStatisticsKey) != nil {
-            return preferences.bool(forKey: Self.anonymousUsageStatisticsKey)
-        }
-
-        // A missing preference is never treated as consent. Existing saved
-        // choices continue unchanged when the app is upgraded.
-        return false
     }
 }
 

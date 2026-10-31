@@ -15,13 +15,12 @@ enum BackgroundKeepAliveStatus: String, Sendable {
 }
 
 /// Receives updates solely to maintain an active session. Coordinates are never
-/// stored, injected, or passed to analytics. DVT remains the simulation source.
+/// stored or injected. DVT remains the simulation source.
 @MainActor
 @Observable
 final class BackgroundLocationKeepAlive: NSObject, @preconcurrency CLLocationManagerDelegate {
     private(set) var status: BackgroundKeepAliveStatus = .idle
     private(set) var started = false
-    var onChange: (() -> Void)?
     private let manager: CLLocationManager
     private var requested = false
     private let hasBackgroundMode: Bool
@@ -57,7 +56,6 @@ final class BackgroundLocationKeepAlive: NSObject, @preconcurrency CLLocationMan
         guard self.status != status || self.started != started else { return }
         self.status = status
         self.started = started
-        onChange?()
     }
 
     private func unavailable(_ status: BackgroundKeepAliveStatus) {

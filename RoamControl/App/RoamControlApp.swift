@@ -3,7 +3,6 @@ import SwiftUI
 @main
 struct RoamControlApp: App {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.scenePhase) private var scenePhase
     @State private var appModel = AppModel()
 
     var body: some Scene {
@@ -29,10 +28,6 @@ struct RoamControlApp: App {
                 )
                 .onOpenURL { url in
                     appModel.handleOpenURL(url)
-                }
-                .onChange(of: scenePhase) { _, phase in
-                    guard phase == .active else { return }
-                    appModel.appBecameActive()
                 }
         }
     }

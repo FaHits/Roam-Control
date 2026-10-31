@@ -2305,22 +2305,6 @@
         }
       }
     },
-    "Events are sent to Roam Control's maintainer-operated service and, in configured beta builds, TelemetryDeck. The self-hosted service receives ordinary HTTPS connection metadata, such as the source IP address, but the app does not include it in the event body.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Events are sent to Roam Control's maintainer-operated service and, in configured beta builds, TelemetryDeck. The self-hosted service receives ordinary HTTPS connection metadata, such as the source IP address, but the app does not include it in the event body."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "事件会发送到由 Roam Control 维护者运营的服务；在已配置的测试构建中，也会发送到 TelemetryDeck。自托管服务会收到常规的 HTTPS 连接元数据（例如来源 IP 地址），但 App 不会把它写进事件正文。"
-          }
-        }
-      }
-    },
     "Every drawn point will be removed. The route name and closed-loop setting are kept.": {
       "localizations": {
         "en": {
@@ -7169,22 +7153,6 @@
         }
       }
     },
-    "Share Anonymous Usage Statistics": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Share Anonymous Usage Statistics"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "共享匿名使用统计"
-          }
-        }
-      }
-    },
     "Shared": {
       "localizations": {
         "en": {
@@ -8689,22 +8657,6 @@
         }
       }
     },
-    "The self-hosted service runs daily maintenance that deletes live events older than 90 days. No fixed deletion schedule is promised for database backups or web-server access logs. TelemetryDeck says it does not store IP addresses and may retain anonymous events for roughly 7–10 years without guaranteeing an exact deletion date.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The self-hosted service runs daily maintenance that deletes live events older than 90 days. No fixed deletion schedule is promised for database backups or web-server access logs. TelemetryDeck says it does not store IP addresses and may retain anonymous events for roughly 7–10 years without guaranteeing an exact deletion date."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自托管服务每天执行维护，删除超过 90 天的在线事件。数据库备份和 Web 服务器访问日志没有承诺固定的删除周期。TelemetryDeck 表示不存储 IP 地址，匿名事件可能保留约 7–10 年，且不保证确切的删除日期。"
-          }
-        }
-      }
-    },
     "The stored pairing record could not be read.": {
       "localizations": {
         "en": {
@@ -9437,22 +9389,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "欢迎使用 Roam Control"
-          }
-        }
-      }
-    },
-    "What Is Shared": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What Is Shared"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "共享内容"
           }
         }
       }

@@ -84,23 +84,6 @@ struct SettingsView: View {
                     .foregroundStyle(.primary)
                 }
 
-                Section {
-                    Toggle(
-                        "Share Anonymous Usage Statistics",
-                        isOn: anonymousUsageStatisticsBinding
-                    )
-
-                    NavigationLink {
-                        UsageStatisticsPrivacyView()
-                    } label: {
-                        Label("What Is Shared", systemImage: "hand.raised.fill")
-                    }
-                } header: {
-                    Text("Privacy")
-                } footer: {
-                    Text("Optional and off by default. Helps estimate activity from participating installations. Locations, searches and pairing data are never included.")
-                }
-
                 Section("About") {
                     NavigationLink {
                         AboutRoamControlView()
@@ -288,13 +271,6 @@ struct SettingsView: View {
         Binding(
             get: { appModel.mapDisplayStyle },
             set: appModel.setMapDisplayStyle
-        )
-    }
-
-    private var anonymousUsageStatisticsBinding: Binding<Bool> {
-        Binding(
-            get: { appModel.sharesAnonymousUsageStatistics },
-            set: appModel.setSharesAnonymousUsageStatistics
         )
     }
 

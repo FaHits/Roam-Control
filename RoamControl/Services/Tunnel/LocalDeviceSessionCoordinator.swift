@@ -60,20 +60,13 @@ final class LocalDeviceSessionCoordinator: NSObject {
             onPhaseChange?(phase)
         }
     }
-    private(set) var mobileDataGuidance: MobileDataGuidance? {
-        didSet {
-            if mobileDataGuidance == .connectionHelp, oldValue != .connectionHelp {
-                onConnectionEvent?(.connectionHelpShown)
-            }
-        }
-    }
+    private(set) var mobileDataGuidance: MobileDataGuidance?
     let backgroundKeepAlive = BackgroundLocationKeepAlive()
 
     /// Injected so tests can prove the FFI boundary uses the adapter's output.
     /// Production code never mutates this.
     @ObservationIgnored
     var coordinateAdapter = DeviceCoordinateAdapter.live
-    var onBackgroundEvent: ((UsageAnalyticsEvent, BackgroundSessionTelemetry) -> Void)?
     var backgroundTelemetry: BackgroundSessionTelemetry {
         BackgroundSessionTelemetry(
             status: backgroundKeepAlive.status,
@@ -81,8 +74,6 @@ final class LocalDeviceSessionCoordinator: NSObject {
             schedulerAvailable: taskRegistrationStatus == .accepted
         )
     }
-    var onConnectionEvent: ((UsageAnalyticsEvent) -> Void)?
-    private var retryTelemetry = ConnectionRetryTelemetry()
     private var vpnReturnRetryUsed = false
     private var vpnReturnRetryTask: Task<Void, Never>?
 
@@ -152,10 +143,6 @@ final class LocalDeviceSessionCoordinator: NSObject {
 
     override init() {
         super.init()
-        backgroundKeepAlive.onChange = { [weak self] in
-            guard let self else { return }
-            self.onBackgroundEvent?(.backgroundKeepAliveChanged, self.backgroundTelemetry)
-        }
         browser.delegate = self
         browser.includesPeerToPeer = true
         wifiPathMonitor.pathUpdateHandler = { [weak self] path in
@@ -180,7 +167,6 @@ final class LocalDeviceSessionCoordinator: NSObject {
     func start(pairingRecord: Data, target: LocationTarget) {
         guard !workerIsRunning, !isBusy else { return }
         terminalFailureReported = false
-        retryTelemetry.reset()
         schedulerFailureReason = nil
         taskConfigurationStatus = .notChecked
         taskRegistrationStatus = .notAttempted
@@ -302,7 +288,6 @@ final class LocalDeviceSessionCoordinator: NSObject {
 
     func retryConnection() {
         guard mobileDataGuidance == .connectionHelp, pendingSession != nil else { return }
-        onConnectionEvent?(retryTelemetry.selected())
         mobileDataGuidance = nil
         resolvedService = nil
         beginDiscovery(showConnectionHelpIfUnavailable: true)
@@ -543,7 +528,6 @@ final class LocalDeviceSessionCoordinator: NSObject {
     private func observeLocationScheduler() {
         taskConfigurationStatus = BackgroundTaskIdentifier.configurationStatus(for: "location")
         taskRegistrationStatus = .notAttempted
-        defer { onBackgroundEvent?(.backgroundSchedulerObserved, backgroundTelemetry) }
         guard taskConfigurationStatus == .permitted,
               let prefix = BackgroundTaskIdentifier.prefix(for: "location") else {
             reportSchedulerObservationFailure()
@@ -652,9 +636,6 @@ final class LocalDeviceSessionCoordinator: NSObject {
         mobileDataDiscoveryLoopTask = nil
         backgroundKeepAlive.start()
         phase = .active(target)
-        if let event = retryTelemetry.becameActive() {
-            onConnectionEvent?(event)
-        }
         if mobileDataGuidance == .turnOff {
             mobileDataGuidance = .turnBackOn
         }
@@ -880,7 +861,6 @@ final class LocalDeviceSessionCoordinator: NSObject {
 
     private func clearPendingSession() {
         backgroundKeepAlive.stop()
-        retryTelemetry.reset()
         automaticDiscoveryTask?.cancel()
         automaticDiscoveryTask = nil
         networkDecisionTask?.cancel()

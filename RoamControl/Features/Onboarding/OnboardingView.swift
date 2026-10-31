@@ -177,43 +177,12 @@ private struct OnboardingPageView: View {
                     }
                     .padding(.horizontal, 28)
 
-                    if page.showsUsageStatisticsControl {
-                        usageStatisticsCard
-                            .padding(.horizontal, 24)
-                    }
-
                     Spacer(minLength: 20)
                 }
                 .frame(maxWidth: .infinity, minHeight: geometry.size.height)
                 .accessibilityElement(children: .combine)
             }
         }
-    }
-
-    private var usageStatisticsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Toggle(
-                "Share Anonymous Usage Statistics",
-                isOn: Binding(
-                    get: { appModel.sharesAnonymousUsageStatistics },
-                    set: appModel.setSharesAnonymousUsageStatistics
-                )
-            )
-            .font(.headline)
-
-            Label {
-                Text("Off by default. Never includes locations, searches, routes, pairing data or personal information.")
-            } icon: {
-                Image(systemName: "hand.raised.fill")
-                    .foregroundStyle(.green)
-            }
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(18)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .accessibilityElement(children: .contain)
     }
 }
 
@@ -222,20 +191,17 @@ private struct OnboardingPage {
     let title: String
     let message: String
     let colors: [Color]
-    let showsUsageStatisticsControl: Bool
 
     init(
         symbol: String,
         title: String,
         message: String,
-        colors: [Color],
-        showsUsageStatisticsControl: Bool = false
+        colors: [Color]
     ) {
         self.symbol = symbol
         self.title = title
         self.message = message
         self.colors = colors
-        self.showsUsageStatisticsControl = showsUsageStatisticsControl
     }
 
     static let pages: [OnboardingPage] = [
@@ -256,13 +222,6 @@ private struct OnboardingPage {
             title: "Pair this iPhone once",
             message: "Roam Control needs one private pairing before it can control location. We'll guide you through it next.",
             colors: [.green, .teal]
-        ),
-        OnboardingPage(
-            symbol: "hand.raised.fill",
-            title: "Private by design",
-            message: "Choose whether to help improve Roam Control with anonymous activity counts. Sharing starts only if you switch it on and can be changed later in Settings.",
-            colors: [.indigo, .purple],
-            showsUsageStatisticsControl: true
         )
     ]
 }
