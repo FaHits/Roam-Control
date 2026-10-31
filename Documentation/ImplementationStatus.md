@@ -757,10 +757,12 @@
 - 刻意不翻译：纯单位与格式串（`%.0f m`、`%.2f km`、`%.1f m/s`、`%.0f spm`、`%.0f%%`、`%d:%02d`、`%d:%02d:%02d`、`—`、`0 m`、` mi`、`%lld yd`）、`"\(title), \(value)"` 形式的 accessibility 拼接、`ROAM CONTROL` 品牌字、`AppleLanguages`/`CFBundle*`/telemetry 事件名/URL/`Probe (Debug)` 等内部标识；`CFBundleDisplayName` 保持 `Roam Control`，未进入 catalog
 - CI 调试探针保持：`CoordinateDiagnosticsView.swift` 中的字面量 `Probe (Debug)` 未被移到 catalog，`unsigned-ipa-debug` 的 `strings -a | grep -cF 'Probe (Debug)'` 仍然有命中
 - 新增测试：`RoamControlTests/AppLanguageTests.swift` 3 例，使用独立 `UserDefaults` suite：`testSimplifiedChineseWritesSimplifiedChineseIdentifier`（`["zh-Hans"]`）、`testEnglishWritesEnglishIdentifier`（`["en"]`）、`testSystemRemovesOverride`（移除 `AppleLanguages`）。仓库内 `func test` 计数 116 → 119
+- 测试写法修正：首次 CI（run `41198446319`）唯一失败为 `AppLanguageTests.testSystemRemovesOverride`，原因是 `UserDefaults.object(forKey: "AppleLanguages")` 会回落到系统域，删除后仍返回系统值，断言 nil 永不成立。改为读取该 suite 自身域（`persistentDomain(forName:)["AppleLanguages"]`）后通过；`AppLanguage.apply` 逻辑未改
 - 版本：未改动，仍 `0.9.2` / `61`
-- 未验证内容（本机为 Windows，无 `xcodebuild`、无 iOS 模拟器、无配对真机，全部测试与构建均未在本机运行）：`xcodebuild test` 是否 119 例全绿、`Build Debug`、`Build Release`、`unsigned-ipa`、`unsigned-ipa-debug` 与新增的 `Check localization catalogs` 步骤；`xcstrings` 首次编译是否无冲突警告；SwiftUI 自动提取的 key 与 catalog 是否存在大小写或占位符不匹配（脚本只覆盖显式引用与 catalog 自身一致性）
+- 已验证（GitHub Actions，本机为 Windows 无法本地运行）：run [41199478310](https://github.com/FaHits/Roam-Control/actions/runs/41199478310) 全绿 —— `Check localization catalogs` 通过、`test` 8m31s（`** TEST SUCCEEDED **`，119 例通过、0 失败，含 `Build Debug` 与 `Build Release`）、`unsigned-ipa` 1m16s、`unsigned-ipa-debug` 40s（`Probe (Debug)` 探针仍命中）。产物：`RoamControl-unsigned-ipa`（artifact `13042680271`，3,138,658 字节）、`RoamControl-unsigned-debug-ipa`（artifact `13042600461`，4,707,768 字节）
+- 仍未验证：`xcstrings` 编译期是否存在重复 key 警告（构建通过但未逐条查看警告）；SwiftUI 自动提取的 key 与 catalog 是否存在大小写或占位符不匹配（脚本只覆盖显式引用与 catalog 自身一致性）
 - 未验证内容（真机）：Settings > Language 切换后重启是否整体生效、Home / Saved Places / Settings / My Routes / Route Editor / Route Run / Recovery / 弹窗与错误提示是否全中文且无截断、切回 English 与 Follow System 是否恢复、`NSLocalNetworkUsageDescription` 与 `NSLocationWhenInUseUsageDescription` 是否显示中文
 - 未做回归（静态检查，运行时未验证）：Task 15 的 `DeviceCoordinateAdapter.live` 仍为 `.none`，Task 10 的路线历史逻辑与 `startLocationSession` 签名未改，本轮改动只触及字符串与渲染层
 - 已知风险：`String.localized` 对用户数据（地点名、路名、路线名）也做一次 catalog 查表，未命中时回退原文，若某条用户数据恰好与某个 key 相同会被翻译成中文；`diagnosticsText` 复制出的诊断报告沿用本地化后的状态词，未拆出英文专用副本
-- 下一步：在有 macOS + Xcode 27 的环境上运行 `xcodebuild test -project RoamControl.xcodeproj -scheme RoamControl -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' -only-testing:RoamControlTests CODE_SIGNING_ALLOWED=NO`，确认 119 例全绿与四项构建通过，再按真机清单验收并把本任务升为 `completed`
+- 下一步：只剩真机验收 —— 安装 Release 产物，按 Settings > Language 三项切换（简体中文 / English / Follow System）各重启一次，检查 Home、Saved Places、Settings、My Routes、Route Editor、Route Run、Recovery、全部弹窗与错误提示，并按任务书截 7 张图；顺带回归 Task 10 历史与 Task 12 Routes 图标。验收通过后由验收方把本任务升为 `completed`
 - 更新时间：2026-10-31
