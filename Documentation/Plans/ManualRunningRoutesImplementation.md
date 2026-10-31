@@ -1120,7 +1120,7 @@ This method calls the existing private `startLocationSession` with:
 
 - Device target: the runner's initial ground coordinate represented as `LocationTarget`, including when resuming mid-route.
 - Selected target: a `LocationTarget` named after the route.
-- History target: the same initial ground coordinate.
+- History target: none. A route run is owned by My Routes, so it must not write Saved Places history; the private `startLocationSession` takes `historyTarget: LocationTarget?` and only records a entry when it is non-nil.
 - Recovery: the `.savedRoute(...)` factory with zero or restored progress, profile, and mode.
 
 Do not use a fixed-location recovery for a manual route run.

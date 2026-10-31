@@ -93,6 +93,11 @@
 - Task 15 历史 CI：run `41184102255`（111 用例 + Debug IPA）、`41181841011`（111 用例）、`41176205058`（107 用例）、`41176782498`（仅文档）
 - Task 15 新增测试：`DeviceInjectionBoundaryTests` 4 例（适配器输出即注入值、`.none` 透传、注入不改 target、源码断言两个 FFI 调用点只用 `injected`），`ChinaCoordinateTransformTests` 往返用例补 1e-6 度断言
 - Task 15 转换算法核对：独立 Python 实现复算固定算例，天安门 `39.908722,116.397499 → 39.91012550007891,116.4037425752605`（554.93 m）、岭南师范 `21.27122,110.34213 → 21.268808687690072,110.34659102093997`（534.39 m）、湛江田径场 `21.2585,110.3025 → 21.25601589175258,110.30687415389694`（530.82 m），与计划给定值逐位一致
+- Task 10 返工（2026-10-31）：路线启动不再写 Saved Places 历史。`RoamControl/App/AppModel.swift` 的私有 `startLocationSession` 参数由 `historyTarget: LocationTarget` 改为 `LocationTarget?`，`addToHistory` 只在非 `nil` 时执行；`startRouteLocationSession` 传 `historyTarget: nil` 并加注释「A route run is owned by My Routes; it must not enter Saved Places history.」。固定位置与 Apple walking 的 `historyTarget` 取值不变
+- Task 10 返工红灯：run `41195523226`（head `b163951`）`conclusion=failure`，`** TEST FAILED **`，唯一失败用例 `RouteHistoryTests.testStartingRouteRunDoesNotWriteLocationHistory()`（115 passed / 1 failed）
+- Task 10 返工绿灯：run `41195528908`（head `80af1a7`）`conclusion=success`；`test` job 419s、`unsigned-ipa` 68s、`unsigned-ipa-debug` 40s；116 个用例 0 失败，`** TEST SUCCEEDED **`，`Build Debug` 与 `Build Release` 均 `** BUILD SUCCEEDED **`；Debug IPA 自检 `self-check 'Probe (Debug)' hits: 2`
+- Task 10 返工产物：Release IPA artifact `RoamControl-unsigned-ipa` id `13040706415` / 3,093,454 字节；Debug IPA artifact `RoamControl-unsigned-debug-ipa` id `13040422834` / 4,654,993 字节
+- Task 10 返工副作用核对：`startLocationSession(at:)` 与 `startWalkingLocationSession` 仍传非 `nil` 历史目标，新增 `RouteHistoryTests.testStartingFixedLocationSessionStillWritesLocationHistory` 断言固定位置仍写入历史，`locationHistory` 其他读写点（`removeFromHistory`、`clearHistory`、恢复流程）未改动
 
 ## 自动完成规则
 
@@ -115,7 +120,7 @@
 | Task 7：路线编辑器状态模型 | `completed` | Xcode 27.1 下 21 个编辑器测试与全量 78 个测试通过 |
 | Task 8：手动路线编辑界面 | `completed` | Xcode 27.1 全量 78 个测试与 Debug 构建均通过 |
 | Task 9：路线库和运行设置界面 | `completed` | Xcode 27.1 全量 83 个测试（新增 3 个 `RunProfileStore` 测试）与 Debug 构建均通过 |
-| Task 10：恢复模型与设备会话基础 | `completed` | Xcode 27.1 下 9 个新测试与全量 92 个测试通过 |
+| Task 10：恢复模型与设备会话基础 | `implemented_unverified` | 返工修复路线启动污染 Saved Places 地点历史：`startLocationSession` 的 `historyTarget` 改为 `LocationTarget?`，只有非 `nil` 才 `addToHistory`，路线传 `nil`（`AppModel.swift:366`、`:380`、`:393-395`）；新增 `RouteHistoryTests` 2 例；CI run `41195528908` 116 用例 0 失败、Debug/Release 构建与两个 unsigned IPA 均成功（Release artifact `13040706415`、Debug artifact `13040422834`）；真机 6 步验收与截图 `Task10-saved-places-history.png`、`Task10-home-routes-icon.png` 未做 |
 | Task 11：运行中进度持久化 | `completed` | Xcode 27.1 下 4 个新测试与全量 96 个测试通过 |
 | Task 12：运行卡片与主页整合 | `implemented_unverified` | 返工修复 Routes 按钮空图标（`RouteSymbol.library`，无效符号名全仓 0 命中）；CI run `41193407036` 114 用例 0 失败、Debug/Release 构建通过，Release IPA artifact `13039403715`；真机截图 `Task12-routes-icon.png` 未做 |
 | Task 13：中断路线恢复 | `completed` | Xcode 27.1 下新增 2 个测试、全量 98 个测试与 Debug 构建均通过；手工强制退出恢复未验证 |
@@ -714,4 +719,23 @@
 - 已知风险：自动化只覆盖模型层，`HomeView`/`RouteRunCard`/`RouteLibraryView`/`RouteRunSetupView`/`SessionRecoveryView` 的接线没有 XCTest 覆盖，手工项未做即无 UI 层证据；Release 配置到本次才纳入 CI，此前是空缺而非“一直通过”；真机设备会话（配对、LocalDevVPN、`updateLocation` 逐秒回传）与后台节流从未在真实设备上验证，是当前最大未知
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41166020073
 - 下一步：在有 macOS + Xcode 27 + iOS 27 模拟器的环境上，第一条动作为 `cd E:/Ai_Agent/RUN/roam-src && xcodebuild test -project RoamControl.xcodeproj -scheme RoamControl -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' -only-testing:RoamControlTests CODE_SIGNING_ALLOWED=NO`，随后按实施计划 Task 14 的模拟器清单逐项验收并回填本文件
+- 更新时间：2026-10-31
+
+### 2026-10-31 Task 10 返工记录：路线启动不再污染地点历史
+
+- 任务：Task 10 - 恢复模型与设备会话基础（返工，状态 `implemented_unverified`）
+- 分支与基线：`feat/manual-running-routes`，返工前 HEAD `10cc890`，与 `fork` 一致，工作树干净
+- 缺陷：`startRouteLocationSession` 传 `historyTarget: initialTarget`，私有 `startLocationSession` 无条件 `addToHistory(historyTarget)`（改前 `AppModel.swift:392`），因此每次启动路线都会把起点写进 Saved Places 历史；路线应只由 My Routes 承载
+- 修改文件：`RoamControl/App/AppModel.swift`（+6/-3：`historyTarget` 改 `LocationTarget?`、`addToHistory` 加 `if let`、路线调用传 `nil` 并加注释）、新增 `RoamControlTests/RouteHistoryTests.swift`（87 行，2 例）、`Documentation/Plans/ManualRunningRoutesImplementation.md`（Step 3 的 History target 说明改为「none」）、`Documentation/ImplementationStatus.md`。未改 `project.pbxproj`、`HomeView.swift`、`RouteRunCard.swift`、`RouteLibraryView.swift`、`RouteRunSetupView.swift`、`RouteSessionModel.swift`；未改版本号与构建号（仍 `0.9.2` / `61`）
+- 提交：`b163951`（`test(routes): assert route runs stay out of Saved Places history`，红灯）、`80af1a7`（`fix(routes): keep route runs out of Saved Places history`，绿灯）、本文档提交（`docs(routes): record the Task 10 history fix`）
+- 回归测试（不新增生产 test seam）：`RouteHistoryTests` 复用既有 `AppModel(pairingService:preferences:)` 注入点，新增 `PairedStubPairingService`（`storedRecord()` 返回一条 `PairingRecordSummary`）配合 `restorePairingStatus()` 进入 `.paired`，再走公开的 `startRouteLocationSession` / `startLocationSession(at:)` 断言 `locationHistory`。`testStartingRouteRunDoesNotWriteLocationHistory` 断言路线启动后历史为空；`testStartingFixedLocationSessionStillWritesLocationHistory` 断言固定位置启动后历史恰好等于该 target
+- 红灯证据：run `41195523226`（head `b163951`）`test` job 失败，`** TEST FAILED **`，唯一失败用例是 `RouteHistoryTests.testStartingRouteRunDoesNotWriteLocationHistory()`，115 passed / 1 failed；该提交未含 AppModel 修改，说明测试确实能抓住原缺陷，而非测试自身写错
+- 绿灯证据：run `41195528908`（head `80af1a7`）`conclusion=success`，三个 job 全 success（`test` 419s、`unsigned-ipa` 68s、`unsigned-ipa-debug` 40s）；日志 `Test case … passed` 116 行、`failed` 0 行、`** TEST SUCCEEDED **` 1 次，`Build Debug` 与 `Build Release` 各 1 次 `** BUILD SUCCEEDED **`；测试总数 114 → 116
+- 产物：Release IPA artifact `RoamControl-unsigned-ipa` id `13040706415` / 3,093,454 字节；Debug IPA artifact `RoamControl-unsigned-debug-ipa` id `13040422834` / 4,654,993 字节；Debug job 自检 `self-check 'Probe (Debug)' hits: 2`
+- 计划文档同步：`Documentation/Plans/ManualRunningRoutesImplementation.md` 的 Task 10 Step 3 里 “History target: the same initial ground coordinate.” 已改为「none」，并写明私有方法签名是 `historyTarget: LocationTarget?`
+- 本地无法验证的事实：本机为 Windows，无 `xcodebuild`、无 iOS 模拟器、无配对真机；测试与三项构建全部在 `xcode-27` runner 上完成，本文件不声称本地通过
+- 未验证项（真机，待验收）：① 启动任一手绘路线后立即 Stop & Restore，Saved Places 中不得出现名为该路线点位的条目；② 同一台设备先跑一次固定位置，Saved Places 应正常出现该点，证明固定位置流程未被破坏；③ 路线运行中 `RouteRunCard` 进度、暂停、恢复、完成后 `finishActiveRouteRecovery` 行为；④ 设备失败时 `.savedRoute` 恢复记录仍保留；⑤ 截图 `Task10-saved-places-history.png`（Saved Places 列表，路线点位缺席、固定位置点位在场）与 `Task10-home-routes-icon.png`（HomeView 的 Routes 入口图标）均未截
+- 已知风险：`startLocationSession` 的参数语义从「必有历史目标」变成「可选」，调用方若漏传会静默不写历史；当前只有三个调用点（固定位置、Apple walking、路线），均由本任务逐一核对
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41195528908
+- 下一步：在配对的真机上按上面 5 项与两张截图做验收，通过后由验收方把 Task 10 升为 `completed`；本任务不做 Task 11 的每 tick 持久化
 - 更新时间：2026-10-31
