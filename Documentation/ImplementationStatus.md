@@ -12,6 +12,7 @@
 - 当前任务：Task 15 - 统一中国大陆坐标域（注入边界转换）—— `implemented_unverified`，方向已由真机 A/B 实测定为 GCJ-02 → WGS-84，待真机回归
 - 任务状态：`in_progress`（代码与诊断入口就位，`DeviceCoordinateAdapter.live` 保持 `.none`，等待真机 A/B 实测决定方向）
 - 当前执行窗口：DSH-Agent（2026-10-31）
+- 并行任务：Task 16 简体中文本地化与语言切换 —— `implemented_unverified`（代码与资源已落地，见文末 Task 16 记录；不改变 Task 15 状态与版本号）
 - 最近完成：Task 13 - 中断路线恢复（Task 14 自动化通过、手工项未做，故为 `implemented_unverified`）
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Views/RouteRunCard.swift`
@@ -738,4 +739,28 @@
 - 已知风险：`startLocationSession` 的参数语义从「必有历史目标」变成「可选」，调用方若漏传会静默不写历史；当前只有三个调用点（固定位置、Apple walking、路线），均由本任务逐一核对
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41195528908
 - 下一步：在配对的真机上按上面 5 项与两张截图做验收，通过后由验收方把 Task 10 升为 `completed`；本任务不做 Task 11 的每 tick 持久化
+- 更新时间：2026-10-31
+
+### 2026-10-31 Task 16 实现记录：简体中文与语言切换
+
+- 任务：Task 16 - 简体中文本地化与 Settings 语言切换
+- 状态：`implemented_unverified`
+- 分支与基线：`feat/manual-running-routes`，改动前 HEAD `d77bdaf`，工作树干净
+- 语言机制：新增 `AppLanguage`（`system` / `english` / `simplifiedChinese`），选择存 `UserDefaults` 的 `appLanguage`，默认 `.system`。`.system` 删除 `AppleLanguages`；`.english` 写 `["en"]`；`.simplifiedChinese` 写 `["zh-Hans"]`。切换只写偏好并提示重启，不调用 `exit(0)`，当前界面不热切换；重启后 `Bundle.main` 按新语言加载
+- 修改文件（生产代码）：`RoamControl/Features/Settings/AppLanguage.swift`（新增）、`RoamControl/Models/StringLocalization.swift`（新增，`String.localized` 走 `NSLocalizedString`）、`RoamControl/Features/Settings/SettingsView.swift`、`RoamControl/Models/AppPreferences.swift`、`RoamControl/Features/Home/{HomeView,StatusCard,MobileDataGuidanceView,SessionRecoveryView}.swift`、`RoamControl/Features/Map/{SavedPlacesView,ConnectionBadge,LocationSelectionCard,MapViewModel,WalkingRoutePlanner,WalkingRoutePreviewCard,WalkingSimulationController}.swift`、`RoamControl/Features/Onboarding/OnboardingView.swift`、`RoamControl/Features/Pairing/PairingSetupView.swift`、`RoamControl/Features/Routes/State/{RouteEditorModel,RouteLibraryModel,RouteSessionModel}.swift`、`RoamControl/Features/Routes/Views/{RouteRunCard,RouteRunSetupView}.swift`、`RoamControl/Features/Settings/{AboutRoamControlView,ConnectionHealthView,CoordinateDiagnosticsView}.swift`
+- 新增资源：`RoamControl/Resources/Localizable.xcstrings`（`sourceLanguage` = `en`，609 个 key，每个 key 同时带 `en` 与 `zh-Hans`）、`RoamControl/Resources/InfoPlist.xcstrings`（`NSLocalNetworkUsageDescription`、`NSLocationWhenInUseUsageDescription` 两条中文）
+- 工程与 CI：`project.pbxproj` 的 `knownRegions` 追加 `"zh-Hans"`，`developmentRegion` 仍为 `en`；两个 `.xcstrings` 位于 `RoamControl/Resources/`，由既有 `PBXFileSystemSynchronizedRootGroup` 自动进入 target；`.github/workflows/xcode-27.yml` 的 `test` job 在 `Run RoamControlTests` 之前插入 `Check localization catalogs`（`python3 scripts/check_localizations.py`）
+- 脚本路径偏差：任务书写作 `Scripts/check_localizations.py`，仓库既有脚本目录是小写 `scripts/`，且 GitHub runner 区分大小写，实际落地为 `scripts/check_localizations.py`，CI 调用同一路径
+- 检查脚本：`scripts/check_localizations.py`（仅 Python 标准库）。校验 `sourceLanguage`、每个 key 的 `en`/`zh-Hans` 非空、plural 变体逐个校验、两种语言的格式占位符集合一致、Swift 里 `String(localized:)` 与 `NSLocalizedString(` 引用的 key 必须存在于 catalog。本地输出：`Localizable.xcstrings: 609/609 keys translated (100.0%)`、`InfoPlist.xcstrings: 2/2 keys translated (100.0%)`、`All 611 keys have non-empty zh-Hans values.`，`exit=0`
+- 动态字符串处理：UI 层 computed `String` 保持返回类型，在返回处用 `String(localized:)`，插值改用 `String(format: String(localized: "…%@/…%lld…"), …)`；跨层传入的显示文本在渲染边界加 `.localized`；`AppLanguage.title` 返回 `LocalizedStringKey`；`ModeSelection`、`ProbeCandidate` 等 rawValue 用于持久化或匹配的枚举一律不改 rawValue，只在显示处本地化
+- Services 层刻意不改英文原文：`UsageAnalyticsService.classify` 用 `switch message` 精确匹配约 60 条英文错误原文，`LocalDeviceSessionCoordinator.isRecoverableTunnelConnectionFailure` 用 `localizedCaseInsensitiveContains`，`AppModel` 用 `contains("localdevvpn")` / `contains("prepare")`，`LocationSelectionCard.shouldOfferLocalDevVPN` 用 `localizedCaseInsensitiveContains("Install LocalDevVPN")`。这些英文只作为 key 进入 catalog，显示点用 `NSLocalizedString` 查表，源码字面量保持原样，行为不变
+- 刻意不翻译：纯单位与格式串（`%.0f m`、`%.2f km`、`%.1f m/s`、`%.0f spm`、`%.0f%%`、`%d:%02d`、`%d:%02d:%02d`、`—`、`0 m`、` mi`、`%lld yd`）、`"\(title), \(value)"` 形式的 accessibility 拼接、`ROAM CONTROL` 品牌字、`AppleLanguages`/`CFBundle*`/telemetry 事件名/URL/`Probe (Debug)` 等内部标识；`CFBundleDisplayName` 保持 `Roam Control`，未进入 catalog
+- CI 调试探针保持：`CoordinateDiagnosticsView.swift` 中的字面量 `Probe (Debug)` 未被移到 catalog，`unsigned-ipa-debug` 的 `strings -a | grep -cF 'Probe (Debug)'` 仍然有命中
+- 新增测试：`RoamControlTests/AppLanguageTests.swift` 3 例，使用独立 `UserDefaults` suite：`testSimplifiedChineseWritesSimplifiedChineseIdentifier`（`["zh-Hans"]`）、`testEnglishWritesEnglishIdentifier`（`["en"]`）、`testSystemRemovesOverride`（移除 `AppleLanguages`）。仓库内 `func test` 计数 116 → 119
+- 版本：未改动，仍 `0.9.2` / `61`
+- 未验证内容（本机为 Windows，无 `xcodebuild`、无 iOS 模拟器、无配对真机，全部测试与构建均未在本机运行）：`xcodebuild test` 是否 119 例全绿、`Build Debug`、`Build Release`、`unsigned-ipa`、`unsigned-ipa-debug` 与新增的 `Check localization catalogs` 步骤；`xcstrings` 首次编译是否无冲突警告；SwiftUI 自动提取的 key 与 catalog 是否存在大小写或占位符不匹配（脚本只覆盖显式引用与 catalog 自身一致性）
+- 未验证内容（真机）：Settings > Language 切换后重启是否整体生效、Home / Saved Places / Settings / My Routes / Route Editor / Route Run / Recovery / 弹窗与错误提示是否全中文且无截断、切回 English 与 Follow System 是否恢复、`NSLocalNetworkUsageDescription` 与 `NSLocationWhenInUseUsageDescription` 是否显示中文
+- 未做回归（静态检查，运行时未验证）：Task 15 的 `DeviceCoordinateAdapter.live` 仍为 `.none`，Task 10 的路线历史逻辑与 `startLocationSession` 签名未改，本轮改动只触及字符串与渲染层
+- 已知风险：`String.localized` 对用户数据（地点名、路名、路线名）也做一次 catalog 查表，未命中时回退原文，若某条用户数据恰好与某个 key 相同会被翻译成中文；`diagnosticsText` 复制出的诊断报告沿用本地化后的状态词，未拆出英文专用副本
+- 下一步：在有 macOS + Xcode 27 的环境上运行 `xcodebuild test -project RoamControl.xcodeproj -scheme RoamControl -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' -only-testing:RoamControlTests CODE_SIGNING_ALLOWED=NO`，确认 119 例全绿与四项构建通过，再按真机清单验收并把本任务升为 `completed`
 - 更新时间：2026-10-31
