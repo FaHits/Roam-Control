@@ -107,7 +107,14 @@ struct RouteRunCard: View {
     }
 
     private var lapsMetric: RouteRunMetric {
-        RouteRunMetric(title: "Laps", value: "\(session.completedLaps)", symbol: "repeat")
+        if let trips = session.tripCount, let index = session.tripIndex {
+            return RouteRunMetric(
+                title: "Trips",
+                value: "\(index)/\(trips)",
+                symbol: "arrow.left.arrow.right"
+            )
+        }
+        return RouteRunMetric(title: "Laps", value: "\(session.completedLaps)", symbol: "repeat")
     }
 
     private var lapMetric: RouteRunMetric {

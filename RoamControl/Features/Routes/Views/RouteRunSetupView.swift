@@ -44,6 +44,7 @@ struct RouteRunSetupView: View {
     @State private var profile: RunProfile
     @State private var modeSelection: ModeSelection
     @State private var lapCount = 1
+    @State private var tripCount = 1
 
     init(
         route: RouteDefinition,
@@ -172,8 +173,18 @@ struct RouteRunSetupView: View {
                     Stepper("Laps: \(lapCount)", value: $lapCount, in: 1...100)
                 }
             } else {
-                Text("Once")
-                    .foregroundStyle(.secondary)
+                Stepper("Trips: \(tripCount)", value: $tripCount, in: 1...100)
+
+                Text(
+                    LocalizedStringKey(
+                        tripCount.isMultiple(of: 2)
+                            ? "Ends at the start point."
+                            : "Ends at the finish point."
+                    )
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -209,7 +220,8 @@ struct RouteRunSetupView: View {
     private var mode: RouteRunMode {
         switch modeSelection {
         case .once:
-            return .once
+            // A single trip keeps the existing `.once` behaviour; more trips run back and forth.
+            return tripCount == 1 ? .once : .outAndBack(trips: tripCount)
         case .continuous:
             return .continuous
         case .laps:

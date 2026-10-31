@@ -52,6 +52,18 @@ final class RouteSessionModel {
         snapshot?.totalDistance ?? 0
     }
 
+    /// Trips an `.outAndBack` run was set up for, or `nil` for the looping modes.
+    var tripCount: Int? {
+        guard case .outAndBack(let trips)? = mode else { return nil }
+        return trips
+    }
+
+    /// The trip in progress, 1-based, held on the last trip once the run finished.
+    var tripIndex: Int? {
+        guard let tripCount else { return nil }
+        return min(completedLaps + 1, tripCount)
+    }
+
     // MARK: - Preparation
 
     func prepare(

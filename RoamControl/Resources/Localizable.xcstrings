@@ -2305,6 +2305,38 @@
         }
       }
     },
+    "Ends at the finish point.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ends at the finish point."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "结束时停在终点。"
+          }
+        }
+      }
+    },
+    "Ends at the start point.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ends at the start point."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "结束时回到起点。"
+          }
+        }
+      }
+    },
     "Erase the pairing record and all saved app choices, then return to onboarding. LocalDevVPN itself is not changed.": {
       "localizations": {
         "en": {
@@ -8973,6 +9005,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "时间戳"
+          }
+        }
+      }
+    },
+    "Trips": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trips"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "趟数"
+          }
+        }
+      }
+    },
+    "Trips: %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trips: %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "趟数：%lld"
           }
         }
       }
