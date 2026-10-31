@@ -152,6 +152,24 @@ final class RouteLibraryModelTests: XCTestCase {
         XCTAssertEqual(try RouteStore(fileURL: storeURL).load().count, 1)
     }
 
+    // MARK: - Name validation
+
+    func testNormalizedNameRejectsEmptyName() {
+        XCTAssertNil(RouteNameValidator.normalizedName(from: ""))
+    }
+
+    func testNormalizedNameRejectsWhitespaceAndNewlines() {
+        XCTAssertNil(RouteNameValidator.normalizedName(from: " \n\t\r "))
+    }
+
+    func testNormalizedNameAcceptsOrdinaryName() {
+        XCTAssertEqual(RouteNameValidator.normalizedName(from: "神秘"), "神秘")
+    }
+
+    func testNormalizedNameTrimsSurroundingWhitespace() {
+        XCTAssertEqual(RouteNameValidator.normalizedName(from: "  Riverside loop \n"), "Riverside loop")
+    }
+
     // MARK: - Delete
 
     func testDeleteRemovesOnlyRequestedRoute() throws {
