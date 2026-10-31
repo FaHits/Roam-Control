@@ -128,6 +128,7 @@ struct CoordinateDiagnosticsView: View {
         } footer: {
             Text("Injects the selected candidate straight to the device, bypassing the adapter. The selected target, history and routes are untouched. Readback arrives after 5 seconds.")
         }
+        .accessibilityIdentifier("Probe (Debug) inject single candidate")
     }
 
     private func runProbe(for target: LocationTarget) {

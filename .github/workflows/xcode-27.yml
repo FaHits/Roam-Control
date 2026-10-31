@@ -97,3 +97,70 @@ jobs:
           path: build/RoamControl-unsigned.ipa
           if-no-files-found: error
           retention-days: 14
+
+  unsigned-ipa-debug:
+    needs: test
+    runs-on: xcode-27
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Show build configuration
+        run: |
+          xcodebuild -showBuildSettings \
+            -project RoamControl.xcodeproj \
+            -scheme RoamControl \
+            -configuration Debug 2>/dev/null \
+            | grep -E '^ +(CONFIGURATION|SWIFT_OPTIMIZATION_LEVEL|SWIFT_ACTIVE_COMPILATION_CONDITIONS) ='
+
+      - name: Build unsigned debug device archive
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project RoamControl.xcodeproj \
+            -scheme RoamControl \
+            -configuration Debug \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$PWD/build/RoamControl-Debug.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            ENABLE_DEBUG_DYLIB=NO
+
+      - name: Verify debug probe is compiled in
+        run: |
+          set -euo pipefail
+          BIN="$PWD/build/RoamControl-Debug.xcarchive/Products/Applications/RoamControl.app/RoamControl"
+          test -f "$BIN"
+          echo "binary: $BIN"
+          HITS=$(strings -a "$BIN" | grep -cF 'Probe (Debug)' || true)
+          echo "self-check 'Probe (Debug)' hits: $HITS"
+          strings -a "$BIN" | grep -F 'Probe (Debug)' | head -3
+          if [ "$HITS" -eq 0 ]; then
+            echo "self-check FAILED: 'Probe (Debug)' is missing from the debug binary"
+            exit 1
+          fi
+
+      - name: Package debug unsigned IPA
+        run: |
+          set -euo pipefail
+          APP_PATH="$PWD/build/RoamControl-Debug.xcarchive/Products/Applications/RoamControl.app"
+          test -d "$APP_PATH"
+          rm -rf "$PWD/build/Payload"
+          mkdir -p "$PWD/build/Payload"
+          ditto "$APP_PATH" "$PWD/build/Payload/RoamControl.app"
+          cd "$PWD/build"
+          zip -qry RoamControl-unsigned-debug.ipa Payload
+          unzip -l RoamControl-unsigned-debug.ipa | sed -n '1,20p'
+
+      - name: Upload unsigned debug IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: RoamControl-unsigned-debug-ipa
+          path: build/RoamControl-unsigned-debug.ipa
+          if-no-files-found: error
+          retention-days: 14
