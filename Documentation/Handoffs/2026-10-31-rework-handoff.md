@@ -316,7 +316,10 @@
 | 9 | 19 | 走一遍 Onboarding | 无共享统计卡片 | 待测 |
 | 10 | 16R | 语言选择当前语言 | 不弹重启提示；英文→中文→英文各一次行为正确 | 待测 |
 | 11 | 16R | 中文下看 Onboarding/设备设置/连接检查 | 无英文句子 | 待测 |
-| 12 | 20 | 点 Report a Bug / Request a Feature | 打开 `FaHits/Roam-Control` | 待测 |
-| 13 | 17 | 开放路线跑 1 次与 3 次往返 | 地图可见去程/回程，运行卡计数正确 | 待测 |
-| 14 | 18 | 编辑器切换 standard / satellite / hybrid | 三种都渲染；卫星下点 4 点闭环保存后几何不变 | 待测 |
-| 15 | 15/10/12/13 | 已由用户真机通过的历史项 | 回归确认无退化 | 待测 |
+| 12 | 20 | 简体中文下点 Settings → Feedback → Report a Bug | 打开 `github.com/FaHits/Roam-Control/issues/new`，模板为 bug_report，页面上不再出现 `seanhowarthdev` | 待测 |
+| 13 | 20 | 点 Request a Feature | 同一仓库，模板为 feature_request | 待测 |
+| 14 | 20 | 点 Check for Updates | 显示「该仓库尚未发布版本。」类文案，不报错、不显示任何上游版本号 | 待测 |
+| 15 | 20 | 断网后点 Check for Updates | 显示不可用文案（`Couldn’t check GitHub right now.`），App 不崩溃 | 待测 |
+| 16 | 17 | 开放路线跑 1 次与 3 次往返 | 地图可见去程/回程，运行卡计数正确 | 待测 |
+| 17 | 18 | 编辑器切换 standard / satellite / hybrid | 三种都渲染；卫星下点 4 点闭环保存后几何不变 | 待测 |
+| 18 | 15/10/12/13 | 已由用户真机通过的历史项 | 回归确认无退化 | 待测 |

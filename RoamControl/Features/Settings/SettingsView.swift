@@ -1,12 +1,8 @@
 import SwiftUI
 
 struct SettingsView: View {
-    private static let bugReportURL = URL(
-        string: "https://github.com/seanhowarthdev/Roam-Control/issues/new?template=bug_report.yml"
-    )!
-    private static let featureRequestURL = URL(
-        string: "https://github.com/seanhowarthdev/Roam-Control/issues/new?template=feature_request.yml"
-    )!
+    private static let bugReportURL = AppRepository.issuesURL(template: "bug_report.yml")
+    private static let featureRequestURL = AppRepository.issuesURL(template: "feature_request.yml")
 
     @Environment(AppModel.self) private var appModel
     @Environment(\.dismiss) private var dismiss
@@ -339,7 +335,7 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         case .noPublishedRelease:
-            Label("No public GitHub release has been published yet.", systemImage: "clock")
+            Label("This repository has no published release yet.", systemImage: "clock")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         case .unavailable:

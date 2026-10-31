@@ -11,9 +11,9 @@
 - 源码基线：`0f63d1f`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 16R - 语言弹窗与剩余英文残留返工 —— `implemented`（代码 head `b7797d1`，CI run `41227597504` 三 job 全绿，129 用例 0 失败）
-- 任务状态：Task 19 `implemented`（含 Task 19F 收尾补正；本地无 Xcode，测试/构建/产物均来自 GitHub Actions）；Task 16R `implemented`（Task 16 的返工，CI 与产物齐备，6 项真机行为待 Task 14 批量验证）；Task 9R `implemented`；Task 14 `fail`；Task 17/18/20 待做；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
-- 当前执行窗口：Task 16R 已收尾，下一步按 `Documentation/Handoffs/2026-10-31-rework-handoff.md` 第 3 节进入 Task 20（顺序 9R → 19 → 16R → 20 → 17 → 18 → 14）
+- 当前任务：Task 20 - 更新/反馈仓库地址 —— `implemented`（代码 head `PENDING_HEAD`，CI run `PENDING_RUN`）
+- 任务状态：Task 20 `implemented`（仓库地址统一到 `FaHits/Roam-Control`，无 release 时明确提示「未发布」；4 项真机行为待 Task 14 批量验证）；Task 19 `implemented`（含 Task 19F 收尾补正；本地无 Xcode，测试/构建/产物均来自 GitHub Actions）；Task 16R `implemented`；Task 9R `implemented`；Task 14 `fail`；Task 17/18 待做；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
+- 当前执行窗口：Task 20 已收尾，下一步按 `Documentation/Handoffs/2026-10-31-rework-handoff.md` 第 3 节进入 Task 17（顺序 9R → 19 → 16R → 20 → 17 → 18 → 14）
 - 并行任务：无。Task 16 的返工已在 Task 16R 内完成，语言弹窗与英文残留项以 Task 16R 记录为准
 - 最近完成：Task 9R 代码与 CI（删除确认期间行不消失、微信输入法 marked text 可重命名），最终 HEAD CI run `41215787777` 三 job 全绿
 - 已完成工程修改：
@@ -139,6 +139,7 @@
 | Task 15：统一中国大陆坐标域 | `implemented_unverified` | 方向已由真机 A/B 实测确定：MapKit raw 为 GCJ-02、DVT 期望 WGS-84，`DeviceCoordinateAdapter.swift:36` 取 `.gcj02ToWGS84`，只转换一次且仅在注入边界；CI run `41186642773` 113 用例 0 失败、Debug/Release 构建通过，产 Release IPA `13037307005` 与 Debug IPA `13037142318`；真机回归（天安门城楼、田径场、路线、Update、Stop & Restore）未做 |
 | Task 19：移除匿名统计/共享数据全链路 | `implemented` | Task 19F 收尾补正完成：删三处死回调（`LocalDeviceSessionCoordinator.onFailure` / `onRecoveryNeeded`、`OnDevicePairingCoordinator.onFailure`）与两个私有 `failureSnapshot(...)` 工厂，`FailureDiagnosticSnapshot` 随之删除，`FailureDiagnostics.swift` 收敛为 `FailureStage` / `FailureDisposition` / `SchedulerFailureReason` 三个类型（131 行）；删孤儿本地化 key `Privacy`，`check_localizations.py` 604/604 + 2/2、`All 606 keys` exit 0；`rg -n "UsageAnalytics|sharesAnonymousUsageStatistics|AnonymousUsage|What Is Shared|Share Anonymous"` exit 1，`Telemetry` 只剩 4 处 `BackgroundSessionTelemetry`；`rg -n "failureSnapshot\(|FailureDiagnosticSnapshot"` 无输出；123 用例 0 失败（未删未增）；最终代码状态 CI run `41223835438`（head `3ffd834`）三 job 全绿，Release IPA artifact `13050992072`（3,101,262 字节）、Debug IPA `13051995426`（4,623,883 字节）
 | Task 16R：语言弹窗与剩余英文残留返工 | `implemented` | 语言切换只在生效语言真正改变时写入并弹窗：`AppLanguage.effective(...)` 由 `AppleLanguages` 覆盖值推导（无覆盖回落到系统偏好），`requiresRestart(comparedTo:)` 供 `SettingsView` 判定；Onboarding 三页 `title/message`、`PairingSetupView` 的 `requirementRow` / `instructionRow` / `pairingDetail(title:)`、`ConnectionHealthView.healthRow(title:)` 改 `LocalizedStringKey`；`ConnectionHealthView.restorationText(for:)` 把四个内部英文状态映射成本地化文案（内部值不变），`"None"` 两处显示改 `String(localized:)`；`Localizable.xcstrings` 604 → 609 key（+4 恢复状态、+1 a11y 逗号），合计 611；新增 6 例 AppLanguage/映射测试，全量 129 用例 0 失败；head `b7797d1`，CI run `41227597504` 三 job 全绿，Release artifact `13052626294`（3,104,532 字节）、Debug artifact `13053106037`（4,626,145 字节）；6 项真机行为登记在交接文档第 7 节，随 Task 14 批量验证 |
+| Task 20：更新/反馈仓库地址 | `implemented` | 新增 `RoamControl/Services/AppRepository.swift` 单一来源（`owner`/`repo`/`webURL`/`issuesURL(template:)`/`latestReleaseAPIURL`）；`SettingsView.swift:4-5` 两个反馈 URL 改由常量派生，`ReleaseUpdateChecker.swift:34-40` 用 `AppRepository.latestReleaseAPIURL`；新增纯函数 `ReleaseUpdateChecker.result(statusCode:body:)`（`:49`）：200 解码、404 → `.noPublishedRelease`、其他 → `.unavailable`，`latestRelease()` 只发请求；`SettingsView.swift:337-339` 的 `.noPublishedRelease` 文案改为 `This repository has no published release yet.` /「该仓库尚未发布版本。」，不回落上游 release、不伪装成「已是最新」；`rg -n "seanhowarthdev/Roam-Control" RoamControl` exit 1，`FaHits` 在 swift 里只剩 `AppRepository.swift:7` 一处；`check_localizations.py` 609/609 + 2/2、`All 611 keys` exit 0；新增 6 例 `ReleaseUpdateCheckerTests`，129 + 6 = 135 用例 0 失败；head `PENDING_HEAD`，CI run `PENDING_RUN`，产物 `PENDING_ARTIFACTS`；4 项真机行为登记在交接文档第 7 节，随 Task 14 批量验证 |
 
 ## 交接记录
 

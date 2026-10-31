@@ -3953,18 +3953,18 @@
         }
       }
     },
-    "No public GitHub release has been published yet.": {
+    "This repository has no published release yet.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No public GitHub release has been published yet."
+            "value": "This repository has no published release yet."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "GitHub 上尚未发布任何公开版本。"
+            "value": "该仓库尚未发布版本。"
           }
         }
       }

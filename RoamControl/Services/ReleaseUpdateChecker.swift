@@ -32,12 +32,8 @@ extension ReleaseUpdateStatus {
 }
 
 struct ReleaseUpdateChecker {
-    private static let latestReleaseURL = URL(
-        string: "https://api.github.com/repos/seanhowarthdev/Roam-Control/releases/latest"
-    )!
-
     func latestRelease() async throws -> PublishedRelease {
-        var request = URLRequest(url: Self.latestReleaseURL)
+        var request = URLRequest(url: AppRepository.latestReleaseAPIURL)
         request.timeoutInterval = 10
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
 
@@ -45,13 +41,21 @@ struct ReleaseUpdateChecker {
         guard let response = response as? HTTPURLResponse else {
             throw ReleaseUpdateCheckError.unavailable
         }
-        guard response.statusCode == 200 else {
-            throw response.statusCode == 404
+
+        return try Self.result(statusCode: response.statusCode, body: data)
+    }
+
+    /// Pure mapping from a GitHub response to a release, so every status code
+    /// path is testable without a network. 404 means the repository has no
+    /// published release yet; it is never filled in from the fork's upstream.
+    static func result(statusCode: Int, body: Data) throws -> PublishedRelease {
+        guard statusCode == 200 else {
+            throw statusCode == 404
                 ? ReleaseUpdateCheckError.noPublishedRelease
                 : ReleaseUpdateCheckError.unavailable
         }
 
-        let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
+        let release = try JSONDecoder().decode(GitHubRelease.self, from: body)
         guard let releaseURL = URL(string: release.htmlURL) else {
             throw ReleaseUpdateCheckError.unavailable
         }
