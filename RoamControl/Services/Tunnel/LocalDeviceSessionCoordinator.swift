@@ -1,4 +1,5 @@
 import BackgroundTasks
+import CoreLocation
 import Foundation
 import Network
 import Observation
@@ -67,6 +68,11 @@ final class LocalDeviceSessionCoordinator: NSObject {
         }
     }
     let backgroundKeepAlive = BackgroundLocationKeepAlive()
+
+    /// Injected so tests can prove the FFI boundary uses the adapter's output.
+    /// Production code never mutates this.
+    @ObservationIgnored
+    var coordinateAdapter = DeviceCoordinateAdapter.live
     var onBackgroundEvent: ((UsageAnalyticsEvent, BackgroundSessionTelemetry) -> Void)?
     var backgroundTelemetry: BackgroundSessionTelemetry {
         BackgroundSessionTelemetry(
@@ -214,6 +220,12 @@ final class LocalDeviceSessionCoordinator: NSObject {
         }
     }
 
+    /// The single place where App coordinates become device coordinates.
+    /// Every FFI call below must use this, never a raw target.
+    func injectedCoordinate(for target: LocationTarget) -> CLLocationCoordinate2D {
+        coordinateAdapter.coordinate(latitude: target.latitude, longitude: target.longitude)
+    }
+
     @discardableResult
     func updateLocation(_ target: LocationTarget) -> ActiveLocationUpdateResult {
         guard
@@ -223,10 +235,7 @@ final class LocalDeviceSessionCoordinator: NSObject {
             let pendingSession
         else { return .unavailable }
 
-        let injected = DeviceCoordinateAdapter.live.coordinate(
-            latitude: target.latitude,
-            longitude: target.longitude
-        )
+        let injected = injectedCoordinate(for: target)
 
         guard rc_location_session_update(activeSession, injected.latitude, injected.longitude) == 0 else {
             fail("Roam Control could not update the active location.")
@@ -240,6 +249,17 @@ final class LocalDeviceSessionCoordinator: NSObject {
         phase = .active(target)
         return .updated
     }
+
+    #if DEBUG
+    /// Probe-only injection for the coordinate A/B: writes exactly the given values and
+    /// leaves pendingSession, phase, history and routes untouched.
+    @discardableResult
+    func injectProbeCoordinate(latitude: Double, longitude: Double) -> ActiveLocationUpdateResult {
+        guard workerIsRunning, case .active = phase, let activeSession else { return .unavailable }
+        guard rc_location_session_update(activeSession, latitude, longitude) == 0 else { return .failed }
+        return .updated
+    }
+    #endif
 
     func openLocalDevVPN() {
 #if !targetEnvironment(simulator)
@@ -573,10 +593,7 @@ final class LocalDeviceSessionCoordinator: NSObject {
         let pairingRecord = pendingSession.pairingRecord
         let target = pendingSession.target
         let peerAddressString = Self.localDevVPNPeerAddress
-        let injected = DeviceCoordinateAdapter.live.coordinate(
-            latitude: target.latitude,
-            longitude: target.longitude
-        )
+        let injected = injectedCoordinate(for: target)
         let injectedLatitude = injected.latitude
         let injectedLongitude = injected.longitude
 

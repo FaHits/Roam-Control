@@ -68,6 +68,8 @@ final class ChinaCoordinateTransformTests: XCTestCase {
         )
 
         assertNear(restored, latitude: gcj.latitude, longitude: gcj.longitude, toleranceMeters: 0.5)
+        XCTAssertEqual(restored.latitude, gcj.latitude, accuracy: 1e-6)
+        XCTAssertEqual(restored.longitude, gcj.longitude, accuracy: 1e-6)
     }
 
     func testOutsideChinaReturnsInputUnchanged() {
