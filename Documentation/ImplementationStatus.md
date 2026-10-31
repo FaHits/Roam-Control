@@ -645,3 +645,15 @@
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41162486040
 - 下一步：Task 14 - 完整验证（第一条动作：读实施计划 Task 14 章节，把状态改为 `in_progress`，再跑全量测试、Debug/Release 构建与手工清单）
 - 更新时间：2026-10-31
+
+### 2026-10-31 Task 13 流程偏差
+
+- 任务：Task 13 - 中断路线恢复（状态保持 `completed`，本节只记录交付流程上的偏差，不改任务状态值）
+- 偏差事实：Task 13 的文档提交原始哈希是 `82354ee`（`docs(routes): record Task 13 completion`），已经推送到个人 fork 后，为了修正文档正文里写错的 `+/-` 行数，改用 `git commit --amend` 改写成 `8b4dcb3`，并用 `git push --force-with-lease` 强推
+- 强推范围：只有个人 fork `fork` 的 `feat/manual-running-routes` 分支，没有触碰 `origin`，也没有触碰其他分支
+- 受影响内容：仅是 `Documentation/ImplementationStatus.md` 里的文档 diffstat 数字（`SessionRecoveryView.swift` +55/-10 → +65/-8、`HomeView.swift` +49 → +44、`RouteRecoveryTests.swift` +53 → +51）。代码提交 `0b2331d`（`test(recovery): define saved route restoration`）和 `e71bda8`（`feat(recovery): restore interrupted route runs`）没有被改写，`RoamControl/`、`RoamControlTests/` 与 `project.pbxproj` 的内容在这次强推前后完全一致
+- CI 影响：改写后的 docs 提交 run `41163895262`（head `8b4dcb3`）`conclusion=success`，98 passed / 0 failed，`** TEST SUCCEEDED **` 和 `** BUILD SUCCEEDED **`；被覆盖的 run `41163866675`（head `82354ee`）随之作废。代码与测试结论不受影响
+- 被违反的规则：`Documentation/AIDevelopment.md` 第 107 行“不强制推送，不改写已推送历史”
+- 后续处理：不再改写 `feat/manual-running-routes` 的已推送历史；之后发现已推送提交有误时，只追加新的修复提交，不改写远端历史；推送前用 `git log --oneline fork/<分支>..HEAD` 确认待推内容，若发现要改的是已推送提交，停止并报告，不自行强推
+- 规则加固：`Documentation/AIDevelopment.md` 第 7 节和 `AGENTS.md` 的“自动完成与同步”已把 `git commit --amend`、`git rebase`、`git push --force`、`git push --force-with-lease` 明确列为对已推送历史的禁止操作，并规定远端拒绝普通 push 时停止报告而不是改用 force
+- 更新时间：2026-10-31

@@ -56,6 +56,8 @@
 5. 将当前分支推送到个人 fork：`git push fork HEAD:<当前分支>`。
 6. 用 `git ls-remote fork refs/heads/<当前分支>` 确认远端提交与本地 `HEAD` 一致。
 7. 在最终回复中报告提交哈希、推送结果和 CI 的当前状态。
+8. 推送后才发现提交内容有误时，只能追加新的修复提交；不得对已推送历史使用 `git commit --amend`、`git rebase`、`git push --force` 或 `git push --force-with-lease`。
+9. 普通 `git push` 被远端拒绝时，停止并报告，不要改用 force 推送。
 
 只有测试和构建都通过的任务才自动进入 `completed` 并提交推送。`implemented_unverified`、`blocked` 或 `in_progress` 状态不得伪装成完成；窗口中断时至少把状态和下一步写入交接文件，但不能声称任务完成。
 

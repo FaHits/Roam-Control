@@ -105,6 +105,11 @@ xcodebuild build \
 - 当前功能分支是 `feat/manual-running-routes`。
 - 上游远程名是 `origin`，个人 fork 远程名是 `fork`。
 - 不强制推送，不改写已推送历史。
+  - 已推送的提交禁止 `git commit --amend`，包括只改提交信息或只改文档数字。
+  - 已推送的提交禁止 `git rebase`，包括 `git rebase -i` 压缩或改写提交顺序。
+  - 禁止 `git push --force` 和 `git push --force-with-lease`；`--force-with-lease` 不是安全例外。
+  - 发现已推送提交有误时，追加一个新的修复提交，不重写远端历史。
+  - 推送前检查 `git log --oneline fork/<当前分支>..HEAD`，确认将要推送的都是新提交；若需要修改的正是已推送提交，停止并报告，不要自行强推。
 - 提交信息使用 `feat(routes):`、`fix(recovery):`、`test(routes):`、`docs(repo):` 等前缀。
 - 已通过验证的任务默认自动提交并推送到 `fork`；用户明确要求暂停同步时除外。
 
