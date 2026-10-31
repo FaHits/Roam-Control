@@ -1301,7 +1301,7 @@ Add:
 @State private var routeLibraryError: String?
 ```
 
-Add a route-library button beside Favourites and Settings using the `point.topleft.down.to.point.right.curvepath` SF Symbol. Present `RouteLibraryView` in a sheet.
+Add a route-library button beside Favourites and Settings using the `point.topleft.down.to.point.bottomright.curvepath` SF Symbol. Present `RouteLibraryView` in a sheet.
 
 When `RouteLibraryView` returns a configuration:
 

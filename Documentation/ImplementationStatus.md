@@ -117,7 +117,7 @@
 | Task 9：路线库和运行设置界面 | `completed` | Xcode 27.1 全量 83 个测试（新增 3 个 `RunProfileStore` 测试）与 Debug 构建均通过 |
 | Task 10：恢复模型与设备会话基础 | `completed` | Xcode 27.1 下 9 个新测试与全量 92 个测试通过 |
 | Task 11：运行中进度持久化 | `completed` | Xcode 27.1 下 4 个新测试与全量 96 个测试通过 |
-| Task 12：运行卡片与主页整合 | `completed` | Xcode 27.1 全量 96 个测试与 Debug 构建均通过 |
+| Task 12：运行卡片与主页整合 | `implemented_unverified` | 返工修复 Routes 按钮空图标（`RouteSymbol.library`，无效符号名全仓 0 命中）；CI run `41193407036` 114 用例 0 失败、Debug/Release 构建通过，Release IPA artifact `13039403715`；真机截图 `Task12-routes-icon.png` 未做 |
 | Task 13：中断路线恢复 | `completed` | Xcode 27.1 下新增 2 个测试、全量 98 个测试与 Debug 构建均通过；手工强制退出恢复未验证 |
 | Task 14：完整验证 | `implemented_unverified` | 架构边界与 98 个测试、Debug/Release 构建均通过（CI run `41166020073`）；模拟器与真机手工清单未验证 |
 | Task 15：统一中国大陆坐标域 | `implemented_unverified` | 方向已由真机 A/B 实测确定：MapKit raw 为 GCJ-02、DVT 期望 WGS-84，`DeviceCoordinateAdapter.swift:36` 取 `.gcj02ToWGS84`，只转换一次且仅在注入边界；CI run `41186642773` 113 用例 0 失败、Debug/Release 构建通过，产 Release IPA `13037307005` 与 Debug IPA `13037142318`；真机回归（天安门城楼、田径场、路线、Update、Stop & Restore）未做 |
@@ -628,7 +628,7 @@
   ```
 - 卡片：`RouteRunCard(route:session:isPaired:onStart:onTogglePause:onStop:onDone:)` 只读 `RouteSessionModel`，不持有运行逻辑。header 显示路线名与 phase 标题，`ProgressView(value: session.lapProgress)`，六个 metric（Laps、Lap 百分比、Distance、Speed m/s、Cadence spm、Elapsed）。按钮按 phase 分派：`.idle`→Start，`.failed`→Try Again（同样调用 `onStart`），`.preparing`→ProgressView 文案并禁用，`.running`→Pause + Stop，`.paused`→Resume + Stop，`.finished`→Done，`.stopping`→恢复真实位置文案并禁用。Stop 走 `confirmationDialog`（"Stop & Restore" destructive / "Keep Running" cancel），Done 只在 `.finished` 出现
 - 卡片样式：`@Environment(\.dynamicTypeSize)`，`isAccessibilitySize` 时 `ScrollView` + `.frame(maxHeight: 460)`，卡片 `.padding(18).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))`，主按钮 `.borderedProminent` + `.controlSize(.large)`，与 `WalkingRoutePreviewCard` 一致。Start、Pause、Resume、Stop、Done 均设置 `accessibilityLabel`
-- 主页入口：`HomeView` 新增 `routeSession`/`isShowingRouteLibrary`/`routeLibraryError` 三个 `@State`，Favourites 左侧新增 `point.topleft.down.to.point.right.curvepath` 按钮（`accessibilityLabel("Routes")`）；`Favourites` 按钮在 `routeSession.locksRouteInput` 时禁用
+- 主页入口：`HomeView` 新增 `routeSession`/`isShowingRouteLibrary`/`routeLibraryError` 三个 `@State`，Favourites 左侧新增 `point.topleft.down.to.point.bottomright.curvepath` 按钮（`accessibilityLabel("Routes")`）；`Favourites` 按钮在 `routeSession.locksRouteInput` 时禁用
 - onRun 顺序（`startRouteRun(_:)`）：关库 → `walkingSimulation.reset()` + `walkingRoutePlanner.clear()` → `mapModel.clearSelectedLocation()` → `routeSession.prepare(route:profile:mode:progress:)`（progress 全零）→ 成功后 `mapModel.show(try RouteGeometry(...))` → `Task { await routeSession.start(using: appModel) }`；`prepare` 或几何构造抛错时设置 `routeLibraryError` 并 `return`，不启动设备、不碰 `deviceSession`
 - 地图：`activeRouteGeometry` 由 `routeSession.route` 用 `try?` 构造，`MapPolyline(coordinates:)` 蓝色 `lineWidth 6`；`routeSession.snapshot` 存在时用 `reportedCoordinate` 画 `figure.run.circle.fill` 的 "Running location" 标注，样式与 "Walking location" 相同。固定点 `Marker` 增加 `routeSession.route == nil` 条件；Apple `MKRoute` 与手绘路线不会同时出现，因为开跑前已 `walkingRoutePlanner.clear()`
 - 互斥：地图点击 `onTapGesture` 增加 `guard !routeSession.locksRouteInput`，搜索栏 `.disabled` 与建议列表条件都并入 `locksRouteInput`，`SavedPlacesView.onSelect` 同样加 guard；`LocationSelectionCard.onStart` 先 `routeSession.reset()`。卡片优先级为 RestoringRealLocationCard → RouteRunCard（`routeSession.route != nil`）→ WalkingRoutePreviewCard → LocationSelectionCard，因此路线运行期间不会出现固定位置卡
@@ -642,6 +642,24 @@
 - 下一步：Task 13 - 中断路线恢复
 - 更新时间：2026-10-31
 
+### 2026-10-31 Task 12 返工：主页 Routes 按钮空图标
+
+- 状态：`implemented_unverified`。自动化证据齐全，真机截图验收未做，不宣布验收通过
+- 根因：`HomeView` 的 Routes 按钮用的 SF Symbol 名称把末段写成了 `point.right`（正确是 `point.bottomright`），该名称不存在，SwiftUI 静默渲染为空圆圈；`SessionRecoveryView` 的 savedRoute 图标与详情行用的是同一个错名
+- 修复：新增 `RoamControl/Features/Routes/Views/RouteSymbol.swift`，`RouteSymbol.library = "point.topleft.down.to.point.bottomright.curvepath"`（`RouteLibraryView` 空状态原本就在用的有效名称）；`HomeView`、`RouteLibraryView`、`SessionRecoveryView`（详情行与 `recoveryIcon` 两处）共 4 处改为引用该常量。按钮的 44×44 尺寸、位置、`regularMaterial` + 阴影、`accessibilityLabel("Routes")` 与点击动作未改
+- 文档同步：`Documentation/Plans/ManualRunningRoutesImplementation.md` 的 Task 12 原文与本文件历史记录里同样的无效名称一并改正
+- 验证命令：`rg -n "point\.topleft\.down\.to\.point\.right\.curvepath" .` → 0 命中
+- 红灯：提交 `79e1157`（`test(routes): assert the route library SF Symbol resolves`），run `41193155586` `conclusion=failure`，报错 `RoamControlTests/RouteSymbolTests.swift:8:33: error: cannot find 'RouteSymbol' in scope`，`** TEST FAILED **`
+- 实现提交：`a272bf2`（`fix(routes): use a real SF Symbol for the route entry`）
+- 绿灯 CI：run `41193407036`，head `a272bf2`，`conclusion=success`；`Test case … passed` 114 行、`failed` 0 行，`** TEST SUCCEEDED **`；`Build Debug` 与 `Build Release` 均为 `** BUILD SUCCEEDED **`；`unsigned-ipa` 与 `unsigned-ipa-debug` 两个作业均 success
+- 新测试：`RoamControlTests/RouteSymbolTests.swift` 1 个（`testLibrarySymbolExists`，`UIImage(systemName: RouteSymbol.library)` 非 nil），测试数 113 → 114
+- 产物：Release 未签名 IPA artifact `13039403715`（`RoamControl-unsigned-ipa`，3,092,461 B ≈ 2.95 MiB）；Debug 未签名 IPA artifact `13039154180`（`RoamControl-unsigned-debug-ipa`，4,652,173 B）
+- 未验证项：真机安装 Release IPA 后主页右上角三个按钮的截图（要求文件名 `Task12-routes-icon.png`）与点击进入 `RouteLibraryView` 的目视确认。本机为 Windows，没有 macOS、`xcodebuild`、iOS 模拟器或真机连接链路，截图未生成，`implemented_unverified`
+- 版本：仍为 `0.9.2` / `61`，未改 `project.pbxproj`
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41193407036
+- 下一步：在有 macOS + Xcode 27 + 真机的环境上装 `RoamControl-unsigned-ipa`（artifact `13039403715`），截 `Task12-routes-icon.png` 并回填本文件
+- 更新时间：2026-10-31
+
 ### 2026-10-31 Task 13 完成记录
 
 - 任务：Task 13 - 中断路线恢复
@@ -649,7 +667,7 @@
 - 分支与基线：`feat/manual-running-routes`，基线 `fab1444`
 - 修改文件：`RoamControl/Features/Home/SessionRecoveryView.swift`（+65/-8）、`RoamControl/Features/Home/HomeView.swift`（+44）、`RoamControlTests/RouteRecoveryTests.swift`（+51）、`Documentation/ImplementationStatus.md`。未改 `project.pbxproj`、`RouteSessionModel.swift`、`RouteRunner.swift`、`RouteGeometry.swift`、`RouteDefinition.swift`、`RunProfile.swift`、`HumanizedMotionModel.swift`、`SessionRecoveryRecord.swift`、`AppModel.swift`、`RouteLibraryView.swift`、`RouteRunSetupView.swift`、`RouteEditorView.swift`、`RouteRunCard.swift`，未改版本号与构建号
 - 提交：`0b2331d`（`test(recovery): define saved route restoration`）、`e71bda8`（`feat(recovery): restore interrupted route runs`）、本文档提交（`docs(routes): record Task 13 completion`）
-- 恢复卡展示（`SessionRecoveryView`）：只按 `recovery.isSavedRoute` 增加分支，未引入新模型。图标 `recoveryIcon` 为 savedRoute → `point.topleft.down.to.point.right.curvepath`、walking → `figure.walk.motion`、fixed → `location.fill`；详情用 `Route`（`recovery.savedRoute?.name ?? "Saved route"`）替换 savedRoute 的 Last location 行，不显示 Destination；`routeProgressText` 用 `routeProgress.distanceInLap` 除以 `RouteGeometry(points:isClosed:).totalDistance` 现算百分比（clamp 到 0...1，`Int((f * 100).rounded())`），输出如 `3 completed · 42% of lap`，几何不可用时退化为 `N completed laps`；标题仍为 `Previous Session Interrupted`；`resumeTitle` 与 `resumeSystemImage` 按 savedRoute/walking/fixed 三分支返回 `Resume Route Run`+`figure.run`、`Resume Walking`+`figure.walk`、`Resume Location`+`arrow.clockwise`；`summaryText` 为 savedRoute 单独文案，不含 Apple route 或 walking 字样。`Restore Real Location`、`Already Restored`、`isPaired` 禁用、Dynamic Type 分支、错误文案与 `isResuming` 的 `Preparing the route…` 均未改动
+- 恢复卡展示（`SessionRecoveryView`）：只按 `recovery.isSavedRoute` 增加分支，未引入新模型。图标 `recoveryIcon` 为 savedRoute → `point.topleft.down.to.point.bottomright.curvepath`、walking → `figure.walk.motion`、fixed → `location.fill`；详情用 `Route`（`recovery.savedRoute?.name ?? "Saved route"`）替换 savedRoute 的 Last location 行，不显示 Destination；`routeProgressText` 用 `routeProgress.distanceInLap` 除以 `RouteGeometry(points:isClosed:).totalDistance` 现算百分比（clamp 到 0...1，`Int((f * 100).rounded())`），输出如 `3 completed · 42% of lap`，几何不可用时退化为 `N completed laps`；标题仍为 `Previous Session Interrupted`；`resumeTitle` 与 `resumeSystemImage` 按 savedRoute/walking/fixed 三分支返回 `Resume Route Run`+`figure.run`、`Resume Walking`+`figure.walk`、`Resume Location`+`arrow.clockwise`；`summaryText` 为 savedRoute 单独文案，不含 Apple route 或 walking 字样。`Restore Real Location`、`Already Restored`、`isPaired` 禁用、Dynamic Type 分支、错误文案与 `isResuming` 的 `Preparing the route…` 均未改动
 - 恢复流程（`HomeView.resumeInterruptedSession`）：函数开头先判 `if recovery.isSavedRoute { resumeSavedRoute(recovery); return }`，之后才是原来的 `guard recovery.isWalkingRoute, let destination` 分支，savedRoute 不会落到 fixed 的 `startLocationSession(at: recovery.lastReportedLocation)`
 - 新增 `private func resumeSavedRoute(_:)`：置空 `recoveredWalkError`；`guard let route/profile/mode/progress` 四件齐全，否则设置 `The saved route run could not be restored.` 并直接 return（不 dismiss recovery、不启动设备）；随后 `routeSession.reset()` → `walkingSimulation.reset()` → `walkingRoutePlanner.clear()`；`try routeSession.prepare(route:profile:mode:progress:)` 传入保存的 `routeProgress`（不归零），成功后 `mapModel.show(try RouteGeometry(points:isClosed:))`；然后 `appModel.dismissInterruptedSessionRecovery()`、`isPreparingRecoveredWalk = false`，最后 `Task { await routeSession.start(using: appModel) }`。`prepare` 或几何构造抛错时 `routeSession.reset()` + `recoveredWalkError = "The saved route run could not be restored."` + `isPreparingRecoveredWalk = false`，不 dismiss、不启动设备，`Restore Real Location` 仍可用
 - 快照优先：全程只用 `recovery.savedRoute` 的 `points`/`isClosed`，不按 `route.id` 查路线库、不调用 `walkingRoutePlanner.preview`、不改 `progress` 的圈数与圈内距离；`isPreparingRecoveredWalk`、`RouteRunCard`、`DeviceSessionPhase` 转发都没有新增第二个状态或第二条运行循环
