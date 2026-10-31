@@ -46,6 +46,13 @@ struct SettingsView: View {
                         Label("Connection Health", systemImage: "stethoscope")
                     }
 
+                    NavigationLink {
+                        CoordinateDiagnosticsView()
+                            .environment(appModel)
+                    } label: {
+                        Label("Coordinate Diagnostics", systemImage: "scope")
+                    }
+
                     Button {
                         isShowingDeviceSetup = true
                     } label: {

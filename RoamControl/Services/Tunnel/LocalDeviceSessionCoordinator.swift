@@ -223,7 +223,12 @@ final class LocalDeviceSessionCoordinator: NSObject {
             let pendingSession
         else { return .unavailable }
 
-        guard rc_location_session_update(activeSession, target.latitude, target.longitude) == 0 else {
+        let injected = DeviceCoordinateAdapter.live.coordinate(
+            latitude: target.latitude,
+            longitude: target.longitude
+        )
+
+        guard rc_location_session_update(activeSession, injected.latitude, injected.longitude) == 0 else {
             fail("Roam Control could not update the active location.")
             return .failed
         }
@@ -568,6 +573,12 @@ final class LocalDeviceSessionCoordinator: NSObject {
         let pairingRecord = pendingSession.pairingRecord
         let target = pendingSession.target
         let peerAddressString = Self.localDevVPNPeerAddress
+        let injected = DeviceCoordinateAdapter.live.coordinate(
+            latitude: target.latitude,
+            longitude: target.longitude
+        )
+        let injectedLatitude = injected.latitude
+        let injectedLongitude = injected.longitude
 
         DispatchQueue.global(qos: .userInitiated).async {
             guard
@@ -592,8 +603,8 @@ final class LocalDeviceSessionCoordinator: NSObject {
                                 resolvedService.port,
                                 serviceIdentifier,
                                 authTag,
-                                target.latitude,
-                                target.longitude,
+                                injectedLatitude,
+                                injectedLongitude,
                                 locationStartedCallback,
                                 context,
                                 &result

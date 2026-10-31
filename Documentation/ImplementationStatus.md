@@ -9,8 +9,8 @@
 - 源码基线：`38c0d80`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 14 - 完整验证
-- 任务状态：`implemented_unverified`
+- 当前任务：Task 15 - 统一中国大陆坐标域（注入边界转换）
+- 任务状态：`in_progress`（代码与诊断入口就位，`DeviceCoordinateAdapter.live` 保持 `.none`，等待真机 A/B 实测决定方向）
 - 当前执行窗口：DSH-Agent（2026-10-31）
 - 最近完成：Task 13 - 中断路线恢复（Task 14 自动化通过、手工项未做，故为 `implemented_unverified`）
 - 已完成工程修改：
@@ -81,6 +81,9 @@
 - Task 14 Release 构建结果：同一 run 新增的 `Build Release` 步骤 `** BUILD SUCCEEDED **`；该步骤为本次补入的 CI 缺口（此前工作流只有 test + Debug）
 - Task 14 手工验收：模拟器与真机清单全部未验证（本机为 Windows，无 macOS、无 iOS 模拟器、无配对设备），不记为通过
 - 下一步：在有 macOS + Xcode 27 + iOS 27 模拟器的环境执行 Task 14 手册的模拟器清单，再在配对真机上做后台长跑与强制退出恢复验收；缺陷只能以 `fix(routes): …` 追加提交处理
+- Task 15 改动文件：新增 `RoamControl/Services/Location/ChinaCoordinateTransform.swift`、`RoamControl/Services/Location/DeviceCoordinateAdapter.swift`、`RoamControl/Features/Settings/CoordinateDiagnosticsView.swift`、`RoamControlTests/ChinaCoordinateTransformTests.swift`；修改 `RoamControl/Services/Tunnel/LocalDeviceSessionCoordinator.swift`（`:226`、`:576-607`）、`RoamControl/Features/Settings/SettingsView.swift`（Device 段）、`RoamControl/Models/LocationTarget.swift`（仅注释）
+- Task 15 边界：只改注入边界，`LocationTarget` / `GeoCoordinate` / `RouteGeometry` / `RouteRunner` / `RouteStore` / Rust-FFI 均未动，无数据迁移；`DeviceCoordinateAdapter.live` 仍为 `.none`，没有运行时开关
+- Task 15 待办：真机 A/B 实测（天安门、湛江田径场），确定 `.wgs84ToGCJ02` 或 `.gcj02ToWGS84` 后改 `DeviceCoordinateAdapter.swift:36` 一行，重跑 CI 取 test + unsigned-ipa 证据，再写坐标实测表
 
 ## 自动完成规则
 
@@ -108,6 +111,7 @@
 | Task 12：运行卡片与主页整合 | `completed` | Xcode 27.1 全量 96 个测试与 Debug 构建均通过 |
 | Task 13：中断路线恢复 | `completed` | Xcode 27.1 下新增 2 个测试、全量 98 个测试与 Debug 构建均通过；手工强制退出恢复未验证 |
 | Task 14：完整验证 | `implemented_unverified` | 架构边界与 98 个测试、Debug/Release 构建均通过（CI run `41166020073`）；模拟器与真机手工清单未验证 |
+| Task 15：统一中国大陆坐标域 | `in_progress` | 转换工具、注入适配器、只读诊断页与 10 个新测试已就位；`live` 仍为 `.none`，等天安门与湛江田径场 A/B 实测数据后改一行并重跑 CI |
 
 ## 交接记录
 
