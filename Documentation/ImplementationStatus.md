@@ -11,11 +11,11 @@
 - 源码基线：`0f63d1f`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 20 - 更新/反馈仓库地址 —— `implemented`（代码 head `c75f2b0`，CI run `41231501665` 三 job 全绿，135 用例 0 失败）
-- 任务状态：Task 20 `implemented`（仓库地址统一到 `FaHits/Roam-Control`，无 release 时明确提示「未发布」；4 项真机行为待 Task 14 批量验证）；Task 19 `implemented`（含 Task 19F 收尾补正；本地无 Xcode，测试/构建/产物均来自 GitHub Actions）；Task 16R `implemented`；Task 9R `implemented`；Task 14 `fail`；Task 17/18 待做；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
-- 当前执行窗口：Task 20 已收尾，下一步按 `Documentation/Handoffs/2026-10-31-rework-handoff.md` 第 3 节进入 Task 17（顺序 9R → 19 → 16R → 20 → 17 → 18 → 14）
+- 当前任务：Task 17 - 开放路线折返（单程趟数）—— `implemented`（代码 head `76d41f1`，CI run `41236893110` 三 job 全绿，147 用例 0 失败）
+- 任务状态：Task 17 `implemented`（开放路线 `.outAndBack(trips:)`，偶数趟停在起点、奇数趟停在终点；2 项真机行为待 Task 14 批量验证）；Task 20 `implemented`（仓库地址统一到 `FaHits/Roam-Control`，无 release 时明确提示「未发布」；4 项真机行为待 Task 14 批量验证）；Task 19 `implemented`（含 Task 19F 收尾补正；本地无 Xcode，测试/构建/产物均来自 GitHub Actions）；Task 16R `implemented`；Task 9R `implemented`；Task 14 `fail`；Task 18 待做；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
+- 当前执行窗口：Task 17 已收尾，下一步按 `Documentation/Handoffs/2026-10-31-rework-handoff.md` 第 3 节进入 Task 18（卫星底图），之后 Task 14 批量真机验收（顺序 9R → 19 → 16R → 20 → 17 → 18 → 14）
 - 并行任务：无。Task 16 的返工已在 Task 16R 内完成，语言弹窗与英文残留项以 Task 16R 记录为准
-- 最近完成：Task 9R 代码与 CI（删除确认期间行不消失、微信输入法 marked text 可重命名），最终 HEAD CI run `41215787777` 三 job 全绿
+- 最近完成：Task 17 代码/测试/文档与 CI（开放路线趟数折返、运行卡趟数指标、本地化 615 keys），最终 HEAD CI run `41236893110` 三 job 全绿
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Views/RouteRunCard.swift`
   - `RoamControl/Features/Map/MapViewModel.swift`
@@ -107,6 +107,10 @@
 - Task 10 返工绿灯：run `41195528908`（head `80af1a7`）`conclusion=success`；`test` job 419s、`unsigned-ipa` 68s、`unsigned-ipa-debug` 40s；116 个用例 0 失败，`** TEST SUCCEEDED **`，`Build Debug` 与 `Build Release` 均 `** BUILD SUCCEEDED **`；Debug IPA 自检 `self-check 'Probe (Debug)' hits: 2`
 - Task 10 返工产物：Release IPA artifact `RoamControl-unsigned-ipa` id `13040706415` / 3,093,454 字节；Debug IPA artifact `RoamControl-unsigned-debug-ipa` id `13040422834` / 4,654,993 字节
 - Task 10 返工副作用核对：`startLocationSession(at:)` 与 `startWalkingLocationSession` 仍传非 `nil` 历史目标，新增 `RouteHistoryTests.testStartingFixedLocationSessionStillWritesLocationHistory` 断言固定位置仍写入历史，`locationHistory` 其他读写点（`removeFromHistory`、`clearHistory`、恢复流程）未改动
+- Task 17 代码提交 `20ef07f`（`feat(routes): run open routes out and back by trip count`）、测试提交 `76d41f1`（`test(routes): cover out-and-back trips`），CI run `41236893110`（head `76d41f1`）`test` / `unsigned-ipa` / `unsigned-ipa-debug` 三 job 全绿，`RoamControlTests` 全量 147 用例 0 失败
+- Task 17 产物（run `41236893110`）：Release IPA artifact `RoamControl-unsigned-ipa` id `13055889161` / 3,107,748 字节；Debug IPA artifact `RoamControl-unsigned-debug-ipa` id `13055378342` / 4,635,484 字节
+- Task 17 本地化与坐标边界：`check_localizations.py` 输出 `Localizable.xcstrings: 613/613`、`InfoPlist.xcstrings: 2/2`、`All 615 keys have non-empty zh-Hans values.`（exit 0）；`rg -n "gcj02ToWGS84|offsetDegrees|coordinateOffset" RoamControl | wc -l` 为 8，与起点 `03f9a92` 的 8 一致，`DeviceCoordinateAdapter.swift:37` 仍 `.gcj02ToWGS84`
+- Task 17 真机项：执行方无法接触 iOS 真机，折返去程/回程与趟数指标由用户批量验证，登记在 [`Documentation/Handoffs/2026-10-31-rework-handoff.md`](Handoffs/2026-10-31-rework-handoff.md) 第 7 节第 16 行
 
 ## 自动完成规则
 
@@ -907,4 +911,34 @@
 - 本地无法验证：本机为 Windows，无 `xcodebuild`、无 iOS 模拟器、无配对真机；测试、Debug/Release 构建与产物全部来自 `xcode-27` GitHub Actions
 - 未验证项（真机，登记在交接文档第 7 节第 12–15 行，随 Task 14 批量验证）：① 中文下 Report a Bug 打开 `github.com/FaHits/Roam-Control/issues/new` 且模板为 bug_report；② Request a Feature 同仓库 feature_request 模板；③ Check for Updates 显示「该仓库尚未发布版本。」且不显示上游版本号；④ 断网后 Check for Updates 显示不可用文案、不崩溃
 - 下一步：按交接文档第 3 节进入 **Task 17**（折返/往返次数）
+- 更新时间：2026-11-01
+
+### 2026-11-01 Task 17 实现记录：开放路线折返（单程趟数）
+
+- 任务：Task 17 - 开放路线折返。开放路线可按「单程趟数」跑，偶数趟回到起点、奇数趟停在终点；闭环路线的 `laps` / `continuous` / `once` 行为与文案不变
+- 状态：`implemented`（按交接文档约定，Task 14 批量真机验收前不标 `completed`）
+- 分支与基线：`feat/manual-running-routes`，起点 HEAD `03f9a92`；代码提交 `20ef07f`（`feat(routes): run open routes out and back by trip count`）、测试提交 `76d41f1`（`test(routes): cover out-and-back trips`）、文档提交与本节同批（`docs(repo): record the Task 17 out-and-back results`）
+- 逐项结果
+
+| 项 | 结论 | 证据 |
+| --- | --- | --- |
+| 1. `.outAndBack(trips:)` 与 trips 校验 | pass | `RoamControl/Features/Routes/Models/RouteRunMode.swift:22` 新 case；`:31-33` `trips < 1` 抛 `invalidTripCount`（`:7`）；`Codable` 仍为合成实现，测试 `testOutAndBackSurvivesAnEncodingRoundTrip` 覆盖 `.outAndBack(trips: 3)` 往返 |
+| 2. 只允许开放路线 | pass | `RoamControl/Features/Routes/Core/RouteRunner.swift:91-102` 按模式分派：`.once` 不校验、`.outAndBack` 要求 `!geometry.isClosed` 否则 `requiresOpenRoute`（`RouteRunMode.swift:11`）、`.laps`/`.continuous` 仍要求闭环；测试 `testClosedRouteRejectsOutAndBack`、`testOpenRouteRejectsLapsMode`、`testOpenRouteRejectsContinuousMode` |
+| 3. 复用 `targetLaps` | pass | `RouteRunner.swift:59-70` `.outAndBack → trips`；`:203-205` `completedLaps >= targetLaps` 进 `.finished`；`:227-231` 覆盖距离被夹到最后目标 |
+| 4. 奇偶决定方向 | pass | `RouteRunner.swift:79-82` `isReturnTrip`；`:247-249` 奇数趟取 `coordinate(atDistance: lapLength - distanceInLap)`，偶数趟取 `coordinate(atDistance: distanceInLap)`；测试 `testOutAndBackFirstTripLandsOnTheLastPoint`、`testOutAndBackSecondTripRunsBackwards` |
+| 5. 恢复与夹紧 | pass | `RouteRunner.swift:111-125` 按 `completedLaps` 奇偶还原方向，`.outAndBack` 的 `completedLaps` 夹到 `trips` 且不抛错；测试 `testOutAndBackRecoveryResumesInTheReturnDirection`、`testOutAndBackRecoveryClampsTripsBeyondTheTarget` |
+| 6. 设置页趟数 Stepper | pass | `RouteRunSetupView.swift:47` `@State private var tripCount = 1`；`:176` `Stepper("Trips: \(tripCount)", value: $tripCount, in: 1...100)`；`:180-182` 偶数趟 `Ends at the start point.` / 奇数趟 `Ends at the finish point.`；`:224` `tripCount == 1 ? .once : .outAndBack(trips: tripCount)` |
+| 7. 运行卡趟数指标 | pass | `RouteRunCard.swift:109-117` 有趟数时 `Trips` + `index/count`（如 `2/3`），否则原 `Laps` + `completedLaps`；进度条仍用 `session.lapProgress`（本趟进度），`:48` 未改 |
+| 8. 新增中文文案 | pass | `Localizable.xcstrings:2308` `Ends at the finish point.`（结束时停在终点。）、`:2324` `Ends at the start point.`（结束时回到起点。）、`:9012` `Trips`（趟数）、`:9028` `Trips: %lld`（趟数：%lld）；闭环既有 5 个 key 未改 |
+
+- 测试：基线 135 → 147（新增 12 例，只加不删）。`RouteRunnerTests` 9 例 `testOutAndBackFirstTripLandsOnTheLastPoint`、`testOutAndBackSecondTripRunsBackwards`、`testEvenTripCountFinishesAtTheStartPoint`、`testOddTripCountFinishesAtTheFinishPoint`、`testOutAndBackTotalDistanceIsMonotonicAcrossTrips`、`testSingleTripMatchesOnceOnAnOpenRoute`、`testOutAndBackRejectsZeroTrips`、`testClosedRouteRejectsOutAndBack`、`testOutAndBackSurvivesAnEncodingRoundTrip`；`RouteRecoveryTests` 2 例 `testOutAndBackRecoveryResumesInTheReturnDirection`、`testOutAndBackRecoveryClampsTripsBeyondTheTarget`；`RouteSessionModelTests` 1 例 `testTripCountAndIndexFollowCompletedTrips`。CI `Run RoamControlTests` 输出 147 行 `Test case … passed`、0 行 `failed`，`** TEST SUCCEEDED **`
+- 编译与构建：同一 run `Build Debug` 与 `Build Release` 均 `** BUILD SUCCEEDED **`
+- 本地化：`python scripts/check_localizations.py` → `Localizable.xcstrings: 613/613 keys translated (100.0%)`、`InfoPlist.xcstrings: 2/2 keys translated (100.0%)`、`All 615 keys have non-empty zh-Hans values.`，exit 0；CI `Check localization catalogs` 步骤输出相同
+- CI：run [41236893110](https://github.com/FaHits/Roam-Control/actions/runs/41236893110)（head `76d41f1710d3077f9535f7ac86ec3324b938b50e`）`conclusion=success`；`test` success、`unsigned-ipa` success、`unsigned-ipa-debug` success
+- 产物（该 run 实测）：Release IPA artifact `RoamControl-unsigned-ipa` id `13055889161` / 3,107,748 字节；Debug IPA artifact `RoamControl-unsigned-debug-ipa` id `13055378342` / 4,635,484 字节；字节取自 `gh api repos/FaHits/Roam-Control/actions/runs/41236893110/artifacts` 的 `size_in_bytes`，unsigned IPA 字节不可复现，记录的是该 run 实测值
+- 静态证据：`rg -n "outAndBack" RoamControl | wc -l` → 16（`RouteRunMode.swift` 3、`RouteRunner.swift` 9、`RouteSessionModel.swift` 2、`RouteRunSetupView.swift` 1、`RouteRunCard.swift` 1 附近）；`rg -n "outAndBack" RoamControlTests | wc -l` → 16；`rg -n "gcj02ToWGS84|offsetDegrees|coordinateOffset" RoamControl | wc -l` → 8，与 `git grep -h -n -E "gcj02ToWGS84|offsetDegrees|coordinateOffset" 03f9a92 -- RoamControl | wc -l` 的 8 相同，坐标适配层零改动，`DeviceCoordinateAdapter.swift:37` 仍 `.gcj02ToWGS84`；`rg -n "MARKETING_VERSION|CURRENT_PROJECT_VERSION" RoamControl.xcodeproj/project.pbxproj` 仍 `0.10.0` / `62`
+- 未改动：`RouteStore.schemaVersion`、`RouteRunCard` 进度条、闭环 `.laps` / `.continuous` 的计数与文案、`.once` 的 `distanceInLap` 语义（跑完仍为本趟全长，`.outAndBack` 则在 seam 处归零进入下一趟，两者差异由 `testSingleTripMatchesOnceOnAnOpenRoute` 用坐标/距离/相位逐帧锁定）
+- 本地无法验证：本机为 Windows，无 `xcodebuild`、无 iOS 模拟器、无配对真机；测试、Debug/Release 构建与产物全部来自 `xcode-27` GitHub Actions
+- 未验证项（真机，登记在交接文档第 7 节第 16 行，随 Task 14 批量验证）：开放路线分别设 1 / 2 / 3 趟跑完，地图上去程与回程方向可见且落点符合奇偶（2 趟停在起点、3 趟停在终点），运行卡第二行显示 `1/3`、`2/3` 类趟数指标而不是 `Laps`
+- 下一步：按交接文档第 3 节进入 **Task 18**（路线选点卫星底图）
 - 更新时间：2026-11-01
