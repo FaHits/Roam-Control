@@ -81,11 +81,14 @@
 - Task 14 Release 构建结果：同一 run 新增的 `Build Release` 步骤 `** BUILD SUCCEEDED **`；该步骤为本次补入的 CI 缺口（此前工作流只有 test + Debug）
 - Task 14 手工验收：模拟器与真机清单全部未验证（本机为 Windows，无 macOS、无 iOS 模拟器、无配对设备），不记为通过
 - 下一步：在有 macOS + Xcode 27 + iOS 27 模拟器的环境执行 Task 14 手册的模拟器清单，再在配对真机上做后台长跑与强制退出恢复验收；缺陷只能以 `fix(routes): …` 追加提交处理
-- Task 15 改动文件：新增 `RoamControl/Services/Location/ChinaCoordinateTransform.swift`、`RoamControl/Services/Location/DeviceCoordinateAdapter.swift`、`RoamControl/Features/Settings/CoordinateDiagnosticsView.swift`、`RoamControlTests/ChinaCoordinateTransformTests.swift`；修改 `RoamControl/Services/Tunnel/LocalDeviceSessionCoordinator.swift`（`:226`、`:576-607`）、`RoamControl/Features/Settings/SettingsView.swift`（Device 段）、`RoamControl/Models/LocationTarget.swift`（仅注释）
-- Task 15 边界：只改注入边界，`LocationTarget` / `GeoCoordinate` / `RouteGeometry` / `RouteRunner` / `RouteStore` / Rust-FFI 均未动，无数据迁移；`DeviceCoordinateAdapter.live` 仍为 `.none`，没有运行时开关
-- Task 15 待办：真机 A/B 实测（天安门、湛江田径场），确定 `.wgs84ToGCJ02` 或 `.gcj02ToWGS84` 后改 `DeviceCoordinateAdapter.swift:36` 一行，重跑 CI 取 test + unsigned-ipa 证据，再写坐标实测表
-- Task 15 CI 结果：GitHub Actions run `41176205058`（`https://github.com/FaHits/Roam-Control/actions/runs/41176205058`）`conclusion=success`；`test` job 6m55s，`Run RoamControlTests` 107 个用例通过、0 失败，`** TEST SUCCEEDED **`；`Build Debug` 与 `Build Release` 均 `** BUILD SUCCEEDED **`
-- Task 15 artifact：`unsigned-ipa` job 成功，artifact `RoamControl-unsigned-ipa`，id `13032888086`，3,092,139 字节
+- Task 15 改动文件：新增 `RoamControl/Services/Location/ChinaCoordinateTransform.swift`、`RoamControl/Services/Location/DeviceCoordinateAdapter.swift`、`RoamControl/Services/Location/DeviceLocationProbe.swift`（`#if DEBUG`，真机读回）、`RoamControl/Features/Settings/CoordinateDiagnosticsView.swift`、`RoamControlTests/ChinaCoordinateTransformTests.swift`、`RoamControlTests/DeviceInjectionBoundaryTests.swift`；修改 `RoamControl/Services/Tunnel/LocalDeviceSessionCoordinator.swift`（`injectedCoordinate(for:)` 为唯一转换点；`updateLocation` 的 `rc_location_session_update`（`:240`）与 `runNativeLocationSession` 的 `rc_location_session_run`（`:583-586` 计算、`:615` 调用）只用适配器输出；`#if DEBUG` 的 `injectProbeCoordinate` 供 A/B 单候选注入）、`RoamControl/Features/Settings/SettingsView.swift`（Device 段）、`RoamControl/Models/LocationTarget.swift`（仅注释）
+- Task 15 边界：只改注入边界，`LocationTarget` / `GeoCoordinate` / `RouteGeometry` / `RouteRunner` / `RouteStore` / Rust-FFI 均未动，无数据迁移；`DeviceCoordinateAdapter.live` 仍为 `.none`，没有运行时开关；Probe 注入绕开适配器、不改 `selectedTarget` / history / 路线
+- Task 15 待办：真机 A/B 实测（天安门城楼、岭南师范学院田径场），用诊断页 Probe 区逐候选注入并读回 `sourceInformation.isSimulatedBySoftware`，确定方向后改 `DeviceCoordinateAdapter.swift:36` 一行，重跑 CI 取 test + unsigned-ipa 证据，再写坐标实测表
+- Task 15 真机 A/B 操作单：① `Settings > Coordinate Diagnostics` 记录 Raw 六位小数并截图两个候选值；② 启动固定点会话，Probe 选 `Raw app coordinate`，点 `Inject Probe`，等 5 秒读 `Readback` / `Simulated` / `Readback→Raw`，在高德与 Apple Maps 各自最大缩放截图；③ 同一地标换 `WGS-84 → GCJ-02` 与 `GCJ-02 → WGS-84` 重做②；④ 判定：raw≈WGS 且蓝点在西北→`.wgs84ToGCJ02`，raw≈GCJ 且蓝点在东南→`.gcj02ToWGS84`，两候选都不满足→保留 `.none` 并报残差；⑤ 天安门城楼与岭南师范学院田径场各做一遍，截图按「地标-候选」命名回传
+- Task 15 CI 结果（当前 HEAD）：GitHub Actions run `41181841011`（`https://github.com/FaHits/Roam-Control/actions/runs/41181841011`）`conclusion=success`；`test` job 7m59s，111 个用例通过、0 失败，`** TEST SUCCEEDED **`；`Build Debug` 与 `Build Release` 均 `** BUILD SUCCEEDED **`（Release 下 `#if DEBUG` 的 Probe 不参与编译）
+- Task 15 artifact：run `41181841011` 的 `unsigned-ipa` job 1m0s 成功，artifact `RoamControl-unsigned-ipa`，id `13034848792`，3,092,255 字节
+- Task 15 历史 CI：run `41176205058` test 6m55s、107 用例，artifact id `13032888086`；run `41176782498`（仅文档）107 用例，artifact id `13033192446`
+- Task 15 新增测试：`DeviceInjectionBoundaryTests` 4 例（适配器输出即注入值、`.none` 透传、注入不改 target、源码断言两个 FFI 调用点只用 `injected`），`ChinaCoordinateTransformTests` 往返用例补 1e-6 度断言
 - Task 15 转换算法核对：独立 Python 实现复算固定算例，天安门 `39.908722,116.397499 → 39.91012550007891,116.4037425752605`（554.93 m）、岭南师范 `21.27122,110.34213 → 21.268808687690072,110.34659102093997`（534.39 m）、湛江田径场 `21.2585,110.3025 → 21.25601589175258,110.30687415389694`（530.82 m），与计划给定值逐位一致
 
 ## 自动完成规则
@@ -114,7 +117,7 @@
 | Task 12：运行卡片与主页整合 | `completed` | Xcode 27.1 全量 96 个测试与 Debug 构建均通过 |
 | Task 13：中断路线恢复 | `completed` | Xcode 27.1 下新增 2 个测试、全量 98 个测试与 Debug 构建均通过；手工强制退出恢复未验证 |
 | Task 14：完整验证 | `implemented_unverified` | 架构边界与 98 个测试、Debug/Release 构建均通过（CI run `41166020073`）；模拟器与真机手工清单未验证 |
-| Task 15：统一中国大陆坐标域 | `in_progress` | 转换工具、注入适配器、只读诊断页与 9 个新测试已就位（CI run `41176205058`：全量 107 用例 0 失败、Debug/Release 构建通过、unsigned IPA 已产出）；`live` 仍为 `.none`，等天安门与湛江田径场 A/B 实测数据后改一行并重跑 CI |
+| Task 15：统一中国大陆坐标域 | `in_progress` | 转换工具、注入适配器、只读诊断页、DEBUG 探针与 111 用例已就位（CI run `41181841011`：0 失败、Debug/Release 构建通过、unsigned IPA artifact `13034848792`）；`live` 仍为 `.none`，等天安门城楼与岭南师范学院田径场 A/B 实测数据后改一行并重跑 CI |
 
 ## 交接记录
 
