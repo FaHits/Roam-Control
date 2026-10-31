@@ -9,10 +9,10 @@
 - 源码基线：`38c0d80`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 13 - 中断路线恢复
-- 任务状态：`completed`
-- 当前执行窗口：DSH-Agent（2026-10-31 完成）
-- 最近完成：Task 13 - 中断路线恢复
+- 当前任务：Task 14 - 完整验证
+- 任务状态：`implemented_unverified`
+- 当前执行窗口：DSH-Agent（2026-10-31）
+- 最近完成：Task 13 - 中断路线恢复（Task 14 自动化通过、手工项未做，故为 `implemented_unverified`）
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Views/RouteRunCard.swift`
   - `RoamControl/Features/Map/MapViewModel.swift`
@@ -75,7 +75,12 @@
 - Task 13 测试结果：GitHub Actions `Xcode 27 verification` run `41162486040` 通过；Xcode 27.1 下 `RoamControlTests` 全量 98 个用例 0 失败，结果为 `TEST SUCCEEDED`（新增 2 个用例，invalid-progress 复用 `RouteSessionModelTests.testPrepareRejectsNegativeProgress`）
 - Task 13 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：执行 Task 14 - 完整验证（未认领，先读实施计划 Task 14 并把状态改为 `in_progress`）
+- Task 14 架构边界：两条 `rg`（`import (SwiftUI|MapKit)|AppModel` 与 `MKRoute|MKMapPoint|MKPolyline`，范围 `Routes/Core` + `Routes/Models`）均无输出，`exit=1`，无架构违规
+- Task 14 测试结果：GitHub Actions `Xcode 27 verification` run `41166020073`（触发提交 `9b4984a` `ci: verify release build`）`conclusion=success`；Xcode 27.1 下 `RoamControlTests` 全量 98 个用例 0 失败，98 行 `Test case … passed`、0 行 `failed`，结果为 `** TEST SUCCEEDED **`（未新增测试）
+- Task 14 Debug 构建结果：同一 run 的 `Build Debug` 步骤 `** BUILD SUCCEEDED **`
+- Task 14 Release 构建结果：同一 run 新增的 `Build Release` 步骤 `** BUILD SUCCEEDED **`；该步骤为本次补入的 CI 缺口（此前工作流只有 test + Debug）
+- Task 14 手工验收：模拟器与真机清单全部未验证（本机为 Windows，无 macOS、无 iOS 模拟器、无配对设备），不记为通过
+- 下一步：在有 macOS + Xcode 27 + iOS 27 模拟器的环境执行 Task 14 手册的模拟器清单，再在配对真机上做后台长跑与强制退出恢复验收；缺陷只能以 `fix(routes): …` 追加提交处理
 
 ## 自动完成规则
 
@@ -102,7 +107,7 @@
 | Task 11：运行中进度持久化 | `completed` | Xcode 27.1 下 4 个新测试与全量 96 个测试通过 |
 | Task 12：运行卡片与主页整合 | `completed` | Xcode 27.1 全量 96 个测试与 Debug 构建均通过 |
 | Task 13：中断路线恢复 | `completed` | Xcode 27.1 下新增 2 个测试、全量 98 个测试与 Debug 构建均通过；手工强制退出恢复未验证 |
-| Task 14：完整验证 | `pending` | 等待 Task 13 |
+| Task 14：完整验证 | `implemented_unverified` | 架构边界与 98 个测试、Debug/Release 构建均通过（CI run `41166020073`）；模拟器与真机手工清单未验证 |
 
 ## 交接记录
 
@@ -656,4 +661,26 @@
 - 被违反的规则：`Documentation/AIDevelopment.md` 第 107 行“不强制推送，不改写已推送历史”
 - 后续处理：不再改写 `feat/manual-running-routes` 的已推送历史；之后发现已推送提交有误时，只追加新的修复提交，不改写远端历史；推送前用 `git log --oneline fork/<分支>..HEAD` 确认待推内容，若发现要改的是已推送提交，停止并报告，不自行强推
 - 规则加固：`Documentation/AIDevelopment.md` 第 7 节和 `AGENTS.md` 的“自动完成与同步”已把 `git commit --amend`、`git rebase`、`git push --force`、`git push --force-with-lease` 明确列为对已推送历史的禁止操作，并规定远端拒绝普通 push 时停止报告而不是改用 force
+- 更新时间：2026-10-31
+
+### 2026-10-31 Task 14 验证记录
+
+- 任务：Task 14 - 完整验证
+- 状态：`implemented_unverified`
+- 分支与基线：`feat/manual-running-routes`，验证前 HEAD `25129d9`，与 `fork` 远端一致，工作树干净；整体差异基线 `b68dac0`
+- 修改文件：`.github/workflows/xcode-27.yml`（+10，仅追加 `Build Release` 步骤）、`Documentation/ImplementationStatus.md`。未改 `RoamControl/`、`RoamControlTests/`、`project.pbxproj`、版本号与构建号：本次验证没有发现真实缺陷，因此没有补测试也没有改代码
+- 提交：`9b4984a`（`ci: verify release build`）、本文档提交（`docs(routes): record Task 14 verification`）。无 `fix` 提交
+- 架构边界检查：`rg -n "import (SwiftUI|MapKit)|AppModel" RoamControl/Features/Routes/Core RoamControl/Features/Routes/Models` 无输出、`exit=1`；`rg -n "MKRoute|MKMapPoint|MKPolyline" RoamControl/Features/Routes/Core RoamControl/Features/Routes/Models` 无输出、`exit=1`。同一目录下 `rg -c "import Foundation"` 命中 7 个文件，证明两条检查确实扫描到目标目录而不是空扫。`Routes/Views/` 内的 `import MapKit`/`import SwiftUI` 属于 UI 层，不在边界检查范围内，未作违规记录
+- CI 缺口与补丁：`.github/workflows/xcode-27.yml` 原本只有 `Run RoamControlTests` 与 `Build Debug`，没有 Release 构建，Release 配置此前从未在 CI 上验证过。已按计划追加最小 `Build Release` 步骤（`-configuration Release`、`-destination 'generic/platform=iOS Simulator'`、`CODE_SIGNING_ALLOWED=NO`、`set -o pipefail`），未改动任何既有 test/Debug 步骤
+- CI 结果：run `41166020073`，head `9b4984a`，`conclusion=success`；步骤 `Run RoamControlTests` success、`Build Debug` success、`Build Release` success。日志内 `** TEST SUCCEEDED **`、`** BUILD SUCCEEDED **` 各 1 次（Debug）、1 次（Release）；`Test case '…' passed` 98 行、`Test case '…' failed` 0 行；Xcode 27.1（Build 27A9275）。10 个测试套件：`BaselineTests` 1、`HumanizedMotionModelTests` 8、`RouteEditorModelTests` 23、`RouteGeometryTests` 10、`RouteLibraryModelTests` 12、`RouteProfileStoreTests` 3、`RouteRecoveryTests` 12、`RouteRunnerTests` 18、`RouteSessionModelTests` 3、`RouteStoreTests` 8，合计 98，与仓库内 `func test` 计数一致
+- 新增测试：0。本次只验证，没有失败用例可复现，因此没有为了凑数写测试
+- 日志警告：路线相关文件无警告；仅有既有的 `Ignoring --strip-bitcode because --sign was not passed` 与 `appintentsmetadataprocessor` 提示，与路线代码无关
+- 本地无法验证的事实：本机为 Windows（`uname` 为 MINGW64），`which xcodebuild` 与 `which swift` 均为空，测试与 Debug/Release 构建全部在 `xcode-27` runner 上完成，本地没有任何 `xcodebuild` 结果
+- 未验证内容（模拟器，全部未做）：画并保存闭环矩形、重启后仍在、重开几何一致；重命名；删除；`Continuous` 启动后暂停 10 秒进度不变再恢复；跨接缝 ≥3 次且圈数与圈内进度连续；`jitter=0` 标记落在路线上；`jitter=5 m` 移动仍局部连续；有限圈完成后 Done、折线消失、真实位置恢复；固定位置启动/停止/恢复真实位置；Apple walking 预览/启动/停止
+- 未验证内容（真机与配对环境，全部未做）：配对并打开 LocalDevVPN 后跑已知闭环 ≥10 分钟；切后台后移动继续且圈进度速率不变；Stop 后真实位置恢复；运行中强制退出、重启、恢复卡显示路线名/圈数/圈内进度且 Resume 从保存位置继续；固定位置与 Apple walking 未被路线功能破坏
+- 单元级证据（不能替代手工验收）：暂停不改进度 `RouteRunnerTests.testPauseDoesNotAdvanceProgress`、`testResumeContinuesFromPausedCoordinate`；接缝 `testContinuousRouteWrapsWithoutASeamJump`、`testCompletedLapIncrementsExactlyOnceAtSeam`、`testLargeAdvanceCanCrossMultipleLaps`、`testThousandLapsDoNotAccumulateLapError`；抖动 `testZeroJitterReturnsExactGroundCoordinate`、`testJitterNeverExceedsRadius`、`testJitterRemainsSmoothBetweenOneSecondSamples`；有限圈 `testFiniteLapRunFinishesAfterRequestedLapCount`、`testFinishedRunnerIsTerminal`；持久化 `RouteStoreTests.testSaveAndLoadRoundTripsRoutes`、`testSaveUsesAtomicReplacement`、`testCorruptedFileThrowsAndRemainsUnchanged`；固定位置与 Apple walking 兼容 `RouteRecoveryTests.testExistingFixedLocationRecordStillDecodes`、`testExistingWalkingRecordStillDecodes`、`testFixedFactoryKeepsLegacyShape`
+- 固定位置与 Apple walking 回归（静态检查）：`git diff b68dac0 -- RoamControl/Features/Home/HomeView.swift` 只在这些流程原有的 guard 上并列增加 `routeSession.locksRouteInput`，并在启动/恢复路线时调用 `walkingSimulation.reset()` 与 `walkingRoutePlanner.clear()`；`startLocationSession(at:)`、`walkingRoutePlanner.preview`、`walkingSimulation.start` 的调用链没有逻辑改动，`locksRouteInput` 在 `.idle`/`.failed` 为 false，未跑路线时行为与改动前一致。`SessionRecoveryRecord` 中 fixed 与 walking 的解码路径保留并有测试覆盖。运行时行为仍属未验证
+- 已知风险：自动化只覆盖模型层，`HomeView`/`RouteRunCard`/`RouteLibraryView`/`RouteRunSetupView`/`SessionRecoveryView` 的接线没有 XCTest 覆盖，手工项未做即无 UI 层证据；Release 配置到本次才纳入 CI，此前是空缺而非“一直通过”；真机设备会话（配对、LocalDevVPN、`updateLocation` 逐秒回传）与后台节流从未在真实设备上验证，是当前最大未知
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41166020073
+- 下一步：在有 macOS + Xcode 27 + iOS 27 模拟器的环境上，第一条动作为 `cd E:/Ai_Agent/RUN/roam-src && xcodebuild test -project RoamControl.xcodeproj -scheme RoamControl -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' -only-testing:RoamControlTests CODE_SIGNING_ALLOWED=NO`，随后按实施计划 Task 14 的模拟器清单逐项验收并回填本文件
 - 更新时间：2026-10-31
