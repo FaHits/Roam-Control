@@ -143,6 +143,52 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
         )
     }
 
+    /// Frames a manual route: its bounding box plus 25% padding on every side, with a minimum span
+    /// so a short route still reads as a place rather than a pixel.
+    func show(_ geometry: RouteGeometry) {
+        let coordinates = geometry.points.map {
+            CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
+        }
+        guard let first = coordinates.first else {
+            cameraPosition = .automatic
+            return
+        }
+
+        var minimumLatitude = first.latitude
+        var maximumLatitude = first.latitude
+        var minimumLongitude = first.longitude
+        var maximumLongitude = first.longitude
+
+        for coordinate in coordinates.dropFirst() {
+            minimumLatitude = min(minimumLatitude, coordinate.latitude)
+            maximumLatitude = max(maximumLatitude, coordinate.latitude)
+            minimumLongitude = min(minimumLongitude, coordinate.longitude)
+            maximumLongitude = max(maximumLongitude, coordinate.longitude)
+        }
+
+        let centre = CLLocationCoordinate2D(
+            latitude: (minimumLatitude + maximumLatitude) / 2,
+            longitude: (minimumLongitude + maximumLongitude) / 2
+        )
+        let minimumSpan = 0.002
+        let latitudeDelta = max((maximumLatitude - minimumLatitude) * 1.5, minimumSpan)
+        let longitudeDelta = max((maximumLongitude - minimumLongitude) * 1.5, minimumSpan)
+        guard centre.latitude.isFinite,
+              centre.longitude.isFinite,
+              latitudeDelta.isFinite,
+              longitudeDelta.isFinite else {
+            cameraPosition = .automatic
+            return
+        }
+
+        cameraPosition = .region(
+            MKCoordinateRegion(
+                center: centre,
+                span: MKCoordinateSpan(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta)
+            )
+        )
+    }
+
     func prepareCurrentLocation(recenter: Bool = false) {
         requestCurrentLocation(
             recenter: recenter,

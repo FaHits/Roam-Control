@@ -8,6 +8,9 @@ struct HomeView: View {
     @State private var mapModel = MapViewModel()
     @State private var walkingRoutePlanner = WalkingRoutePlanner()
     @State private var walkingSimulation = WalkingSimulationController()
+    @State private var routeSession = RouteSessionModel()
+    @State private var isShowingRouteLibrary = false
+    @State private var routeLibraryError: String?
     @State private var isShowingDeviceSetup: Bool
     @State private var isShowingSettings: Bool
     @State private var isShowingSavedPlaces = false
@@ -36,11 +39,16 @@ struct HomeView: View {
                             .stroke(.blue, lineWidth: 6)
                     }
 
+                    if let geometry = activeRouteGeometry {
+                        MapPolyline(coordinates: geometry.points.map(\.mapCoordinate))
+                            .stroke(.blue, lineWidth: 6)
+                    }
+
                     if shouldShowRealLocation {
                         UserAnnotation()
                     }
 
-                    if let target = mapModel.selectedLocation {
+                    if let target = mapModel.selectedLocation, routeSession.route == nil {
                         Marker(target.name, coordinate: target.coordinate)
                             .tint(.blue)
                     }
@@ -50,6 +58,17 @@ struct HomeView: View {
                             Image(systemName: "figure.walk.circle.fill")
                                 .font(.title.weight(.semibold))
                                 .foregroundStyle(.white, .green)
+                                .padding(4)
+                                .background(.regularMaterial, in: Circle())
+                                .shadow(color: .black.opacity(0.22), radius: 7, y: 3)
+                        }
+                    }
+
+                    if let snapshot = routeSession.snapshot {
+                        Annotation("Running location", coordinate: snapshot.reportedCoordinate.mapCoordinate) {
+                            Image(systemName: "figure.run.circle.fill")
+                                .font(.title.weight(.semibold))
+                                .foregroundStyle(.white, .blue)
                                 .padding(4)
                                 .background(.regularMaterial, in: Circle())
                                 .shadow(color: .black.opacity(0.22), radius: 7, y: 3)
@@ -70,6 +89,7 @@ struct HomeView: View {
                     }
 
                     guard !walkingSimulation.locksDestination else { return }
+                    guard !routeSession.locksRouteInput else { return }
                     guard let coordinate = proxy.convert(point, from: .local) else { return }
                     Task { await mapModel.selectDroppedPin(at: coordinate) }
                 }
@@ -89,9 +109,11 @@ struct HomeView: View {
                     },
                     onClear: mapModel.clearSearch
                 )
-                .disabled(walkingSimulation.locksDestination)
+                .disabled(walkingSimulation.locksDestination || routeSession.locksRouteInput)
 
-                if mapModel.isShowingSuggestions && !walkingSimulation.locksDestination {
+                if mapModel.isShowingSuggestions
+                    && !walkingSimulation.locksDestination
+                    && !routeSession.locksRouteInput {
                     SearchSuggestionsView(
                         suggestions: mapModel.searchSuggestions,
                         onSelect: { suggestion in
@@ -115,6 +137,21 @@ struct HomeView: View {
 
                     HStack(spacing: 10) {
                         Button {
+                            routeLibraryError = nil
+                            isShowingRouteLibrary = true
+                        } label: {
+                            Image(systemName: "point.topleft.down.to.point.right.curvepath")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .frame(width: 36, height: 36)
+                                .background(.regularMaterial, in: Circle())
+                                .shadow(color: .black.opacity(0.08), radius: 8, y: 3)
+                                .frame(width: 44, height: 44)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Routes")
+
+                        Button {
                             isShowingSavedPlaces = true
                         } label: {
                             Image(systemName: "heart.text.square.fill")
@@ -126,6 +163,7 @@ struct HomeView: View {
                                 .frame(width: 44, height: 44)
                         }
                         .buttonStyle(.plain)
+                        .disabled(routeSession.locksRouteInput)
                         .accessibilityLabel("Favourites and history")
 
                         Button {
@@ -221,6 +259,31 @@ struct HomeView: View {
 
                     if isLocatingRealLocationAfterRestoration {
                     RestoringRealLocationCard()
+                    } else if let route = routeSession.route {
+                    RouteRunCard(
+                        route: route,
+                        session: routeSession,
+                        isPaired: isPaired,
+                        onStart: {
+                            Task { await routeSession.start(using: appModel) }
+                        },
+                        onTogglePause: routeSession.togglePause,
+                        onStop: {
+                            shouldClearLocationAfterRestoration = true
+                            routeSession.stop(using: appModel)
+                        },
+                        onDone: {
+                            routeSession.reset()
+                            mapModel.clearSelectedLocation()
+                            switch appModel.deviceSession.phase {
+                            case .active, .stopping:
+                                shouldClearLocationAfterRestoration = true
+                                appModel.stopLocationSession()
+                            case .idle, .openingLocalDevVPN, .discovering, .connecting, .failed:
+                                break
+                            }
+                        }
+                    )
                     } else if let route = walkingRoutePlanner.route,
                    let destination = walkingRoutePlanner.destination {
                     WalkingRoutePreviewCard(
@@ -281,6 +344,7 @@ struct HomeView: View {
                         },
                         onStart: {
                             guard let target = mapModel.selectedLocation else { return }
+                            routeSession.reset()
                             shouldRefreshRealLocationWhenActive = false
                             mapModel.show(target)
                             Task { await appModel.startLocationSession(at: target) }
@@ -399,6 +463,7 @@ struct HomeView: View {
                 newPhase,
                 deviceSession: appModel.deviceSession
             )
+            routeSession.handleDeviceSessionPhase(newPhase, appModel: appModel)
 
             switch newPhase {
             case .openingLocalDevVPN, .discovering, .connecting, .active, .stopping:
@@ -466,6 +531,7 @@ struct HomeView: View {
                 isFavourite: appModel.isFavourite,
                 onSelect: { target in
                     guard !walkingSimulation.locksDestination else { return }
+                    guard !routeSession.locksRouteInput else { return }
                     mapModel.show(target)
                 },
                 onToggleFavourite: appModel.toggleFavourite,
@@ -477,6 +543,38 @@ struct HomeView: View {
                 onClearFavourites: appModel.clearFavouriteLocations,
                 onClearHistory: appModel.clearLocationHistory
             )
+        }
+        .sheet(isPresented: $isShowingRouteLibrary) {
+            RouteLibraryView(
+                isRouteActive: routeSession.locksRouteInput,
+                isPaired: isPaired,
+                onRun: { configuration in
+                    startRouteRun(configuration)
+                },
+                onClose: {
+                    isShowingRouteLibrary = false
+                },
+                onEditActiveRoute: {
+                    routeLibraryError = "Stop the active run before editing this route."
+                }
+            )
+        }
+        .alert(
+            "Route Run Unavailable",
+            isPresented: Binding(
+                get: { routeLibraryError != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        routeLibraryError = nil
+                    }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                routeLibraryError = nil
+            }
+        } message: {
+            Text(routeLibraryError ?? "")
         }
     }
 
@@ -498,6 +596,11 @@ struct HomeView: View {
             return true
         }
         return false
+    }
+
+    private var activeRouteGeometry: RouteGeometry? {
+        guard let route = routeSession.route else { return nil }
+        return try? RouteGeometry(points: route.points, isClosed: route.isClosed)
     }
 
     private var shouldShowRealLocation: Bool {
@@ -560,6 +663,35 @@ struct HomeView: View {
                 mapModel.showCurrentLocation()
             }
         }
+    }
+
+    private func startRouteRun(_ configuration: RouteRunConfiguration) {
+        isShowingRouteLibrary = false
+        walkingSimulation.reset()
+        walkingRoutePlanner.clear()
+        mapModel.clearSelectedLocation()
+        routeLibraryError = nil
+
+        let zeroProgress = RouteRunProgress(distanceInLap: 0, completedLaps: 0, elapsedTime: 0)
+        do {
+            try routeSession.prepare(
+                route: configuration.route,
+                profile: configuration.profile,
+                mode: configuration.mode,
+                progress: zeroProgress
+            )
+            mapModel.show(
+                try RouteGeometry(
+                    points: configuration.route.points,
+                    isClosed: configuration.route.isClosed
+                )
+            )
+        } catch {
+            routeLibraryError = "This route could not be started. Check its points and run settings before trying again."
+            return
+        }
+
+        Task { await routeSession.start(using: appModel) }
     }
 
     private func resumeInterruptedSession(_ recovery: SessionRecoveryRecord) {
@@ -638,6 +770,12 @@ private struct CompassRoseDial: View {
         .font(.system(size: 7.5, weight: .bold, design: .rounded))
         .foregroundStyle(.primary.opacity(0.78))
         .frame(width: 34, height: 34)
+    }
+}
+
+private extension GeoCoordinate {
+    var mapCoordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }
 
