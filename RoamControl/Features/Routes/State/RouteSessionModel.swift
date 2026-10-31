@@ -244,6 +244,8 @@ final class RouteSessionModel {
         }
         if next.phase == .finished {
             finish(at: target, using: appModel)
+        } else {
+            appModel.updateActiveRouteRecovery(at: target, progress: progress(of: next))
         }
     }
 

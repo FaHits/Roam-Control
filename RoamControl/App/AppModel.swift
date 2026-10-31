@@ -641,6 +641,23 @@ final class AppModel {
         preferences.set(data, forKey: Self.activeSessionRecoveryKey)
     }
 
+#if DEBUG
+    /// Test-only seam: seeds a recovery record exactly as a restored run would leave it,
+    /// with the next save still due.
+    var debugActiveSessionRecovery: SessionRecoveryRecord? {
+        get { activeSessionRecovery }
+        set {
+            activeSessionRecovery = newValue
+            lastRecoverySaveDate = nil
+            guard let newValue, let data = try? JSONEncoder().encode(newValue) else {
+                preferences.removeObject(forKey: Self.activeSessionRecoveryKey)
+                return
+            }
+            preferences.set(data, forKey: Self.activeSessionRecoveryKey)
+        }
+    }
+#endif
+
     private func saveActiveSessionRecoveryIfDue(at now: Date) {
         guard let recovery = activeSessionRecovery else { return }
         let shouldSave = lastRecoverySaveDate == nil
