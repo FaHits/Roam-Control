@@ -9,10 +9,10 @@
 - 源码基线：`38c0d80`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 12 - 运行卡片与主页整合
+- 当前任务：Task 13 - 中断路线恢复
 - 任务状态：`completed`
 - 当前执行窗口：DSH-Agent（2026-10-31 完成）
-- 最近完成：Task 12 - 运行卡片与主页整合
+- 最近完成：Task 13 - 中断路线恢复
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Views/RouteRunCard.swift`
   - `RoamControl/Features/Map/MapViewModel.swift`
@@ -72,8 +72,10 @@
 - Task 11 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - Task 12 测试结果：GitHub Actions `Xcode 27 verification` run `41160737660` 通过；Xcode 27.1 下 `RoamControlTests` 全量 96 个用例 0 失败，结果为 `TEST SUCCEEDED`（本任务只新增视图与接线，未新增测试）
 - Task 12 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
+- Task 13 测试结果：GitHub Actions `Xcode 27 verification` run `41162486040` 通过；Xcode 27.1 下 `RoamControlTests` 全量 98 个用例 0 失败，结果为 `TEST SUCCEEDED`（新增 2 个用例，invalid-progress 复用 `RouteSessionModelTests.testPrepareRejectsNegativeProgress`）
+- Task 13 构建结果：同一 run 的 `Build Debug` 步骤通过，结果为 `BUILD SUCCEEDED`
 - 当前环境限制：本地工作区为 Windows，不能直接运行 `xcodebuild`；验证在 `xcode-27` runner 上完成
-- 下一步：执行 Task 13 - 中断路线恢复（未认领，先读实施计划 Task 13 并把状态改为 `in_progress`）
+- 下一步：执行 Task 14 - 完整验证（未认领，先读实施计划 Task 14 并把状态改为 `in_progress`）
 
 ## 自动完成规则
 
@@ -99,7 +101,7 @@
 | Task 10：恢复模型与设备会话基础 | `completed` | Xcode 27.1 下 9 个新测试与全量 92 个测试通过 |
 | Task 11：运行中进度持久化 | `completed` | Xcode 27.1 下 4 个新测试与全量 96 个测试通过 |
 | Task 12：运行卡片与主页整合 | `completed` | Xcode 27.1 全量 96 个测试与 Debug 构建均通过 |
-| Task 13：中断路线恢复 | `pending` | 等待认领 |
+| Task 13：中断路线恢复 | `completed` | Xcode 27.1 下新增 2 个测试、全量 98 个测试与 Debug 构建均通过；手工强制退出恢复未验证 |
 | Task 14：完整验证 | `pending` | 等待 Task 13 |
 
 ## 交接记录
@@ -620,4 +622,26 @@
 - 未验证项：真实设备会话下的路线运行（`updateLocation` 逐秒回传、暂停后坐标确实不再变化、Stop 后真实位置恢复）、有限圈完成到 Done 的动画与折线消失、固定位置与路线之间连续切换的实际表现、Dynamic Type accessibility 尺寸下的卡片滚动、`onEditActiveRoute` 在路线库仍展示时设置的错误提示要等 sheet 关闭后才可见
 - 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41160737660
 - 下一步：Task 13 - 中断路线恢复
+- 更新时间：2026-10-31
+
+### 2026-10-31 Task 13 完成记录
+
+- 任务：Task 13 - 中断路线恢复
+- 状态：`completed`
+- 分支与基线：`feat/manual-running-routes`，基线 `fab1444`
+- 修改文件：`RoamControl/Features/Home/SessionRecoveryView.swift`（+65/-8）、`RoamControl/Features/Home/HomeView.swift`（+44）、`RoamControlTests/RouteRecoveryTests.swift`（+51）、`Documentation/ImplementationStatus.md`。未改 `project.pbxproj`、`RouteSessionModel.swift`、`RouteRunner.swift`、`RouteGeometry.swift`、`RouteDefinition.swift`、`RunProfile.swift`、`HumanizedMotionModel.swift`、`SessionRecoveryRecord.swift`、`AppModel.swift`、`RouteLibraryView.swift`、`RouteRunSetupView.swift`、`RouteEditorView.swift`、`RouteRunCard.swift`，未改版本号与构建号
+- 提交：`0b2331d`（`test(recovery): define saved route restoration`）、`e71bda8`（`feat(recovery): restore interrupted route runs`）、本文档提交（`docs(routes): record Task 13 completion`）
+- 恢复卡展示（`SessionRecoveryView`）：只按 `recovery.isSavedRoute` 增加分支，未引入新模型。图标 `recoveryIcon` 为 savedRoute → `point.topleft.down.to.point.right.curvepath`、walking → `figure.walk.motion`、fixed → `location.fill`；详情用 `Route`（`recovery.savedRoute?.name ?? "Saved route"`）替换 savedRoute 的 Last location 行，不显示 Destination；`routeProgressText` 用 `routeProgress.distanceInLap` 除以 `RouteGeometry(points:isClosed:).totalDistance` 现算百分比（clamp 到 0...1，`Int((f * 100).rounded())`），输出如 `3 completed · 42% of lap`，几何不可用时退化为 `N completed laps`；标题仍为 `Previous Session Interrupted`；`resumeTitle` 与 `resumeSystemImage` 按 savedRoute/walking/fixed 三分支返回 `Resume Route Run`+`figure.run`、`Resume Walking`+`figure.walk`、`Resume Location`+`arrow.clockwise`；`summaryText` 为 savedRoute 单独文案，不含 Apple route 或 walking 字样。`Restore Real Location`、`Already Restored`、`isPaired` 禁用、Dynamic Type 分支、错误文案与 `isResuming` 的 `Preparing the route…` 均未改动
+- 恢复流程（`HomeView.resumeInterruptedSession`）：函数开头先判 `if recovery.isSavedRoute { resumeSavedRoute(recovery); return }`，之后才是原来的 `guard recovery.isWalkingRoute, let destination` 分支，savedRoute 不会落到 fixed 的 `startLocationSession(at: recovery.lastReportedLocation)`
+- 新增 `private func resumeSavedRoute(_:)`：置空 `recoveredWalkError`；`guard let route/profile/mode/progress` 四件齐全，否则设置 `The saved route run could not be restored.` 并直接 return（不 dismiss recovery、不启动设备）；随后 `routeSession.reset()` → `walkingSimulation.reset()` → `walkingRoutePlanner.clear()`；`try routeSession.prepare(route:profile:mode:progress:)` 传入保存的 `routeProgress`（不归零），成功后 `mapModel.show(try RouteGeometry(points:isClosed:))`；然后 `appModel.dismissInterruptedSessionRecovery()`、`isPreparingRecoveredWalk = false`，最后 `Task { await routeSession.start(using: appModel) }`。`prepare` 或几何构造抛错时 `routeSession.reset()` + `recoveredWalkError = "The saved route run could not be restored."` + `isPreparingRecoveredWalk = false`，不 dismiss、不启动设备，`Restore Real Location` 仍可用
+- 快照优先：全程只用 `recovery.savedRoute` 的 `points`/`isClosed`，不按 `route.id` 查路线库、不调用 `walkingRoutePlanner.preview`、不改 `progress` 的圈数与圈内距离；`isPreparingRecoveredWalk`、`RouteRunCard`、`DeviceSessionPhase` 转发都没有新增第二个状态或第二条运行循环
+- fixed 与 walking 恢复未变：`startLocationSession(at:)` 一次性定位与 `walkingRoutePlanner.preview` + pace 恢复 + `walkingSimulation.start(using:)` 的代码路径逐字保留，仅在其前面增加了 savedRoute 提前返回
+- 新增测试（`RouteRecoveryTests`，类已是 `@MainActor`）2 个：`testSavedRouteRecoveryKeepsSnapshotWhenLibraryEntryIsMissing`（savedRoute 记录编码再解码后 `savedRoute`/`runProfile`/`runMode`/`routeProgress` 齐全，`RouteGeometry` 可构造且 `totalDistance`、`coordinate(atDistance:)` 与原始路线一致，全程不读 `RouteStore`，等价于路线库条目已删除）、`testSavedRouteRecoveryWithoutRunSettingsCannotBeRestored`（去掉 `runProfile`/`runMode`/`routeProgress` 键后解码得到 `nil`，即 `resumeSavedRoute` 的 guard 会走错误分支）。invalid-progress 用例未重复写：`RouteSessionModelTests.testPrepareRejectsNegativeProgress` 已用 `distanceInLap: -1`、`completedLaps: -1`、`elapsedTime: -1` 断言 `RouteSessionError.invalidProgress`，且 `prepare` 抛错前不触碰 `deviceSession`
+- 无新增可失败逻辑：两个新测试在旧代码（`fab1444`）上同样通过，因为模型层（`SessionRecoveryRecord`、`RouteSessionModel.prepare`）在 Task 10/11 已实现，Task 13 缺的是视图分支与 `HomeView` 接线，而这两处不属于 XCTest 可覆盖范围。没有伪造红灯
+- CI：run `41162486040`，head `e71bda8`，`conclusion=success`；`Test case … passed` 98 行、`failed` 0 行、`** TEST SUCCEEDED **`，同一 run 的 `Build Debug` 为 `** BUILD SUCCEEDED **`；测试从 96 增至 98；日志仅两条既有的 `appintentsmetadataprocessor` 提示，无源码警告。测试提交 `0b2331d` 的 run `41162481900` 同样 `conclusion=success`
+- 本地无法验证的事实：本机是 Windows 且没有 `xcodebuild`，全量测试与 Debug 构建都在 `xcode-27` runner 上完成，没有本地测试通过的结论；也没有 iOS 模拟器
+- 未验证项：模拟器手工验收（开始 continuous 路线并跨点、5 秒恢复写入、强制退出重启、确认恢复卡显示路线名/圈数/圈内进度/`Resume Route Run`、点击后从保存圈数与圈内位置继续），真实设备会话下中断后恢复的实际坐标与节流节奏，损坏快照在 UI 上真实显示的文案
+- 已知风险：`resumeSavedRoute` 是同步执行，`isPreparingRecoveredWalk` 只在异常路径上被显式置回，正常路径置回后立即 dismiss，因此 `Preparing the route…` 在 savedRoute 上通常只有一帧；恢复后圈数与圈内距离直接来自快照，若快照的 `distanceInLap` 大于几何总长，`RouteRunner` 首次推进会把进度夹到圈末而不是拒绝，这属于模型既有行为，本任务未改
+- 工作流：https://github.com/FaHits/Roam-Control/actions/runs/41162486040
+- 下一步：Task 14 - 完整验证（第一条动作：读实施计划 Task 14 章节，把状态改为 `in_progress`，再跑全量测试、Debug/Release 构建与手工清单）
 - 更新时间：2026-10-31
