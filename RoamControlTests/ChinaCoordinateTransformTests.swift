@@ -72,6 +72,18 @@ final class ChinaCoordinateTransformTests: XCTestCase {
         XCTAssertEqual(restored.longitude, gcj.longitude, accuracy: 1e-6)
     }
 
+    /// Device regression fixture: the raw MapKit coordinate read at Tiananmen Gate on
+    /// 2026-10-31 and the value that landed the blue dot on the gate.
+    func testDeviceRegressionTiananmenRawIsGCJ02() {
+        let injected = ChinaCoordinateTransform.gcj02ToWGS84(
+            latitude: 39.908717,
+            longitude: 116.397488
+        )
+
+        XCTAssertEqual(injected.latitude, 39.907316, accuracy: 1e-5)
+        XCTAssertEqual(injected.longitude, 116.391247, accuracy: 1e-5)
+    }
+
     func testOutsideChinaReturnsInputUnchanged() {
         let tokyo = ChinaCoordinateTransform.wgs84ToGCJ02(latitude: 35.681236, longitude: 139.767125)
         let london = ChinaCoordinateTransform.gcj02ToWGS84(latitude: 51.507351, longitude: -0.127758)

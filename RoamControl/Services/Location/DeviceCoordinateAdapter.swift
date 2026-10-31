@@ -30,8 +30,9 @@ struct DeviceCoordinateAdapter {
         }
     }
 
-    /// Phase 0: the ~500 m offset is confirmed, its direction is not.
-    /// Replace `.none` with the measured case (`.wgs84ToGCJ02` or
-    /// `.gcj02ToWGS84`) once on-device A/B data says which one. No runtime switch.
-    static let live = DeviceCoordinateAdapter(conversion: .none)
+    /// Measured on device on 2026-10-31 at Tiananmen Gate: MapKit's raw
+    /// coordinate is already GCJ-02, while the injected location service
+    /// expects WGS-84. This boundary is the only conversion point. No runtime
+    /// switch: the direction was fixed by the A/B measurement, not by a guess.
+    static let live = DeviceCoordinateAdapter(conversion: .gcj02ToWGS84)
 }

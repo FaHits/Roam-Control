@@ -9,7 +9,7 @@
 - 源码基线：`38c0d80`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 15 - 统一中国大陆坐标域（注入边界转换）
+- 当前任务：Task 15 - 统一中国大陆坐标域（注入边界转换）—— `implemented_unverified`，方向已由真机 A/B 实测定为 GCJ-02 → WGS-84，待真机回归
 - 任务状态：`in_progress`（代码与诊断入口就位，`DeviceCoordinateAdapter.live` 保持 `.none`，等待真机 A/B 实测决定方向）
 - 当前执行窗口：DSH-Agent（2026-10-31）
 - 最近完成：Task 13 - 中断路线恢复（Task 14 自动化通过、手工项未做，故为 `implemented_unverified`）
@@ -83,8 +83,9 @@
 - 下一步：在有 macOS + Xcode 27 + iOS 27 模拟器的环境执行 Task 14 手册的模拟器清单，再在配对真机上做后台长跑与强制退出恢复验收；缺陷只能以 `fix(routes): …` 追加提交处理
 - Task 15 改动文件：新增 `RoamControl/Services/Location/ChinaCoordinateTransform.swift`、`RoamControl/Services/Location/DeviceCoordinateAdapter.swift`、`RoamControl/Services/Location/DeviceLocationProbe.swift`（`#if DEBUG`，真机读回）、`RoamControl/Features/Settings/CoordinateDiagnosticsView.swift`、`RoamControlTests/ChinaCoordinateTransformTests.swift`、`RoamControlTests/DeviceInjectionBoundaryTests.swift`；修改 `RoamControl/Services/Tunnel/LocalDeviceSessionCoordinator.swift`（`injectedCoordinate(for:)` 为唯一转换点；`updateLocation` 的 `rc_location_session_update`（`:240`）与 `runNativeLocationSession` 的 `rc_location_session_run`（`:583-586` 计算、`:615` 调用）只用适配器输出；`#if DEBUG` 的 `injectProbeCoordinate` 供 A/B 单候选注入）、`RoamControl/Features/Settings/SettingsView.swift`（Device 段）、`RoamControl/Models/LocationTarget.swift`（仅注释）、`.github/workflows/xcode-27.yml`（新增 `unsigned-ipa-debug` job，Release 的 `unsigned-ipa` 未动）
 - Task 15 边界：只改注入边界，`LocationTarget` / `GeoCoordinate` / `RouteGeometry` / `RouteRunner` / `RouteStore` / Rust-FFI 均未动，无数据迁移；`DeviceCoordinateAdapter.live` 仍为 `.none`，没有运行时开关；Probe 注入绕开适配器、不改 `selectedTarget` / history / 路线
-- Task 15 待办：真机 A/B 实测（天安门城楼、岭南师范学院田径场），用诊断页 Probe 区逐候选注入并读回 `sourceInformation.isSimulatedBySoftware`，确定方向后改 `DeviceCoordinateAdapter.swift:36` 一行，重跑 CI 取 test + unsigned-ipa 证据，再写坐标实测表
-- Task 15 真机 A/B 操作单：① 安装 `RoamControl-unsigned-debug-ipa`（Release 包不含 Probe），`Settings > Coordinate Diagnostics` 记录 Raw 六位小数并截图两个候选值；② 启动固定点会话，Probe 选 `Raw app coordinate`，点 `Inject Probe`，等 5 秒读 `Readback` / `Simulated` / `Readback→Raw`，在高德与 Apple Maps 各自最大缩放截图；③ 同一地标换 `WGS-84 → GCJ-02` 与 `GCJ-02 → WGS-84` 重做②；④ 判定：raw≈WGS 且蓝点在西北→`.wgs84ToGCJ02`，raw≈GCJ 且蓝点在东南→`.gcj02ToWGS84`，两候选都不满足→保留 `.none` 并报残差；⑤ 天安门城楼与岭南师范学院田径场各做一遍，截图按「地标-候选」命名回传
+- Task 15 实测结论（2026-10-31，天安门-城楼，用户真机）：raw `39.908717, 116.397488`，高德蓝点在城楼东侧约 500 m；`wgs84ToGCJ02` 得 `39.910120, 116.403732`，蓝点更东；`gcj02ToWGS84` 得 `39.907316, 116.391247`，蓝点落在城楼上。三次 Probe 的 Readback 与注入值完全一致，`Simulated=yes`、`Accuracy=5.0 m`。判定：MapKit raw = GCJ-02，DVT 期望 WGS-84，`.live` 取 `.gcj02ToWGS84`
+- Task 15 剩余待办：真机回归 ① 装 Release 包搜「天安门-城楼」Start Location，高德蓝点与 Apple Maps pin 应在城楼；② 「岭南师范学院田径场」同样；③ 经过田径场的路线起点与轨迹不偏；④ Update Location 换目标蓝点跟随；⑤ Stop & Restore 恢复真实位置
+- Task 15 真机回归操作单：Release 包即可（Probe 只在 Debug 包）；同一地标截图用同一缩放级别，两地图不一致时两个都报
 - Task 15 CI 结果（当前 HEAD）：GitHub Actions run `41184102255`（`https://github.com/FaHits/Roam-Control/actions/runs/41184102255`）`conclusion=success`；`test` job 13m46s，111 个用例通过、0 失败，`** TEST SUCCEEDED **`；`Build Debug` 与 `Build Release` 均 `** BUILD SUCCEEDED **`
 - Task 15 Debug IPA：同一 run 的 `unsigned-ipa-debug` job（1m14s）产出 `RoamControl-unsigned-debug.ipa`，artifact `RoamControl-unsigned-debug-ipa`，id `13036955794`，4,652,037 字节；archive 配置为 `CONFIGURATION = Debug` / `SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG` / `SWIFT_OPTIMIZATION_LEVEL = -Onone`，`ENABLE_DEBUG_DYLIB=NO`
 - Task 15 Debug IPA 自检：job 内 `strings -a …/RoamControl.app/RoamControl | grep -cF 'Probe (Debug)'` 输出 `hits: 2`，命中行 `Probe (Debug) inject single candidate`（Probe 区 accessibilityIdentifier）与 `Probe (Debug)`（Probe section 标题），命中为 0 则 job 失败；Release 包不含 Probe，真机 A/B 必须装 Debug 包

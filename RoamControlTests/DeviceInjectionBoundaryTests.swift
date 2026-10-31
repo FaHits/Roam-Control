@@ -48,6 +48,10 @@ final class DeviceInjectionBoundaryTests: XCTestCase {
         XCTAssertEqual(target.longitude, 110.30687415389694)
     }
 
+    func testLiveAdapterUsesMeasuredDirection() {
+        XCTAssertEqual(DeviceCoordinateAdapter.live.conversion, .gcj02ToWGS84)
+    }
+
     func testBothFFICallSitesUseTheAdapterOutput() throws {
         let source = try Self.sourceFile("RoamControl/Services/Tunnel/LocalDeviceSessionCoordinator.swift")
 
