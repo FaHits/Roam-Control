@@ -53,3 +53,47 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO
+
+  unsigned-ipa:
+    needs: test
+    runs-on: xcode-27
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build unsigned device archive
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project RoamControl.xcodeproj \
+            -scheme RoamControl \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$PWD/build/RoamControl.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          APP_PATH="$PWD/build/RoamControl.xcarchive/Products/Applications/RoamControl.app"
+          test -d "$APP_PATH"
+          rm -rf "$PWD/build/Payload"
+          mkdir -p "$PWD/build/Payload"
+          ditto "$APP_PATH" "$PWD/build/Payload/RoamControl.app"
+          cd "$PWD/build"
+          zip -qry RoamControl-unsigned.ipa Payload
+          unzip -l RoamControl-unsigned.ipa | sed -n '1,20p'
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: RoamControl-unsigned-ipa
+          path: build/RoamControl-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
