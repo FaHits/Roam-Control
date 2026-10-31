@@ -20,21 +20,27 @@ final class AppLanguageTests: XCTestCase {
     func testSimplifiedChineseWritesSimplifiedChineseIdentifier() {
         AppLanguage.simplifiedChinese.apply(to: defaults)
 
-        XCTAssertEqual(defaults.stringArray(forKey: "AppleLanguages"), ["zh-Hans"])
+        XCTAssertEqual(storedAppleLanguages, ["zh-Hans"])
     }
 
     func testEnglishWritesEnglishIdentifier() {
         AppLanguage.english.apply(to: defaults)
 
-        XCTAssertEqual(defaults.stringArray(forKey: "AppleLanguages"), ["en"])
+        XCTAssertEqual(storedAppleLanguages, ["en"])
     }
 
     func testSystemRemovesOverride() {
         AppLanguage.english.apply(to: defaults)
-        XCTAssertNotNil(defaults.object(forKey: "AppleLanguages"))
+        XCTAssertEqual(storedAppleLanguages, ["en"])
 
         AppLanguage.system.apply(to: defaults)
 
-        XCTAssertNil(defaults.object(forKey: "AppleLanguages"))
+        XCTAssertNil(storedAppleLanguages)
+    }
+
+    /// Reads only this suite's own domain. `object(forKey:)` falls back to the
+    /// system domain, which always carries an `AppleLanguages` value.
+    private var storedAppleLanguages: [String]? {
+        defaults.persistentDomain(forName: Self.suiteName)?["AppleLanguages"] as? [String]
     }
 }
