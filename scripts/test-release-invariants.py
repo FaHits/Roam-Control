@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check Build 61 release, scheduler and telemetry invariants without networking."""
+"""Check Build 62 release, scheduler and telemetry invariants without networking."""
 
 from pathlib import Path
 import plistlib
@@ -25,8 +25,8 @@ def function_body(source: str, signature: str) -> str:
 
 
 project = (ROOT / "RoamControl.xcodeproj/project.pbxproj").read_text()
-assert project.count("CURRENT_PROJECT_VERSION = 61;") == 2
-assert project.count("MARKETING_VERSION = 0.9.2;") == 2
+assert project.count("CURRENT_PROJECT_VERSION = 62;") == 2
+assert project.count("MARKETING_VERSION = 0.10.0;") == 2
 
 with (ROOT / "Configuration/RoamControl-Info.plist").open("rb") as stream:
     info = plistlib.load(stream)
@@ -130,4 +130,4 @@ if private_config.exists():
             if path.is_file():
                 assert token not in path.read_text(errors="ignore"), f"Private token tracked in {relative}"
 
-print("Build 61 release, scheduler and consent-gate source checks passed; no network requests made.")
+print("Build 62 release, scheduler and consent-gate source checks passed; no network requests made.")
