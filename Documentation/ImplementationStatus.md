@@ -4,16 +4,18 @@
 
 ## 当前交接
 
+> 2026-10-31 大返工交接：Task 14 仍为 `fail`；Task 9 / Task 16 返工；新增 Task 17–20。完整方案、证据与下个会话的 prompt 规则见 [`Documentation/Handoffs/2026-10-31-rework-handoff.md`](Handoffs/2026-10-31-rework-handoff.md)。本文件下方 Task 14 的 `not_run` 记录已过期，以交接文档为准。
+
 - 功能：手绘闭环路线与拟人跑步模拟
 - 当前分支：`feat/manual-running-routes`
-- 源码基线：`38c0d80`
+- 源码基线：`0f63d1f`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 14 - 完整验证路线系统 —— `implemented_unverified`（自动化门禁与 CI 已通过，真机手工清单与截图未做，见文末 2026-10-31 Task 14 记录）
-- 任务状态：`implemented_unverified`（单元测试与 Debug/Release 构建通过；`DeviceCoordinateAdapter.live` 取 `.gcj02ToWGS84`；真机验收项均为 not_run）
-- 当前执行窗口：DSH-Agent（2026-10-31）
-- 并行任务：Task 16 简体中文本地化与语言切换 —— `implemented_unverified`（代码与资源已落地，见文末 Task 16 记录；不改变 Task 15 状态与版本号）
-- 最近完成：Task 13 - 中断路线恢复（Task 14 自动化通过、手工项未做，故为 `implemented_unverified`）
+- 当前任务：Task 14 - 完整验证路线系统 —— `fail`（用户已完成全量真机测试，存在不通过项；返工计划见交接文档）
+- 任务状态：`fail`；Task 9 / Task 16 返工，Task 17–20 新增；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
+- 当前执行窗口：交接给下一个“策划 + 验收”会话
+- 并行任务：Task 16 简体中文本地化与语言切换 —— 返工（语言弹窗与英文残留未通过）
+- 最近完成：Task 15 / 10 / 12 / 13 按用户全量真机测试口径通过；Task 14 整体仍未通过
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Views/RouteRunCard.swift`
   - `RoamControl/Features/Map/MapViewModel.swift`
