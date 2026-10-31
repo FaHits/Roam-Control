@@ -363,7 +363,8 @@ final class AppModel {
                 latitude: initialTarget.latitude,
                 longitude: initialTarget.longitude
             ),
-            historyTarget: initialTarget,
+            // A route run is owned by My Routes; it must not enter Saved Places history.
+            historyTarget: nil,
             recovery: .savedRoute(
                 route: route,
                 at: initialTarget,
@@ -377,7 +378,7 @@ final class AppModel {
     private func startLocationSession(
         at deviceTarget: LocationTarget,
         selectedTarget: LocationTarget,
-        historyTarget: LocationTarget,
+        historyTarget: LocationTarget?,
         recovery: SessionRecoveryRecord
     ) async {
         guard case .paired = pairingStatus else {
@@ -389,7 +390,9 @@ final class AppModel {
         dismissInterruptedSessionRecovery()
         activeSessionRecovery = recovery
         lastRecoverySaveDate = nil
-        addToHistory(historyTarget)
+        if let historyTarget {
+            addToHistory(historyTarget)
+        }
         switch deviceSession.updateLocation(deviceTarget) {
         case .updated:
             usageAnalytics.record(
