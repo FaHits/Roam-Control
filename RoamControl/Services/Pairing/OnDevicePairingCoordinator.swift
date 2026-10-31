@@ -36,7 +36,6 @@ final class OnDevicePairingCoordinator {
                 let stage = schedulerFailureReason == nil
                     ? FailureStage.classify(message, fallback: .pairingUnknown) : .schedulerSubmission
                 lastFailureStage = stage
-                onFailure?(failureSnapshot(stage: stage))
             }
             onPhaseChange?(phase)
         }
@@ -48,20 +47,6 @@ final class OnDevicePairingCoordinator {
     private(set) var taskRegistrationStatus: BackgroundTaskRegistrationStatus = .notAttempted
 
     private var terminalFailureReported = false
-    var onFailure: ((FailureDiagnosticSnapshot) -> Void)?
-
-    private func failureSnapshot(
-        stage: FailureStage,
-        disposition: FailureDisposition = .terminal
-    ) -> FailureDiagnosticSnapshot {
-        FailureDiagnosticSnapshot(
-            stage: stage,
-            disposition: disposition,
-            schedulerReason: schedulerFailureReason,
-            taskConfigurationStatus: taskConfigurationStatus,
-            taskRegistrationStatus: taskRegistrationStatus
-        )
-    }
 
     var onPhaseChange: ((OnDevicePairingPhase) -> Void)?
 

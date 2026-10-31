@@ -55,7 +55,6 @@ final class LocalDeviceSessionCoordinator: NSObject {
                 let stage = FailureStage.classify(message, fallback: .locationUnknown)
                 lastFailureStage = stage
                 lastFailureDisposition = .terminal
-                onFailure?(failureSnapshot(stage: stage))
             }
             onPhaseChange?(phase)
         }
@@ -83,22 +82,7 @@ final class LocalDeviceSessionCoordinator: NSObject {
     private(set) var taskRegistrationStatus: BackgroundTaskRegistrationStatus = .notAttempted
     private(set) var lastFailureStage: FailureStage?
     private(set) var lastFailureDisposition: FailureDisposition?
-    var onRecoveryNeeded: ((FailureDiagnosticSnapshot) -> Void)?
     private var terminalFailureReported = false
-    var onFailure: ((FailureDiagnosticSnapshot) -> Void)?
-
-    private func failureSnapshot(
-        stage: FailureStage,
-        disposition: FailureDisposition = .terminal
-    ) -> FailureDiagnosticSnapshot {
-        FailureDiagnosticSnapshot(
-            stage: stage,
-            disposition: disposition,
-            schedulerReason: schedulerFailureReason,
-            taskConfigurationStatus: taskConfigurationStatus,
-            taskRegistrationStatus: taskRegistrationStatus
-        )
-    }
 
     var onPhaseChange: ((DeviceSessionPhase) -> Void)?
 
@@ -554,7 +538,6 @@ final class LocalDeviceSessionCoordinator: NSObject {
     private func reportSchedulerObservationFailure() {
         lastFailureStage = .schedulerRegistration
         lastFailureDisposition = .recoverable
-        onRecoveryNeeded?(failureSnapshot(stage: .schedulerRegistration, disposition: .recoverable))
     }
 
     private func runNativeLocationSession() {
@@ -687,7 +670,6 @@ final class LocalDeviceSessionCoordinator: NSObject {
                 let stage = FailureStage.classify(message, fallback: .locationUnknown)
                 lastFailureStage = stage
                 lastFailureDisposition = .recoverable
-                onRecoveryNeeded?(failureSnapshot(stage: stage, disposition: .recoverable))
                 resolvedService = nil
                 if isMobileDataStartupMode {
                     enterMobileDataGuidance()

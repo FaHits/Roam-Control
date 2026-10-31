@@ -3,43 +3,6 @@ import Foundation
 // Connection Health diagnostics: fixed failure classification only, with no
 // event reporting. Never carries coordinates, searches, pairing data or error text.
 
-// Captured before callbacks or cleanup can change coordinator state.
-// Only scheduler failures retain the bundle/plist environment; never error text.
-struct FailureDiagnosticSnapshot {
-    let stage: FailureStage
-    let disposition: FailureDisposition
-    let schedulerReason: SchedulerFailureReason?
-    let taskConfigurationStatus: BackgroundTaskConfigurationStatus?
-    let taskRegistrationStatus: BackgroundTaskRegistrationStatus?
-    let runtimeBundleIdentifier: String?
-    let permittedBackgroundTasks: [String]?
-
-    var isSchedulerFailure: Bool {
-        stage == .schedulerRegistration || stage == .schedulerSubmission
-    }
-
-    init(
-        stage: FailureStage,
-        disposition: FailureDisposition = .terminal,
-        schedulerReason: SchedulerFailureReason? = nil,
-        taskConfigurationStatus: BackgroundTaskConfigurationStatus? = nil,
-        taskRegistrationStatus: BackgroundTaskRegistrationStatus? = nil,
-        runtimeBundleIdentifier: String? = Bundle.main.bundleIdentifier,
-        permittedBackgroundTasks: [String]? = Bundle.main.object(
-            forInfoDictionaryKey: "BGTaskSchedulerPermittedIdentifiers"
-        ) as? [String]
-    ) {
-        self.stage = stage
-        self.disposition = disposition
-        let scheduler = stage == .schedulerRegistration || stage == .schedulerSubmission
-        self.schedulerReason = scheduler ? schedulerReason : nil
-        self.taskConfigurationStatus = scheduler ? taskConfigurationStatus : nil
-        self.taskRegistrationStatus = scheduler ? taskRegistrationStatus : nil
-        self.runtimeBundleIdentifier = scheduler ? runtimeBundleIdentifier : nil
-        self.permittedBackgroundTasks = scheduler ? permittedBackgroundTasks : nil
-    }
-}
-
 enum FailureStage: String, CaseIterable {
     case pairingRecord
     case discovery

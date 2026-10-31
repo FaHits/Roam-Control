@@ -5057,22 +5057,6 @@
         }
       }
     },
-    "Privacy": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Privacy"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "隐私"
-          }
-        }
-      }
-    },
     "Private by design": {
       "localizations": {
         "en": {
