@@ -11,7 +11,7 @@
 - 源码基线：`0f63d1f`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 20 - 更新/反馈仓库地址 —— `implemented`（代码 head `PENDING_HEAD`，CI run `PENDING_RUN`）
+- 当前任务：Task 20 - 更新/反馈仓库地址 —— `implemented`（代码 head `c75f2b0`，CI run `41231501665` 三 job 全绿，135 用例 0 失败）
 - 任务状态：Task 20 `implemented`（仓库地址统一到 `FaHits/Roam-Control`，无 release 时明确提示「未发布」；4 项真机行为待 Task 14 批量验证）；Task 19 `implemented`（含 Task 19F 收尾补正；本地无 Xcode，测试/构建/产物均来自 GitHub Actions）；Task 16R `implemented`；Task 9R `implemented`；Task 14 `fail`；Task 17/18 待做；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
 - 当前执行窗口：Task 20 已收尾，下一步按 `Documentation/Handoffs/2026-10-31-rework-handoff.md` 第 3 节进入 Task 17（顺序 9R → 19 → 16R → 20 → 17 → 18 → 14）
 - 并行任务：无。Task 16 的返工已在 Task 16R 内完成，语言弹窗与英文残留项以 Task 16R 记录为准
@@ -139,7 +139,7 @@
 | Task 15：统一中国大陆坐标域 | `implemented_unverified` | 方向已由真机 A/B 实测确定：MapKit raw 为 GCJ-02、DVT 期望 WGS-84，`DeviceCoordinateAdapter.swift:36` 取 `.gcj02ToWGS84`，只转换一次且仅在注入边界；CI run `41186642773` 113 用例 0 失败、Debug/Release 构建通过，产 Release IPA `13037307005` 与 Debug IPA `13037142318`；真机回归（天安门城楼、田径场、路线、Update、Stop & Restore）未做 |
 | Task 19：移除匿名统计/共享数据全链路 | `implemented` | Task 19F 收尾补正完成：删三处死回调（`LocalDeviceSessionCoordinator.onFailure` / `onRecoveryNeeded`、`OnDevicePairingCoordinator.onFailure`）与两个私有 `failureSnapshot(...)` 工厂，`FailureDiagnosticSnapshot` 随之删除，`FailureDiagnostics.swift` 收敛为 `FailureStage` / `FailureDisposition` / `SchedulerFailureReason` 三个类型（131 行）；删孤儿本地化 key `Privacy`，`check_localizations.py` 604/604 + 2/2、`All 606 keys` exit 0；`rg -n "UsageAnalytics|sharesAnonymousUsageStatistics|AnonymousUsage|What Is Shared|Share Anonymous"` exit 1，`Telemetry` 只剩 4 处 `BackgroundSessionTelemetry`；`rg -n "failureSnapshot\(|FailureDiagnosticSnapshot"` 无输出；123 用例 0 失败（未删未增）；最终代码状态 CI run `41223835438`（head `3ffd834`）三 job 全绿，Release IPA artifact `13050992072`（3,101,262 字节）、Debug IPA `13051995426`（4,623,883 字节）
 | Task 16R：语言弹窗与剩余英文残留返工 | `implemented` | 语言切换只在生效语言真正改变时写入并弹窗：`AppLanguage.effective(...)` 由 `AppleLanguages` 覆盖值推导（无覆盖回落到系统偏好），`requiresRestart(comparedTo:)` 供 `SettingsView` 判定；Onboarding 三页 `title/message`、`PairingSetupView` 的 `requirementRow` / `instructionRow` / `pairingDetail(title:)`、`ConnectionHealthView.healthRow(title:)` 改 `LocalizedStringKey`；`ConnectionHealthView.restorationText(for:)` 把四个内部英文状态映射成本地化文案（内部值不变），`"None"` 两处显示改 `String(localized:)`；`Localizable.xcstrings` 604 → 609 key（+4 恢复状态、+1 a11y 逗号），合计 611；新增 6 例 AppLanguage/映射测试，全量 129 用例 0 失败；head `b7797d1`，CI run `41227597504` 三 job 全绿，Release artifact `13052626294`（3,104,532 字节）、Debug artifact `13053106037`（4,626,145 字节）；6 项真机行为登记在交接文档第 7 节，随 Task 14 批量验证 |
-| Task 20：更新/反馈仓库地址 | `implemented` | 新增 `RoamControl/Services/AppRepository.swift` 单一来源（`owner`/`repo`/`webURL`/`issuesURL(template:)`/`latestReleaseAPIURL`）；`SettingsView.swift:4-5` 两个反馈 URL 改由常量派生，`ReleaseUpdateChecker.swift:34-40` 用 `AppRepository.latestReleaseAPIURL`；新增纯函数 `ReleaseUpdateChecker.result(statusCode:body:)`（`:49`）：200 解码、404 → `.noPublishedRelease`、其他 → `.unavailable`，`latestRelease()` 只发请求；`SettingsView.swift:337-339` 的 `.noPublishedRelease` 文案改为 `This repository has no published release yet.` /「该仓库尚未发布版本。」，不回落上游 release、不伪装成「已是最新」；`rg -n "seanhowarthdev/Roam-Control" RoamControl` exit 1，`FaHits` 在 swift 里只剩 `AppRepository.swift:7` 一处；`check_localizations.py` 609/609 + 2/2、`All 611 keys` exit 0；新增 6 例 `ReleaseUpdateCheckerTests`，129 + 6 = 135 用例 0 失败；head `PENDING_HEAD`，CI run `PENDING_RUN`，产物 `PENDING_ARTIFACTS`；4 项真机行为登记在交接文档第 7 节，随 Task 14 批量验证 |
+| Task 20：更新/反馈仓库地址 | `implemented` | 新增 `RoamControl/Services/AppRepository.swift` 单一来源（`owner`/`repo`/`webURL`/`issuesURL(template:)`/`latestReleaseAPIURL`）；`SettingsView.swift:4-5` 两个反馈 URL 改由常量派生，`ReleaseUpdateChecker.swift:34-40` 用 `AppRepository.latestReleaseAPIURL`；新增纯函数 `ReleaseUpdateChecker.result(statusCode:body:)`（`:49`）：200 解码、404 → `.noPublishedRelease`、其他 → `.unavailable`，`latestRelease()` 只发请求；`SettingsView.swift:337-339` 的 `.noPublishedRelease` 文案改为 `This repository has no published release yet.` /「该仓库尚未发布版本。」，不回落上游 release、不伪装成「已是最新」；`rg -n "seanhowarthdev/Roam-Control" RoamControl` exit 1，`FaHits` 在 swift 里只剩 `AppRepository.swift:7` 一处；`check_localizations.py` 609/609 + 2/2、`All 611 keys` exit 0；新增 6 例 `ReleaseUpdateCheckerTests`，129 + 6 = 135 用例 0 失败；head `c75f2b0`，CI run `41231501665` 三 job 全绿，Release artifact `13053863895`（3,105,244 字节）、Debug artifact `13054018030`（4,628,549 字节）；4 项真机行为登记在交接文档第 7 节，随 Task 14 批量验证 |
 
 ## 交接记录
 
@@ -879,4 +879,31 @@
 - 保留英文及理由：`diagnosticsText`（`ConnectionHealthView.swift:325-` 起）整段保持英文——它是开发者诊断快照，供贴到 issue 里比对，翻成中文会让同一份报告在不同语言下无法对照；其可见入口「Run Connection Check」按钮、`Copy Diagnostics` 等文案已本地化。另：单位与格式串（`%.0f m`、`%.1f m/s`、`%.0f spm` 等）、`AppleLanguages` 等内部标识、`Probe (Debug)` 仍保持英文
 - 真机待验（登记到交接文档第 7 节，随 Task 14 批量验证）：① 英文系统下 Settings → Language 选 English 不弹重启提示；② 切到简体中文弹一次，重启后界面中文；③ 重启后再进该页不重复弹窗；④ 中文下 Onboarding 3 页全中文、页点 3 个；⑤ 中文下配对设置页 Requirements/Instructions 全中文，指纹与日期正常；⑥ 中文下 Connection Health 的 Restoration 行与 Place 空值不再是英文 `Not requested` / `None`
 - 下一步：按交接文档第 3 节进入 **Task 20**（更新/反馈仓库地址）
+- 更新时间：2026-11-01
+
+### 2026-11-01 Task 20 实现记录：更新/反馈仓库地址
+
+- 任务：Task 20 - 更新/反馈仓库地址（App 面向用户的仓库地址统一到 `FaHits/Roam-Control`，无 release 时明确提示「未发布」）
+- 状态：`implemented`（按交接文档约定，Task 14 批量真机验收前不得标 `completed`）
+- 分支与基线：`feat/manual-running-routes`，起点 HEAD `3ef5fa7abc284046889913a2d6869b021381f939`，代码提交 `c75f2b0a49085b8346caa342c71bdb5ab8202ec0`（`feat(settings): point feedback and update checks at the fork repository`）
+- 逐项结果
+
+| 项 | 结论 | 证据 |
+| --- | --- | --- |
+| 1.1 统一仓库常量 | pass | `RoamControl/Services/AppRepository.swift:6` `owner = "FaHits"`、`:7` `repo = "Roam-Control"`、`:9-11` `webURL`、`:13-15` `latestReleaseAPIURL`、`:18-22` `issuesURL(template:)`（`URLComponents` 拼 query）；`SettingsView.swift:4-5` 与 `ReleaseUpdateChecker.swift:35` 均只引用常量 |
+| 1.2 反馈入口指向目标仓库 | pass | `SettingsView.swift:4` `bugReportURL = AppRepository.issuesURL(template: "bug_report.yml")`、`:5` `featureRequestURL = AppRepository.issuesURL(template: "feature_request.yml")`；`Report a Bug`（`:119-121`）、`Request a Feature`（`:123-125`）文案与布局未改 |
+| 1.3 无 release 时明确提示 | pass | `ReleaseUpdateChecker.swift:49-64` 的 `result(statusCode:body:)`：非 200 时 404 → `.noPublishedRelease`、其他 → `.unavailable`；`SettingsView.swift:361-364` 把 `.noPublishedRelease` 与网络失败分开 catch；`SettingsView.swift:337-339` 文案 `This repository has no published release yet.` /「该仓库尚未发布版本。」；无任何上游兜底路径 |
+| 1.4 为可测性加最小接缝 | pass | `ReleaseUpdateChecker.swift:34-40` `latestRelease()` 只发请求后调用 `Self.result(...)`；`static func result(statusCode: Int, body: Data) throws -> PublishedRelease`（`:49`）为唯一纯函数接缝，未引入协议、容器或 mock 框架 |
+
+- 新增文件：`RoamControl/Services/AppRepository.swift`（24 行）、`RoamControlTests/ReleaseUpdateCheckerTests.swift`（6 例 91 行）
+- 修改文件：`RoamControl/Features/Settings/SettingsView.swift`（-8/+3 行）、`RoamControl/Services/ReleaseUpdateChecker.swift`（-10/+14 行）、`RoamControl/Resources/Localizable.xcstrings`（key 重命名 `No public GitHub release has been published yet.` → `This repository has no published release yet.`，zh-Hans 改为「该仓库尚未发布版本。」，6 行变更、key 总数不变）
+- 测试：新增 6 例 `ReleaseUpdateCheckerTests`（`testIssueURLsPointAtForkRepositoryWithTemplate`、`testLatestReleaseAPIURLPointsAtForkRepository`、`testResultDecodesPublishedRelease`、`testResultFallsBackToTagWhenNameIsBlank`、`testResultMaps404ToNoPublishedRelease`、`testResultMapsOtherStatusCodesToUnavailable`）。基线 129 + 新增 6 = 135，CI 实测 135 个 `Test case ... passed`、0 failed
+- 静态证据：`rg -n "seanhowarthdev/Roam-Control" RoamControl` exit 1（0 命中）；`rg -n "FaHits" RoamControl --glob '*.swift'` 只剩 `AppRepository.swift:7`；`rg -n "https://" RoamControl --glob '*.swift'` 只剩 `AppRepository.swift:11`、`:15`、`:18` 与既有两处 LocalDevVPN App Store 链接，无硬编码 issues/releases URL；`rg -n "noPublishedRelease" RoamControl` 命中 `ReleaseUpdateChecker.swift:15`、`:22`、`:54`、`:87` 与 `SettingsView.swift:337`、`:361`、`:362`；`rg -n "MARKETING_VERSION|CURRENT_PROJECT_VERSION" RoamControl.xcodeproj/project.pbxproj` 仍 `0.10.0` / `62`（`:248`、`:253`、`:273`、`:278`）；`git diff --stat` 不含 `DeviceCoordinateAdapter.swift`、`ChinaCoordinateTransform.swift`，`:37` 仍 `.gcj02ToWGS84`
+- 本地化：`python scripts/check_localizations.py` → `Localizable.xcstrings: 609/609`、`InfoPlist.xcstrings: 2/2`、`All 611 keys have non-empty zh-Hans values.`，exit 0；CI `Check localization catalogs` 步骤输出相同
+- CI：run [41231501665](https://github.com/FaHits/Roam-Control/actions/runs/41231501665)（head `c75f2b0a49085b8346caa342c71bdb5ab8202ec0`）`conclusion=success`；`test` success（`** TEST SUCCEEDED **`，`Build Debug` 与 `Build Release` 均 `** BUILD SUCCEEDED **`，135 例全 passed）、`unsigned-ipa` success、`unsigned-ipa-debug` success
+- 产物（该 run 实测）：Release IPA artifact `RoamControl-unsigned-ipa` id `13053863895` / 3,105,244 字节；Debug IPA artifact `RoamControl-unsigned-debug-ipa` id `13054018030` / 4,628,549 字节；字节取自 `gh api repos/FaHits/Roam-Control/actions/artifacts/<id> --jq '.size_in_bytes'`。unsigned IPA 字节不可复现，记录的是该 run 实测值
+- 目标仓库现状：`gh release list -R FaHits/Roam-Control` 输出为空，`FaHits/Roam-Control` 当前没有任何已发布 release，因此真机上点 `Check for Updates` 走的是 `.noPublishedRelease` 分支（注意：GitHub 对「有仓库但无 release」返回 404，正好映射到该分支）
+- 本地无法验证：本机为 Windows，无 `xcodebuild`、无 iOS 模拟器、无配对真机；测试、Debug/Release 构建与产物全部来自 `xcode-27` GitHub Actions
+- 未验证项（真机，登记在交接文档第 7 节第 12–15 行，随 Task 14 批量验证）：① 中文下 Report a Bug 打开 `github.com/FaHits/Roam-Control/issues/new` 且模板为 bug_report；② Request a Feature 同仓库 feature_request 模板；③ Check for Updates 显示「该仓库尚未发布版本。」且不显示上游版本号；④ 断网后 Check for Updates 显示不可用文案、不崩溃
+- 下一步：按交接文档第 3 节进入 **Task 17**（折返/往返次数）
 - 更新时间：2026-11-01
