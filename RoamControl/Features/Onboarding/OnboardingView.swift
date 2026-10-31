@@ -188,14 +188,14 @@ private struct OnboardingPageView: View {
 
 private struct OnboardingPage {
     let symbol: String
-    let title: String
-    let message: String
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
     let colors: [Color]
 
     init(
         symbol: String,
-        title: String,
-        message: String,
+        title: LocalizedStringKey,
+        message: LocalizedStringKey,
         colors: [Color]
     ) {
         self.symbol = symbol

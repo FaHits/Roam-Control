@@ -33,6 +33,47 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         }
     }
 
+    /// The language iOS will use the next time the app launches.
+    ///
+    /// `Bundle.main` resolves its localisations once at launch, so it cannot
+    /// report a language the app has not restarted into. The choice is therefore
+    /// derived from the `AppleLanguages` override that `apply(to:)` writes; with
+    /// no override the system preference list is used.
+    static func effective(
+        from defaults: UserDefaults = .standard,
+        systemIdentifiers: [String] = Locale.preferredLanguages
+    ) -> AppLanguage {
+        effective(
+            overrideIdentifiers: defaults.object(forKey: appleLanguagesKey) as? [String],
+            systemIdentifiers: systemIdentifiers
+        )
+    }
+
+    /// Pure form of `effective(from:systemIdentifiers:)`.
+    static func effective(
+        overrideIdentifiers: [String]?,
+        systemIdentifiers: [String] = Locale.preferredLanguages
+    ) -> AppLanguage {
+        matching(identifiers: overrideIdentifiers ?? systemIdentifiers)
+    }
+
+    /// Maps an `AppleLanguages` preference list to the closest supported language.
+    static func matching(identifiers: [String]) -> AppLanguage {
+        guard let preferred = identifiers.first?.lowercased() else { return .system }
+        if preferred.hasPrefix("zh-hans") || preferred == "zh-cn" || preferred == "zh-sg" {
+            return .simplifiedChinese
+        }
+        if preferred.hasPrefix("en") {
+            return .english
+        }
+        return .system
+    }
+
+    /// True when picking this language changes what iOS will use next launch.
+    func requiresRestart(comparedTo current: AppLanguage) -> Bool {
+        self != current
+    }
+
     func apply(to defaults: UserDefaults = .standard) {
         if let languageIdentifiers {
             defaults.set(languageIdentifiers, forKey: Self.appleLanguagesKey)

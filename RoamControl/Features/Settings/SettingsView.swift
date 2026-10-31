@@ -47,6 +47,7 @@ struct SettingsView: View {
                         }
                     }
                     .onChange(of: appLanguage) { _, newLanguage in
+                        guard newLanguage.requiresRestart(comparedTo: AppLanguage.effective()) else { return }
                         newLanguage.apply()
                         isShowingRestartAlert = true
                     }

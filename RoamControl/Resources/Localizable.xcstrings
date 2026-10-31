@@ -33,6 +33,22 @@
         }
       }
     },
+    "%@, %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@，%@"
+          }
+        }
+      }
+    },
     "%@. %@": {
       "localizations": {
         "en": {
@@ -4081,6 +4097,22 @@
         }
       }
     },
+    "Not requested": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not requested"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未请求"
+          }
+        }
+      }
+    },
     "Not run": {
       "localizations": {
         "en": {
@@ -7565,6 +7597,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "停止并恢复真实位置"
+          }
+        }
+      }
+    },
+    "Stop command acknowledged; real location reacquisition unverified": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop command acknowledged; real location reacquisition unverified"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止指令已确认；真实位置重新获取未验证"
+          }
+        }
+      }
+    },
+    "Stop not confirmed; real location unverified": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop not confirmed; real location unverified"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止未获确认；真实位置未验证"
+          }
+        }
+      }
+    },
+    "Stop requested; awaiting device response": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop requested; awaiting device response"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已请求停止；等待设备响应"
           }
         }
       }

@@ -237,7 +237,7 @@ struct PairingSetupView: View {
             .background(.background, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
-    private func requirementRow(number: String, text: String) -> some View {
+    private func requirementRow(number: String, text: LocalizedStringKey) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Text(number)
                 .font(.caption.bold())
@@ -254,7 +254,7 @@ struct PairingSetupView: View {
         .accessibilityLabel("Step \(number). \(text)")
     }
 
-    private func instructionRow(_ text: String) -> some View {
+    private func instructionRow(_ text: LocalizedStringKey) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "chevron.right")
                 .font(.caption.bold())
@@ -269,7 +269,7 @@ struct PairingSetupView: View {
     }
 
     private func pairingDetail(
-        title: String,
+        title: LocalizedStringKey,
         value: String,
         monospaced: Bool = false
     ) -> some View {

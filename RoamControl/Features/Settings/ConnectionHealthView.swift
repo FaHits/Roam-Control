@@ -34,13 +34,13 @@ struct ConnectionHealthView: View {
             }
 
             Section("Restoration") {
-                Text(appModel.deviceSession.restorationStatus)
+                Text(Self.restorationText(for: appModel.deviceSession.restorationStatus))
                 Text("An inactive session means Roam Control's worker has ended. Other apps may need time to acquire a fresh real location.")
                     .foregroundStyle(.secondary)
             }
 
             Section("Current Location") {
-                LabeledContent("Place", value: activeTarget?.name ?? "None")
+                LabeledContent("Place", value: activeTarget?.name ?? String(localized: "None"))
                 LabeledContent("Coordinates", value: coordinatesValue)
 
                 if let activeTarget, !activeTarget.subtitle.isEmpty {
@@ -129,6 +129,24 @@ struct ConnectionHealthView: View {
         }
     }
 
+    /// The coordinator keeps its restoration states in English because other
+    /// code matches those exact strings. The screen maps them to localised copy
+    /// instead of rendering the raw state, and unknown states pass through.
+    static func restorationText(for status: String) -> String {
+        switch status {
+        case "Not requested":
+            String(localized: "Not requested")
+        case "Stop requested; awaiting device response":
+            String(localized: "Stop requested; awaiting device response")
+        case "Stop not confirmed; real location unverified":
+            String(localized: "Stop not confirmed; real location unverified")
+        case "Stop command acknowledged; real location reacquisition unverified":
+            String(localized: "Stop command acknowledged; real location reacquisition unverified")
+        default:
+            status
+        }
+    }
+
     private var activeTarget: LocationTarget? {
         if case .active(let target) = appModel.deviceSession.phase {
             return target
@@ -137,7 +155,7 @@ struct ConnectionHealthView: View {
     }
 
     private var coordinatesValue: String {
-        guard let activeTarget else { return "None" }
+        guard let activeTarget else { return String(localized: "None") }
         return String(format: "%.5f, %.5f", activeTarget.latitude, activeTarget.longitude)
     }
 
@@ -257,7 +275,7 @@ struct ConnectionHealthView: View {
     }
 
     private func healthRow(
-        title: String,
+        title: LocalizedStringKey,
         value: String,
         symbol: String,
         color: Color
@@ -269,7 +287,7 @@ struct ConnectionHealthView: View {
                         .foregroundStyle(color)
                         .frame(width: 22)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(title.localized)
+                        Text(title)
                         Text(value)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -280,7 +298,7 @@ struct ConnectionHealthView: View {
                     Image(systemName: symbol)
                         .foregroundStyle(color)
                         .frame(width: 22)
-                    Text(title.localized)
+                    Text(title)
                     Spacer()
                     Text(value)
                         .foregroundStyle(.secondary)
@@ -288,7 +306,7 @@ struct ConnectionHealthView: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title.localized), \(value)")
+        .accessibilityLabel("\(title), \(value)")
     }
 
     @MainActor
