@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 
 struct RouteLibraryView: View {
     let isRouteActive: Bool
@@ -13,7 +14,6 @@ struct RouteLibraryView: View {
     @State private var routeForSetup: RouteDefinition?
     @State private var routePendingDeletion: RouteDefinition?
     @State private var routePendingRename: RouteDefinition?
-    @State private var renameText = ""
 
     init(
         isRouteActive: Bool,
@@ -89,17 +89,16 @@ struct RouteLibraryView: View {
         } message: {
             Text("This route will be permanently removed.")
         }
-        .alert("Rename Route", isPresented: renameAlertBinding) {
-            TextField("Route name", text: $renameText)
-            Button("Cancel", role: .cancel) {
-                routePendingRename = nil
-            }
-            Button("Rename") {
-                renamePendingRoute()
-            }
-            .disabled(renameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-        } message: {
-            Text("Enter a new name for this route.")
+        .sheet(item: $routePendingRename) { route in
+            RouteRenameSheet(
+                initialName: route.name,
+                onCancel: {
+                    routePendingRename = nil
+                },
+                onRename: { name in
+                    rename(route, to: name)
+                }
+            )
         }
     }
 
@@ -130,9 +129,10 @@ struct RouteLibraryView: View {
                     .disabled(isRouteActive)
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         if !isRouteActive {
-                            Button("Delete", role: .destructive) {
+                            Button("Delete") {
                                 routePendingDeletion = route
                             }
+                            .tint(.red)
                             Button("Rename") {
                                 beginRename(route)
                             }
@@ -248,17 +248,6 @@ struct RouteLibraryView: View {
         )
     }
 
-    private var renameAlertBinding: Binding<Bool> {
-        Binding(
-            get: { routePendingRename != nil },
-            set: { isPresented in
-                if !isPresented {
-                    routePendingRename = nil
-                }
-            }
-        )
-    }
-
     private func distanceText(for route: RouteDefinition) -> String {
         guard let meters = try? RouteGeometry(
             points: route.points,
@@ -274,17 +263,18 @@ struct RouteLibraryView: View {
     }
 
     private func beginRename(_ route: RouteDefinition) {
-        renameText = route.name
         routePendingRename = route
     }
 
-    private func renamePendingRoute() {
-        guard !isRouteActive, var route = routePendingRename else {
+    private func rename(_ route: RouteDefinition, to rawName: String) {
+        guard !isRouteActive,
+              let name = RouteNameValidator.normalizedName(from: rawName) else {
             return
         }
-        route.name = renameText
-        route.updatedAt = .now
-        model.upsert(route)
+        var updatedRoute = route
+        updatedRoute.name = name
+        updatedRoute.updatedAt = .now
+        model.upsert(updatedRoute)
         routePendingRename = nil
     }
 
@@ -294,5 +284,115 @@ struct RouteLibraryView: View {
         }
         model.delete(id: route.id)
         routePendingDeletion = nil
+    }
+}
+
+private struct RouteRenameSheet: View {
+    let initialName: String
+    let onCancel: () -> Void
+    let onRename: (String) -> Void
+
+    @State private var fieldHandle = RouteRenameTextFieldHandle()
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Enter a new name for this route.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    RouteRenameTextField(initialText: initialName, handle: fieldHandle)
+                        .frame(minHeight: 44)
+
+                    if let errorMessage {
+                        Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(18)
+            }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle("Rename Route")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", action: onCancel)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Rename") {
+                        guard let name = RouteNameValidator.normalizedName(
+                            from: fieldHandle.currentText
+                        ) else {
+                            errorMessage = String(localized: "Route name cannot be empty.")
+                            return
+                        }
+                        onRename(name)
+                    }
+                    .accessibilityIdentifier("routeRenameConfirm")
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+}
+
+private final class RouteRenameTextFieldHandle {
+    weak var textField: UITextField?
+
+    /// `text(in:)` includes marked text that the SwiftUI binding never receives.
+    var currentText: String {
+        guard let textField else {
+            return ""
+        }
+        guard let range = textField.textRange(
+            from: textField.beginningOfDocument,
+            to: textField.endOfDocument
+        ) else {
+            return textField.text ?? ""
+        }
+        return textField.text(in: range) ?? textField.text ?? ""
+    }
+}
+
+private struct RouteRenameTextField: UIViewRepresentable {
+    let initialText: String
+    let handle: RouteRenameTextFieldHandle
+
+    func makeUIView(context: Context) -> UITextField {
+        let textField = UITextField()
+        textField.text = initialText
+        textField.font = .preferredFont(forTextStyle: .body)
+        textField.adjustsFontForContentSizeCategory = true
+        textField.borderStyle = .roundedRect
+        textField.clearButtonMode = .whileEditing
+        textField.returnKeyType = .done
+        textField.delegate = context.coordinator
+        textField.accessibilityIdentifier = "routeRenameField"
+        handle.textField = textField
+
+        DispatchQueue.main.async {
+            textField.becomeFirstResponder()
+        }
+        return textField
+    }
+
+    func updateUIView(_ textField: UITextField, context: Context) {
+        handle.textField = textField
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    final class Coordinator: NSObject, UITextFieldDelegate {
+        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+            textField.resignFirstResponder()
+            return true
+        }
     }
 }

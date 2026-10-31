@@ -39,12 +39,13 @@ final class RouteLibraryModel {
     /// Trims the name, then replaces the route with the same id or appends it. Callers own
     /// `id`, `createdAt` and `updatedAt`; the model never rewrites them.
     func upsert(_ route: RouteDefinition) {
-        var candidate = route
-        candidate.name = route.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !candidate.name.isEmpty else {
+        guard let name = RouteNameValidator.normalizedName(from: route.name) else {
             errorMessage = Self.emptyNameMessage
             return
         }
+
+        var candidate = route
+        candidate.name = name
 
         var next = routes
         if let index = next.firstIndex(where: { $0.id == candidate.id }) {
