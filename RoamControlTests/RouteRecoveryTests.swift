@@ -175,6 +175,57 @@ final class RouteRecoveryTests: XCTestCase {
         }
     }
 
+    func testSavedRouteRecoveryKeepsSnapshotWhenLibraryEntryIsMissing() throws {
+        // No route store is read here: the saved route was deleted from the library,
+        // so restoration may only rely on the snapshot inside the recovery record.
+        let source = route()
+        let decoded = try JSONDecoder().decode(
+            SessionRecoveryRecord.self,
+            from: JSONEncoder().encode(savedRecord(mode: .continuous))
+        )
+
+        XCTAssertEqual(decoded.kind, .savedRoute)
+        XCTAssertTrue(decoded.isSavedRoute)
+
+        let storedRoute = try XCTUnwrap(decoded.savedRoute)
+        XCTAssertEqual(storedRoute.id, source.id)
+        XCTAssertEqual(storedRoute.name, source.name)
+        XCTAssertEqual(storedRoute.points, source.points)
+        XCTAssertEqual(storedRoute.isClosed, source.isClosed)
+
+        XCTAssertEqual(try XCTUnwrap(decoded.runProfile), .running)
+        XCTAssertEqual(try XCTUnwrap(decoded.runMode), .continuous)
+        XCTAssertEqual(try XCTUnwrap(decoded.routeProgress), progress)
+
+        let restored = try RouteGeometry(points: storedRoute.points, isClosed: storedRoute.isClosed)
+        let original = try RouteGeometry(points: source.points, isClosed: source.isClosed)
+        XCTAssertEqual(restored.totalDistance, original.totalDistance, accuracy: 1e-9)
+        XCTAssertEqual(
+            restored.coordinate(atDistance: progress.distanceInLap),
+            original.coordinate(atDistance: progress.distanceInLap)
+        )
+    }
+
+    func testSavedRouteRecoveryWithoutRunSettingsCannotBeRestored() throws {
+        let encoded = try JSONEncoder().encode(savedRecord(mode: .laps(2)))
+        var payload = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        payload["runProfile"] = nil
+        payload["runMode"] = nil
+        payload["routeProgress"] = nil
+        let damaged = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+
+        let decoded = try JSONDecoder().decode(SessionRecoveryRecord.self, from: damaged)
+
+        XCTAssertEqual(decoded.kind, .savedRoute)
+        XCTAssertTrue(decoded.isSavedRoute)
+        XCTAssertNotNil(decoded.savedRoute)
+        XCTAssertNil(decoded.runProfile)
+        XCTAssertNil(decoded.runMode)
+        XCTAssertNil(decoded.routeProgress)
+    }
+
     func testFixedFactoryKeepsLegacyShape() throws {
         let record = SessionRecoveryRecord.fixed(at: fixedTarget)
         XCTAssertEqual(record.kind, .fixedLocation)
