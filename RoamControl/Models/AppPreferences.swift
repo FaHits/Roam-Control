@@ -1,6 +1,9 @@
 import Foundation
 import MapKit
+import SwiftUI
 
+/// `MapStyle` lives in the `_MapKit_SwiftUI` cross-import overlay, so this file needs both
+/// `MapKit` and `SwiftUI` imported for the mapping below to resolve.
 enum AppAppearance: String, CaseIterable, Identifiable {
     case automatic
     case light
