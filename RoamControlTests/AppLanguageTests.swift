@@ -151,15 +151,21 @@ final class AppLanguageTests: XCTestCase {
     }
 
     func testRecordSystemLanguageKeepsSnapshotWhenOverridden() {
+        defaults.set(["zh-Hans"], forKey: AppLanguage.systemSnapshotKey)
         defaults.set(AppLanguage.simplifiedChinese.rawValue, forKey: AppLanguage.storageKey)
-        AppLanguage.simplifiedChinese.apply(to: defaults)
 
         AppLanguage.recordSystemLanguageIfUnoverridden(
             defaults: defaults,
             systemIdentifiers: ["en"]
         )
 
-        XCTAssertNil(defaults.object(forKey: AppLanguage.systemSnapshotKey))
+        XCTAssertEqual(
+            AppLanguage.systemLanguageIdentifiers(
+                defaults: defaults,
+                systemIdentifiers: ["en"]
+            ),
+            ["zh-Hans"]
+        )
     }
 
     func testRestorationStatusMapsToNonEmptyCopy() {
