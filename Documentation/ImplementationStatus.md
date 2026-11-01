@@ -11,7 +11,7 @@
 - 源码基线：`0f63d1f`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 18 - 路线编辑器卫星/混合底图 —— `implemented`（代码 head `94cc7a9`，CI run `41263004257` 三 job 全绿，153 用例 0 失败）
+- 当前任务：Task 18 - 路线编辑器卫星/混合底图 —— `implemented`（代码 head `94cc7a9`，CI run `41263004257` 三 job 全绿，153 用例 0 失败；文档提交 run `41263513561`，head `6956859`，三 job 同样 success）
 - 任务状态：Task 18 `implemented`（样式单一真源 `MapDisplayStyle.mapStyle`，编辑器跟随全局样式并可就地切换；3 项真机行为待 Task 14 批量验证）；Task 17 `implemented`（开放路线 `.outAndBack(trips:)`，偶数趟停在起点、奇数趟停在终点；2 项真机行为待 Task 14 批量验证）；Task 20 `implemented`（仓库地址统一到 `FaHits/Roam-Control`，无 release 时明确提示「未发布」；4 项真机行为待 Task 14 批量验证）；Task 19 `implemented`（含 Task 19F 收尾补正；本地无 Xcode，测试/构建/产物均来自 GitHub Actions）；Task 16R `implemented`；Task 9R `implemented`；Task 14 `fail`；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
 - Task 17 收尾口径：代码/测试 run `41236893110`（head `76d41f1`）与最终 HEAD run `41237968926`（head `b414c21`，含文档提交）三 job 均 success；最终 HEAD 产物 Release `RoamControl-unsigned-ipa` id `13056249465` / 3,107,749 字节、Debug `RoamControl-unsigned-debug-ipa` id `13056740573` / 4,635,484 字节
 - 当前执行窗口：Task 18 已收尾，下一步进入 Task 14 批量真机验收（顺序 9R → 19 → 16R → 20 → 17 → 18 → 14）
@@ -976,6 +976,7 @@
 - 测试：147 → 153（+6），`Test case … passed` 153 次、`failed` 0 次、`TEST SUCCEEDED` 1 次、`BUILD SUCCEEDED` 2 次
 - CI：run [41263004257](https://github.com/FaHits/Roam-Control/actions/runs/41263004257)（head `94cc7a9450f42445171580646d3badc14dff9350`）`conclusion=success`；`test` success、`unsigned-ipa-debug` success、`unsigned-ipa` success
 - 产物（该 run 实测）：Release IPA artifact `RoamControl-unsigned-ipa` id `13066740244` / 3,109,098 字节；Debug IPA artifact `RoamControl-unsigned-debug-ipa` id `13065689661` / 4,637,760 字节；字节取自 `gh api repos/FaHits/Roam-Control/actions/runs/41263004257/artifacts` 的 `size_in_bytes`，unsigned IPA 字节不可复现
+- 文档提交 run [41263513561](https://github.com/FaHits/Roam-Control/actions/runs/41263513561)（head `69568597e76fd482fd33453ec94c1a24afd19962`）`conclusion=success`，三 job 同样 success；产物 Release `RoamControl-unsigned-ipa` id `13065884756` / 3,109,105 字节、Debug `RoamControl-unsigned-debug-ipa` id `13066201608` / 4,637,760 字节
 - 静态证据：`rg -n "roamControlMapStyle" RoamControl | wc -l` → 0（私有覆盖已删除）；`rg -n "elevation: .realistic" RoamControl | wc -l` → 3（全部在 `AppPreferences.swift:46-48` 同一 switch 内，即 1 处映射实现）；`rg -n "gcj02ToWGS84|offsetDegrees|coordinateOffset" RoamControl | wc -l` → 8，与 baseline 一致，`DeviceCoordinateAdapter.swift:37` 仍 `.gcj02ToWGS84`；`python scripts/check_localizations.py` → `613/613`、`2/2`、`All 615 keys have non-empty zh-Hans values.`，exit 0（未新增本地化键）
 - 未改动：`MapDisplayStyle` 的 rawValue 与 `"mapDisplayStyle"` 存储键、Home 相机与镜头逻辑、`RouteEditorModel`、`DeviceCoordinateAdapter`、`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`（仍 `0.10.0` / `62`）
 - 本地无法验证：本机为 Windows，无 `xcodebuild`、无 iOS 模拟器、无配对真机；测试、Debug/Release 构建与产物全部来自 `xcode-27` GitHub Actions
