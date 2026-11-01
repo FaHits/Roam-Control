@@ -41,22 +41,14 @@ The suite runs 158 unit tests covering route geometry, persistence, the runner, 
 ## Screenshots
 
 <p align="center">
-  <img src="Documentation/Images/README/welcome.png" width="240" alt="Roam Control welcome screen">
-  <img src="Documentation/Images/README/fixed-location.png" width="240" alt="Selecting a fixed location in London">
-  <img src="Documentation/Images/README/walking-active.png" width="240" alt="Active simulated walking route">
+  <img src="Documentation/Images/README/welcome.jpg" width="220" alt="Roam Control welcome screen">
+  <img src="Documentation/Images/README/pairing.jpg" width="220" alt="One-time device pairing">
+  <img src="Documentation/Images/README/session-active.jpg" width="220" alt="Session active with a dropped pin and Stop and Restore">
+  <img src="Documentation/Images/README/settings.jpg" width="220" alt="Settings: theme, map style, language, device and version">
 </p>
 
 <p align="center">
-  <sub>Welcome · Fixed location · Walking route</sub>
-</p>
-
-<p align="center">
-  <img src="Documentation/Images/README/privacy.png" width="240" alt="Privacy-first design">
-  <img src="Documentation/Images/README/settings.png" width="240" alt="Roam Control settings">
-</p>
-
-<p align="center">
-  <sub>Private by design · Settings</sub>
+  <sub>Welcome · Pair once · Session active · Settings</sub>
 </p>
 
 ## Also included from upstream
