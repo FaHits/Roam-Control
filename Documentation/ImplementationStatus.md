@@ -11,11 +11,12 @@
 - 源码基线：`0f63d1f`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 17 - 开放路线折返（单程趟数）—— `implemented`（代码 head `76d41f1`，CI run `41236893110` 三 job 全绿，147 用例 0 失败）
-- 任务状态：Task 17 `implemented`（开放路线 `.outAndBack(trips:)`，偶数趟停在起点、奇数趟停在终点；2 项真机行为待 Task 14 批量验证）；Task 20 `implemented`（仓库地址统一到 `FaHits/Roam-Control`，无 release 时明确提示「未发布」；4 项真机行为待 Task 14 批量验证）；Task 19 `implemented`（含 Task 19F 收尾补正；本地无 Xcode，测试/构建/产物均来自 GitHub Actions）；Task 16R `implemented`；Task 9R `implemented`；Task 14 `fail`；Task 18 待做；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
-- 当前执行窗口：Task 17 已收尾，下一步按 `Documentation/Handoffs/2026-10-31-rework-handoff.md` 第 3 节进入 Task 18（卫星底图），之后 Task 14 批量真机验收（顺序 9R → 19 → 16R → 20 → 17 → 18 → 14）
+- 当前任务：Task 18 - 路线编辑器卫星/混合底图 —— `implemented`（代码 head `94cc7a9`，CI run `41263004257` 三 job 全绿，153 用例 0 失败）
+- 任务状态：Task 18 `implemented`（样式单一真源 `MapDisplayStyle.mapStyle`，编辑器跟随全局样式并可就地切换；3 项真机行为待 Task 14 批量验证）；Task 17 `implemented`（开放路线 `.outAndBack(trips:)`，偶数趟停在起点、奇数趟停在终点；2 项真机行为待 Task 14 批量验证）；Task 20 `implemented`（仓库地址统一到 `FaHits/Roam-Control`，无 release 时明确提示「未发布」；4 项真机行为待 Task 14 批量验证）；Task 19 `implemented`（含 Task 19F 收尾补正；本地无 Xcode，测试/构建/产物均来自 GitHub Actions）；Task 16R `implemented`；Task 9R `implemented`；Task 14 `fail`；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
+- Task 17 收尾口径：代码/测试 run `41236893110`（head `76d41f1`）与最终 HEAD run `41237968926`（head `b414c21`，含文档提交）三 job 均 success；最终 HEAD 产物 Release `RoamControl-unsigned-ipa` id `13056249465` / 3,107,749 字节、Debug `RoamControl-unsigned-debug-ipa` id `13056740573` / 4,635,484 字节
+- 当前执行窗口：Task 18 已收尾，下一步进入 Task 14 批量真机验收（顺序 9R → 19 → 16R → 20 → 17 → 18 → 14）
 - 并行任务：无。Task 16 的返工已在 Task 16R 内完成，语言弹窗与英文残留项以 Task 16R 记录为准
-- 最近完成：Task 17 代码/测试/文档与 CI（开放路线趟数折返、运行卡趟数指标、本地化 615 keys），最终 HEAD CI run `41236893110` 三 job 全绿
+- 最近完成：Task 18 代码/测试/文档与 CI（地图样式映射单一真源、编辑器样式切换、153 用例、本地化 615 keys），代码 head `94cc7a9` CI run `41263004257` 三 job 全绿
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Views/RouteRunCard.swift`
   - `RoamControl/Features/Map/MapViewModel.swift`
@@ -941,4 +942,46 @@
 - 本地无法验证：本机为 Windows，无 `xcodebuild`、无 iOS 模拟器、无配对真机；测试、Debug/Release 构建与产物全部来自 `xcode-27` GitHub Actions
 - 未验证项（真机，登记在交接文档第 7 节第 16 行，随 Task 14 批量验证）：开放路线分别设 1 / 2 / 3 趟跑完，地图上去程与回程方向可见且落点符合奇偶（2 趟停在起点、3 趟停在终点），运行卡第二行显示 `1/3`、`2/3` 类趟数指标而不是 `Laps`
 - 下一步：按交接文档第 3 节进入 **Task 18**（路线选点卫星底图）
+- 更新时间：2026-11-01
+
+### 2026-11-01 Task 18 实现记录（路线编辑器卫星/混合底图）
+
+- 状态：`implemented`
+- 目标：路线编辑器的底图不再固定标准样式，而是跟随全局 `appModel.mapDisplayStyle`，并在编辑面板内提供标准 / 卫星 / 混合切换；样式映射收敛为一处，Home 与编辑器共用
+- 改动文件：
+  - `RoamControl/Models/AppPreferences.swift`：`MapDisplayStyle` 增加 `var mapStyle: MapStyle`，唯一实现点（`:47`），三分支在 `:49-51`；文件头补 `import MapKit` 与 `import SwiftUI`，注释说明 `MapStyle` 位于 `_MapKit_SwiftUI` 交叉导入 overlay，缺 `SwiftUI` 时 CI 报 `cannot find type 'MapStyle' in scope`
+  - `RoamControl/Features/Home/HomeView.swift`：`roamControlMapStyle(_:)`（原 `:826-838` 的 `private extension View`）整体删除，调用点 `:78` 改为 `.mapStyle(appModel.mapDisplayStyle.mapStyle)`，视觉与行为不变
+  - `RoamControl/Features/Routes/Views/RouteEditorView.swift`：`:15` 注入 `@Environment(AppModel.self)`；`:53` 底图改用共享映射；`:131` 在面板 `VStack` 首位插入 `stylePicker`；`:167` 定义 `private var stylePicker`，无障碍字号时 `.pickerStyle(.menu)`，否则 `.segmented` + `.labelsHidden()`；`:186` 定义 `mapStyleBinding`，`get` 读 `appModel.mapDisplayStyle`，`set` 调 `appModel.setMapDisplayStyle`
+  - `RoamControlTests/MapDisplayStyleTests.swift`（新增）：5 个用例
+  - `RoamControlTests/RouteEditorModelTests.swift`：新增 `testSavedRouteIsIndependentOfMapStyle`
+- 逐项结果：
+
+| # | 要求（prompt §2） | 状态 | 证据 |
+| --- | --- | --- | --- |
+| 1 | 编辑器底图跟随全局样式，含紧凑切换器 | implemented | `RoamControl/Features/Routes/Views/RouteEditorView.swift:53`、`:131`、`:167` |
+| 2 | 单一真源，切换写回 `appModel.setMapDisplayStyle`，无私有覆盖、无第二个持久化键 | implemented | `RoamControl/Features/Routes/Views/RouteEditorView.swift:186-192`；`rg -n "mapDisplayStyle" RoamControl` → 12 处，均在 `AppModel`、`HomeView:78`、`SettingsView:269`、`ConnectionHealthView:362`、`RouteEditorView:53/188`；键名与 rawValue 未改 |
+| 3 | 映射迁入 `AppPreferences`，Home 与编辑器共用，Home 视觉不变 | implemented | `RoamControl/Models/AppPreferences.swift:47-51`、`RoamControl/Features/Home/HomeView.swift:78` |
+| 4 | 卫星/混合下折线、锚点、点击、清除、保存照旧；`MapReader` / `proxy.convert(location, from: .local)` 取点路径不动 | implemented | `RoamControl/Features/Routes/Views/RouteEditorView.swift:55` 取点一行未改；本次 diff 未触及 `RouteEditorModel.swift` 与坐标适配层 |
+| 5 | 无障碍动态字号下降级为 `.menu` Picker | implemented | `RoamControl/Features/Routes/Views/RouteEditorView.swift:167-184`，判据 `.isAccessibilitySize`，与 `SettingsView.swift:225-241` 同模式 |
+| 6 | 样式切换不改动任何 `RouteEditorModel` 状态 | implemented | `RouteEditorModel.swift` 无改动；`RouteEditorModelTests.testSavedRouteIsIndependentOfMapStyle` 取值前后点位/闭环/名称全等 |
+
+| # | 测试（prompt §5） | 状态 | 证据 |
+| --- | --- | --- | --- |
+| 1 | 空偏好下默认 `.standard` | implemented | `MapDisplayStyleTests.testDefaultStyleIsStandardWithoutStoredValue` |
+| 2 | 写入 `.satellite` → 偏好字符串 `satellite`，新建 `AppModel` 读到 `.satellite` | implemented | `MapDisplayStyleTests.testStoredSatelliteStyleIsReadAtLaunch`、`testSettingStylePersistsRawValueAndReloads`（该用例写 `.hybrid`，断言存储值 `hybrid`） |
+| 3 | 非法值 `terrain` / 空串回落 `.standard` 且不崩溃 | implemented | `MapDisplayStyleTests.testUnknownOrEmptyStoredValueFallsBackToStandard` |
+| 4 | `allCases` 为 3，rawValue 与标题非空 | implemented | `MapDisplayStyleTests.testCasesRawValuesAndTitles` |
+| 5 | 保存结果与样式无关 | implemented | `RouteEditorModelTests.testSavedRouteIsIndependentOfMapStyle` |
+
+- 测试：147 → 153（+6），`Test case … passed` 153 次、`failed` 0 次、`TEST SUCCEEDED` 1 次、`BUILD SUCCEEDED` 2 次
+- CI：run [41263004257](https://github.com/FaHits/Roam-Control/actions/runs/41263004257)（head `94cc7a9450f42445171580646d3badc14dff9350`）`conclusion=success`；`test` success、`unsigned-ipa-debug` success、`unsigned-ipa` success
+- 产物（该 run 实测）：Release IPA artifact `RoamControl-unsigned-ipa` id `13066740244` / 3,109,098 字节；Debug IPA artifact `RoamControl-unsigned-debug-ipa` id `13065689661` / 4,637,760 字节；字节取自 `gh api repos/FaHits/Roam-Control/actions/runs/41263004257/artifacts` 的 `size_in_bytes`，unsigned IPA 字节不可复现
+- 静态证据：`rg -n "roamControlMapStyle" RoamControl | wc -l` → 0（私有覆盖已删除）；`rg -n "elevation: .realistic" RoamControl | wc -l` → 3（全部在 `AppPreferences.swift:46-48` 同一 switch 内，即 1 处映射实现）；`rg -n "gcj02ToWGS84|offsetDegrees|coordinateOffset" RoamControl | wc -l` → 8，与 baseline 一致，`DeviceCoordinateAdapter.swift:37` 仍 `.gcj02ToWGS84`；`python scripts/check_localizations.py` → `613/613`、`2/2`、`All 615 keys have non-empty zh-Hans values.`，exit 0（未新增本地化键）
+- 未改动：`MapDisplayStyle` 的 rawValue 与 `"mapDisplayStyle"` 存储键、Home 相机与镜头逻辑、`RouteEditorModel`、`DeviceCoordinateAdapter`、`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`（仍 `0.10.0` / `62`）
+- 本地无法验证：本机为 Windows，无 `xcodebuild`、无 iOS 模拟器、无配对真机；测试、Debug/Release 构建与产物全部来自 `xcode-27` GitHub Actions
+- 未验证项（真机，登记在交接文档第 7 节第 17、19 行，随 Task 14 批量验证）：
+  - 编辑器切换 standard / satellite / hybrid 三种均渲染；卫星底图下点 4 点闭环保存后几何不变
+  - 系统字号调到无障碍字号后，样式控件退化为 `Map Style` 菜单（不再分段），编辑面板无挤压、无截断
+  - 卫星底图与 GCJ-02 坐标偏移是否目视不一致：按 prompt 明确不在本任务调坐标或加校准常量，仅作为观察项记录，若不一致另开任务处理
+- 下一步：按交接文档第 3 节完成 Task 18 后进入 **Task 14**（批量真机验收，顺序 9R → 19 → 16R → 20 → 17 → 18 → 14）
 - 更新时间：2026-11-01
