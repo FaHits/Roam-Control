@@ -43,9 +43,12 @@ struct SettingsView: View {
                         }
                     }
                     .onChange(of: appLanguage) { _, newLanguage in
-                        guard newLanguage.requiresRestart(comparedTo: AppLanguage.effective()) else { return }
                         newLanguage.apply()
-                        isShowingRestartAlert = true
+                        isShowingRestartAlert = AppLanguage.shouldPromptRestart(
+                            selecting: newLanguage,
+                            displayed: AppLanguage.displayed(),
+                            systemIdentifiers: AppLanguage.systemLanguageIdentifiers()
+                        )
                     }
                 }
                 .alert("Restart Required", isPresented: $isShowingRestartAlert) {

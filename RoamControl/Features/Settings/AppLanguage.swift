@@ -69,19 +69,45 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         return .system
     }
 
-    /// True when picking this language changes what iOS will use next launch.
+    /// The language the running app is actually displaying.
     ///
-    /// Compares the language this choice resolves to, not the enum case: under a
-    /// Chinese system `.system` and `.simplifiedChinese` resolve to the same
-    /// language and must not prompt for a restart.
-    func requiresRestart(
-        comparedTo current: AppLanguage,
+    /// `Bundle` resolves its localisations at launch, so this is the only honest
+    /// answer to "what is on screen now" — a stored override that has not been
+    /// restarted into does not count.
+    static func displayed(in bundle: Bundle = .main) -> AppLanguage {
+        let identifiers = bundle.preferredLocalizations
+        return matching(identifiers: identifiers.isEmpty ? Locale.preferredLanguages : identifiers)
+    }
+
+    /// System language recorded at the last launch that had no override.
+    ///
+    /// Once an override exists `AppleLanguages` hides the system preference, so
+    /// the value is latched while the override is still absent.
+    static let systemSnapshotKey = "systemLanguageSnapshot"
+
+    static func recordSystemLanguageIfUnoverridden(
+        defaults: UserDefaults = .standard,
         systemIdentifiers: [String] = Locale.preferredLanguages
+    ) {
+        guard defaults.object(forKey: appleLanguagesKey) == nil else { return }
+        defaults.set(systemIdentifiers, forKey: systemSnapshotKey)
+    }
+
+    static func systemLanguageIdentifiers(
+        defaults: UserDefaults = .standard,
+        systemIdentifiers: [String] = Locale.preferredLanguages
+    ) -> [String] {
+        (defaults.object(forKey: systemSnapshotKey) as? [String]) ?? systemIdentifiers
+    }
+
+    /// True when the selection changes the language the next launch will show.
+    static func shouldPromptRestart(
+        selecting selection: AppLanguage,
+        displayed: AppLanguage,
+        systemIdentifiers: [String]
     ) -> Bool {
-        let resolved = AppLanguage.matching(
-            identifiers: languageIdentifiers ?? systemIdentifiers
-        )
-        return resolved != current
+        let next = selection == .system ? matching(identifiers: systemIdentifiers) : selection
+        return next != displayed
     }
 
     func apply(to defaults: UserDefaults = .standard) {

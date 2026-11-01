@@ -5,6 +5,10 @@ struct RoamControlApp: App {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appModel = AppModel()
 
+    init() {
+        AppLanguage.recordSystemLanguageIfUnoverridden()
+    }
+
     var body: some Scene {
         WindowGroup {
             Group {
