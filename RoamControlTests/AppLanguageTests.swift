@@ -68,108 +68,97 @@ final class AppLanguageTests: XCTestCase {
         )
     }
 
-    /// English system plus an English selection must not look like a change.
-    func testEnglishSelectionUnderEnglishSystemIsNotAChange() {
-        let current = AppLanguage.effective(overrideIdentifiers: nil, systemIdentifiers: ["en"])
-
-        XCTAssertEqual(current, .english)
-        XCTAssertFalse(AppLanguage.english.requiresRestart(comparedTo: current))
+    func testSelectingDisplayedLanguageDoesNotPrompt() {
+        XCTAssertFalse(
+            AppLanguage.shouldPromptRestart(
+                selecting: .simplifiedChinese,
+                displayed: .simplifiedChinese,
+                systemIdentifiers: ["zh-Hans"]
+            )
+        )
     }
 
-    func testSelectingAnotherLanguageRequiresRestartAndWritesOverride() {
-        let current = AppLanguage.effective(overrideIdentifiers: nil, systemIdentifiers: ["en"])
+    func testFollowingSystemWhenItMatchesDisplayedDoesNotPrompt() {
+        XCTAssertFalse(
+            AppLanguage.shouldPromptRestart(
+                selecting: .system,
+                displayed: .simplifiedChinese,
+                systemIdentifiers: ["zh-Hans"]
+            )
+        )
+    }
 
-        XCTAssertTrue(AppLanguage.simplifiedChinese.requiresRestart(comparedTo: current))
+    func testSelectingEnglishWhileChineseDoesPrompt() {
+        XCTAssertTrue(
+            AppLanguage.shouldPromptRestart(
+                selecting: .english,
+                displayed: .simplifiedChinese,
+                systemIdentifiers: ["zh-Hans"]
+            )
+        )
+    }
 
+    func testSelectingChineseWhileEnglishDoesPrompt() {
+        XCTAssertTrue(
+            AppLanguage.shouldPromptRestart(
+                selecting: .simplifiedChinese,
+                displayed: .english,
+                systemIdentifiers: ["zh-Hans"]
+            )
+        )
+    }
+
+    func testFollowingChineseSystemWhileEnglishDoesPrompt() {
+        XCTAssertTrue(
+            AppLanguage.shouldPromptRestart(
+                selecting: .system,
+                displayed: .english,
+                systemIdentifiers: ["zh-Hans"]
+            )
+        )
+    }
+
+    /// Even when no prompt is due, the choice must land in `AppleLanguages`.
+    func testSystemSelectionAppliesEvenWithoutAPrompt() {
+        AppLanguage.simplifiedChinese.apply(to: defaults)
+        XCTAssertEqual(storedAppleLanguages, ["zh-Hans"])
+
+        AppLanguage.system.apply(to: defaults)
+
+        XCTAssertNil(storedAppleLanguages)
+        XCTAssertFalse(
+            AppLanguage.shouldPromptRestart(
+                selecting: .system,
+                displayed: .simplifiedChinese,
+                systemIdentifiers: ["zh-Hans"]
+            )
+        )
+    }
+
+    func testRecordSystemLanguageWritesSnapshotWhenNotOverridden() {
+        AppLanguage.recordSystemLanguageIfUnoverridden(
+            defaults: defaults,
+            systemIdentifiers: ["zh-Hans"]
+        )
+
+        XCTAssertEqual(
+            AppLanguage.systemLanguageIdentifiers(
+                defaults: defaults,
+                systemIdentifiers: ["en"]
+            ),
+            ["zh-Hans"]
+        )
+    }
+
+    func testRecordSystemLanguageKeepsSnapshotWhenOverridden() {
         AppLanguage.simplifiedChinese.apply(to: defaults)
 
-        XCTAssertEqual(storedAppleLanguages, ["zh-Hans"])
-    }
-
-    func testSelectingCurrentSimplifiedChineseIsNotAChange() {
-        let current = AppLanguage.effective(
-            overrideIdentifiers: ["zh-Hans"],
+        AppLanguage.recordSystemLanguageIfUnoverridden(
+            defaults: defaults,
             systemIdentifiers: ["en"]
         )
 
-        XCTAssertFalse(AppLanguage.simplifiedChinese.requiresRestart(comparedTo: current))
-    }
-
-    /// Bug regression: a Chinese system resolves `.system` to simplified Chinese,
-    /// so switching back to "Follow System" must not prompt for a restart.
-    func testFollowSystemUnderChineseOverrideIsNotAChange() {
-        let current = AppLanguage.effective(
-            overrideIdentifiers: ["zh-Hans"],
-            systemIdentifiers: ["zh-Hans"]
-        )
-
-        XCTAssertEqual(current, .simplifiedChinese)
-        XCTAssertFalse(
-            AppLanguage.system.requiresRestart(
-                comparedTo: current,
-                systemIdentifiers: ["zh-Hans"]
-            )
-        )
-    }
-
-    func testSimplifiedChineseSelectionUnderChineseSystemIsNotAChange() {
-        let current = AppLanguage.effective(
-            overrideIdentifiers: nil,
-            systemIdentifiers: ["zh-Hans"]
-        )
-
-        XCTAssertEqual(current, .simplifiedChinese)
-        XCTAssertFalse(
-            AppLanguage.simplifiedChinese.requiresRestart(
-                comparedTo: current,
-                systemIdentifiers: ["zh-Hans"]
-            )
-        )
-    }
-
-    func testFollowSystemUnderChineseOverrideOnEnglishSystemRequiresRestart() {
-        let current = AppLanguage.effective(
-            overrideIdentifiers: ["zh-Hans"],
-            systemIdentifiers: ["en-US"]
-        )
-
-        XCTAssertEqual(current, .simplifiedChinese)
-        XCTAssertTrue(
-            AppLanguage.system.requiresRestart(
-                comparedTo: current,
-                systemIdentifiers: ["en-US"]
-            )
-        )
-    }
-
-    func testEnglishSelectionUnderFrenchSystemRequiresRestart() {
-        let current = AppLanguage.effective(
-            overrideIdentifiers: nil,
-            systemIdentifiers: ["fr-FR"]
-        )
-
-        XCTAssertEqual(current, .system)
-        XCTAssertTrue(
-            AppLanguage.english.requiresRestart(
-                comparedTo: current,
-                systemIdentifiers: ["fr-FR"]
-            )
-        )
-    }
-
-    func testFollowSystemUnderEnglishOverrideOnChineseSystemRequiresRestart() {
-        let current = AppLanguage.effective(
-            overrideIdentifiers: ["en"],
-            systemIdentifiers: ["zh-Hans"]
-        )
-
-        XCTAssertEqual(current, .english)
-        XCTAssertTrue(
-            AppLanguage.system.requiresRestart(
-                comparedTo: current,
-                systemIdentifiers: ["zh-Hans"]
-            )
-        )
+        XCTAssertNil(defaults.object(forKey: AppLanguage.systemSnapshotKey))
     }
 
     func testRestorationStatusMapsToNonEmptyCopy() {
