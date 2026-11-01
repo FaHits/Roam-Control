@@ -70,8 +70,18 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     }
 
     /// True when picking this language changes what iOS will use next launch.
-    func requiresRestart(comparedTo current: AppLanguage) -> Bool {
-        self != current
+    ///
+    /// Compares the language this choice resolves to, not the enum case: under a
+    /// Chinese system `.system` and `.simplifiedChinese` resolve to the same
+    /// language and must not prompt for a restart.
+    func requiresRestart(
+        comparedTo current: AppLanguage,
+        systemIdentifiers: [String] = Locale.preferredLanguages
+    ) -> Bool {
+        let resolved = AppLanguage.matching(
+            identifiers: languageIdentifiers ?? systemIdentifiers
+        )
+        return resolved != current
     }
 
     func apply(to defaults: UserDefaults = .standard) {
