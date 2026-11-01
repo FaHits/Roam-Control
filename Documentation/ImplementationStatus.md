@@ -4,19 +4,19 @@
 
 ## 当前交接
 
-> 2026-10-31 大返工交接：Task 14 仍为 `fail`；Task 9 / Task 16 返工；新增 Task 17–20。完整方案、证据与下个会话的 prompt 规则见 [`Documentation/Handoffs/2026-10-31-rework-handoff.md`](Handoffs/2026-10-31-rework-handoff.md)。本文件下方 Task 14 的 `not_run` 记录已过期，以交接文档为准。
+> 2026-11-01 Task 14 A 段交付：10 条自动化门禁全过，README / CHANGELOG / Issue 模板按 fork 现状改写，任务状态统一为 `implemented`；19 项真机行为登记在 [`Documentation/Handoffs/2026-10-31-rework-handoff.md`](Handoffs/2026-10-31-rework-handoff.md) 第 7 节，由用户执行 B 段后逐行回填。2026-10-31 的返工方案仍以该交接文档为准。
 
 - 功能：手绘闭环路线与拟人跑步模拟
 - 当前分支：`feat/manual-running-routes`
-- 源码基线：`0f63d1f`
+- 源码基线：`a7b68b2`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 18 - 路线编辑器卫星/混合底图 —— `implemented`（代码 head `94cc7a9`，CI run `41263004257` 三 job 全绿，153 用例 0 失败；文档提交 run `41263513561`，head `6956859`，三 job 同样 success）
-- 任务状态：Task 18 `implemented`（样式单一真源 `MapDisplayStyle.mapStyle`，编辑器跟随全局样式并可就地切换；3 项真机行为待 Task 14 批量验证）；Task 17 `implemented`（开放路线 `.outAndBack(trips:)`，偶数趟停在起点、奇数趟停在终点；2 项真机行为待 Task 14 批量验证）；Task 20 `implemented`（仓库地址统一到 `FaHits/Roam-Control`，无 release 时明确提示「未发布」；4 项真机行为待 Task 14 批量验证）；Task 19 `implemented`（含 Task 19F 收尾补正；本地无 Xcode，测试/构建/产物均来自 GitHub Actions）；Task 16R `implemented`；Task 9R `implemented`；Task 14 `fail`；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
+- 当前任务：Task 14 - 最终全量回归 —— `implemented`（A 段门禁与产物已交付，最终代码状态 head `c027584`，CI run `41271064818` 三 job 全绿、153 用例 0 失败；19 项真机行为待用户 B 段验证，未写 `completed`）
+- 任务状态：Task 14 `implemented`（自动化门禁、CI 与最终 IPA 已交付；19 项真机行为待用户 B 段回填第 7 节，未标 `completed`）；Task 9R / 19 / 16R / 20 / 17 / 18 全部 `implemented`，真机项与交接文档第 7 节逐行对齐（9R #1–#7、19 #8–#9、16R #10–#11、20 #12–#15、17 #16、18 #17 与 #19、历史回归 #18）；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
 - Task 17 收尾口径：代码/测试 run `41236893110`（head `76d41f1`）与最终 HEAD run `41237968926`（head `b414c21`，含文档提交）三 job 均 success；最终 HEAD 产物 Release `RoamControl-unsigned-ipa` id `13056249465` / 3,107,749 字节、Debug `RoamControl-unsigned-debug-ipa` id `13056740573` / 4,635,484 字节
-- 当前执行窗口：Task 18 已收尾，下一步进入 Task 14 批量真机验收（顺序 9R → 19 → 16R → 20 → 17 → 18 → 14）
+- 当前执行窗口：Task 14 A 段已交付；下一步为用户 B 段实机验证，按第 7 节顺序（坐标与 Stop → 9R → 19 → 16R → 20 → 17 → 18 → 历史回归 → 无障碍字号）逐行回填交接文档
 - 并行任务：无。Task 16 的返工已在 Task 16R 内完成，语言弹窗与英文残留项以 Task 16R 记录为准
-- 最近完成：Task 18 代码/测试/文档与 CI（地图样式映射单一真源、编辑器样式切换、153 用例、本地化 615 keys），代码 head `94cc7a9` CI run `41263004257` 三 job 全绿
+- 最近完成：Task 14 A 段（10 条自动化门禁、README / CHANGELOG / Issue 模板收尾、最终 Release IPA 作为 B 段装机源），最终代码状态 head `c027584` CI run `41271064818` 三 job 全绿
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Views/RouteRunCard.swift`
   - `RoamControl/Features/Map/MapViewModel.swift`
@@ -135,16 +135,18 @@
 | Task 7：路线编辑器状态模型 | `completed` | Xcode 27.1 下 21 个编辑器测试与全量 78 个测试通过 |
 | Task 8：手动路线编辑界面 | `completed` | Xcode 27.1 全量 78 个测试与 Debug 构建均通过 |
 | Task 9：路线库和运行设置界面 | `completed` | Xcode 27.1 全量 83 个测试（新增 3 个 `RunProfileStore` 测试）与 Debug 构建均通过；2026-10-31 因删除动画与微信输入法重命名返工，见 Task 9R |
-| Task 9R：路线库删除动画与微信输入法重命名 | `implemented` | 删除 swipe 改为普通红色按钮，确认前不动列表数据；重命名改用 UIKit `UITextField` 读取 marked text，点击时校验并写入；新增 `RouteNameValidator` 4 个测试，全量 123 个 0 失败；最终 HEAD CI run `41215787777` 三 job 全绿，Release artifact `13048681679`（3,146,361 字节）、Debug artifact `13048498113`（4,731,549 字节）；7 项真机行为登记在交接文档第 7 节，随 Task 14 批量验证 |
+| Task 9R：路线库删除动画与微信输入法重命名 | `implemented` | 删除 swipe 改为普通红色按钮，确认前不动列表数据；重命名改用 UIKit `UITextField` 读取 marked text，点击时校验并写入；新增 `RouteNameValidator` 4 个测试，全量 123 个 0 失败；最终 HEAD CI run `41215787777` 三 job 全绿，Release artifact `13048681679`（3,146,361 字节）、Debug artifact `13048498113`（4,731,549 字节）；第 7 节 7 条（#1–#7）登记在交接文档，随 Task 14 B 段验证 |
 | Task 10：恢复模型与设备会话基础 | `implemented_unverified` | 返工修复路线启动污染 Saved Places 地点历史：`startLocationSession` 的 `historyTarget` 改为 `LocationTarget?`，只有非 `nil` 才 `addToHistory`，路线传 `nil`（`AppModel.swift:366`、`:380`、`:393-395`）；新增 `RouteHistoryTests` 2 例；CI run `41195528908` 116 用例 0 失败、Debug/Release 构建与两个 unsigned IPA 均成功（Release artifact `13040706415`、Debug artifact `13040422834`）；真机 6 步验收与截图 `Task10-saved-places-history.png`、`Task10-home-routes-icon.png` 未做 |
 | Task 11：运行中进度持久化 | `completed` | Xcode 27.1 下 4 个新测试与全量 96 个测试通过 |
 | Task 12：运行卡片与主页整合 | `implemented_unverified` | 返工修复 Routes 按钮空图标（`RouteSymbol.library`，无效符号名全仓 0 命中）；CI run `41193407036` 114 用例 0 失败、Debug/Release 构建通过，Release IPA artifact `13039403715`；真机截图 `Task12-routes-icon.png` 未做 |
 | Task 13：中断路线恢复 | `completed` | Xcode 27.1 下新增 2 个测试、全量 98 个测试与 Debug 构建均通过；手工强制退出恢复未验证 |
-| Task 14：完整验证 | `implemented_unverified` | 0.10.0 / 62 版本已生效（pbxproj Debug+Release，`61` 与 `0.9.2` 0 残留）；架构边界两条 rg 无输出、`check_localizations.py` 611/611；CI run `41203728405` 119 用例 0 失败、Debug/Release 构建均通过，Release IPA artifact `13043941317`（3,138,686 字节）与 Debug IPA `13044041974`（4,707,863 字节）；模拟器与真机手工清单、15 张截图全部 not_run
+| Task 14：完整验证 | `implemented` | A 段 10 条自动化门禁全过：`check_localizations.py` 613/613 + 2/2（`All 615 keys`，exit 0）、analytics 关键词 0 命中、两条架构边界 rg 无输出、`DeviceCoordinateAdapter.swift:37` 取 `.gcj02ToWGS84`、pbxproj 无 `0.9.2` / `61` 残留、`seanhowarthdev` 全仓 0 命中、`has_issues=true` 且 `private-vulnerability-reporting.enabled=true`；版本 `0.10.0` / `62` 未变；最终代码状态 head `c027584`，CI run `41271064818` 三 job 全绿、153 用例 0 失败、Debug 与 Release 构建均 `** BUILD SUCCEEDED **`，Release IPA artifact `13068894830`（3,109,116 字节）、Debug IPA `13069935430`（4,643,761 字节）；19 项真机行为待用户 B 段验证，未写 `completed` |
 | Task 15：统一中国大陆坐标域 | `implemented_unverified` | 方向已由真机 A/B 实测确定：MapKit raw 为 GCJ-02、DVT 期望 WGS-84，`DeviceCoordinateAdapter.swift:36` 取 `.gcj02ToWGS84`，只转换一次且仅在注入边界；CI run `41186642773` 113 用例 0 失败、Debug/Release 构建通过，产 Release IPA `13037307005` 与 Debug IPA `13037142318`；真机回归（天安门城楼、田径场、路线、Update、Stop & Restore）未做 |
-| Task 19：移除匿名统计/共享数据全链路 | `implemented` | Task 19F 收尾补正完成：删三处死回调（`LocalDeviceSessionCoordinator.onFailure` / `onRecoveryNeeded`、`OnDevicePairingCoordinator.onFailure`）与两个私有 `failureSnapshot(...)` 工厂，`FailureDiagnosticSnapshot` 随之删除，`FailureDiagnostics.swift` 收敛为 `FailureStage` / `FailureDisposition` / `SchedulerFailureReason` 三个类型（131 行）；删孤儿本地化 key `Privacy`，`check_localizations.py` 604/604 + 2/2、`All 606 keys` exit 0；`rg -n "UsageAnalytics|sharesAnonymousUsageStatistics|AnonymousUsage|What Is Shared|Share Anonymous"` exit 1，`Telemetry` 只剩 4 处 `BackgroundSessionTelemetry`；`rg -n "failureSnapshot\(|FailureDiagnosticSnapshot"` 无输出；123 用例 0 失败（未删未增）；最终代码状态 CI run `41223835438`（head `3ffd834`）三 job 全绿，Release IPA artifact `13050992072`（3,101,262 字节）、Debug IPA `13051995426`（4,623,883 字节）
-| Task 16R：语言弹窗与剩余英文残留返工 | `implemented` | 语言切换只在生效语言真正改变时写入并弹窗：`AppLanguage.effective(...)` 由 `AppleLanguages` 覆盖值推导（无覆盖回落到系统偏好），`requiresRestart(comparedTo:)` 供 `SettingsView` 判定；Onboarding 三页 `title/message`、`PairingSetupView` 的 `requirementRow` / `instructionRow` / `pairingDetail(title:)`、`ConnectionHealthView.healthRow(title:)` 改 `LocalizedStringKey`；`ConnectionHealthView.restorationText(for:)` 把四个内部英文状态映射成本地化文案（内部值不变），`"None"` 两处显示改 `String(localized:)`；`Localizable.xcstrings` 604 → 609 key（+4 恢复状态、+1 a11y 逗号），合计 611；新增 6 例 AppLanguage/映射测试，全量 129 用例 0 失败；head `b7797d1`，CI run `41227597504` 三 job 全绿，Release artifact `13052626294`（3,104,532 字节）、Debug artifact `13053106037`（4,626,145 字节）；6 项真机行为登记在交接文档第 7 节，随 Task 14 批量验证 |
-| Task 20：更新/反馈仓库地址 | `implemented` | 新增 `RoamControl/Services/AppRepository.swift` 单一来源（`owner`/`repo`/`webURL`/`issuesURL(template:)`/`latestReleaseAPIURL`）；`SettingsView.swift:4-5` 两个反馈 URL 改由常量派生，`ReleaseUpdateChecker.swift:34-40` 用 `AppRepository.latestReleaseAPIURL`；新增纯函数 `ReleaseUpdateChecker.result(statusCode:body:)`（`:49`）：200 解码、404 → `.noPublishedRelease`、其他 → `.unavailable`，`latestRelease()` 只发请求；`SettingsView.swift:337-339` 的 `.noPublishedRelease` 文案改为 `This repository has no published release yet.` /「该仓库尚未发布版本。」，不回落上游 release、不伪装成「已是最新」；`rg -n "seanhowarthdev/Roam-Control" RoamControl` exit 1，`FaHits` 在 swift 里只剩 `AppRepository.swift:7` 一处；`check_localizations.py` 609/609 + 2/2、`All 611 keys` exit 0；新增 6 例 `ReleaseUpdateCheckerTests`，129 + 6 = 135 用例 0 失败；head `c75f2b0`，CI run `41231501665` 三 job 全绿，Release artifact `13053863895`（3,105,244 字节）、Debug artifact `13054018030`（4,628,549 字节）；4 项真机行为登记在交接文档第 7 节，随 Task 14 批量验证 |
+| Task 19：移除匿名统计/共享数据全链路 | `implemented` | Task 19F 收尾补正完成：删三处死回调（`LocalDeviceSessionCoordinator.onFailure` / `onRecoveryNeeded`、`OnDevicePairingCoordinator.onFailure`）与两个私有 `failureSnapshot(...)` 工厂，`FailureDiagnosticSnapshot` 随之删除，`FailureDiagnostics.swift` 收敛为 `FailureStage` / `FailureDisposition` / `SchedulerFailureReason` 三个类型（131 行）；删孤儿本地化 key `Privacy`，`check_localizations.py` 604/604 + 2/2、`All 606 keys` exit 0；`rg -n "UsageAnalytics|sharesAnonymousUsageStatistics|AnonymousUsage|What Is Shared|Share Anonymous"` exit 1，`Telemetry` 只剩 4 处 `BackgroundSessionTelemetry`；`rg -n "failureSnapshot\(|FailureDiagnosticSnapshot"` 无输出；123 用例 0 失败（未删未增）；最终代码状态 CI run `41223835438`（head `3ffd834`）三 job 全绿，Release IPA artifact `13050992072`（3,101,262 字节）、Debug IPA `13051995426`（4,623,883 字节）；第 7 节 2 条（#8–#9） |
+| Task 16R：语言弹窗与剩余英文残留返工 | `implemented` | 语言切换只在生效语言真正改变时写入并弹窗：`AppLanguage.effective(...)` 由 `AppleLanguages` 覆盖值推导（无覆盖回落到系统偏好），`requiresRestart(comparedTo:)` 供 `SettingsView` 判定；Onboarding 三页 `title/message`、`PairingSetupView` 的 `requirementRow` / `instructionRow` / `pairingDetail(title:)`、`ConnectionHealthView.healthRow(title:)` 改 `LocalizedStringKey`；`ConnectionHealthView.restorationText(for:)` 把四个内部英文状态映射成本地化文案（内部值不变），`"None"` 两处显示改 `String(localized:)`；`Localizable.xcstrings` 604 → 609 key（+4 恢复状态、+1 a11y 逗号），合计 611；新增 6 例 AppLanguage/映射测试，全量 129 用例 0 失败；head `b7797d1`，CI run `41227597504` 三 job 全绿，Release artifact `13052626294`（3,104,532 字节）、Debug artifact `13053106037`（4,626,145 字节）；第 7 节 2 条（#10–#11）登记在交接文档，随 Task 14 B 段验证 |
+| Task 20：更新/反馈仓库地址 | `implemented` | 新增 `RoamControl/Services/AppRepository.swift` 单一来源（`owner`/`repo`/`webURL`/`issuesURL(template:)`/`latestReleaseAPIURL`）；`SettingsView.swift:4-5` 两个反馈 URL 改由常量派生，`ReleaseUpdateChecker.swift:34-40` 用 `AppRepository.latestReleaseAPIURL`；新增纯函数 `ReleaseUpdateChecker.result(statusCode:body:)`（`:49`）：200 解码、404 → `.noPublishedRelease`、其他 → `.unavailable`，`latestRelease()` 只发请求；`SettingsView.swift:337-339` 的 `.noPublishedRelease` 文案改为 `This repository has no published release yet.` /「该仓库尚未发布版本。」，不回落上游 release、不伪装成「已是最新」；`rg -n "seanhowarthdev/Roam-Control" RoamControl` exit 1，`FaHits` 在 swift 里只剩 `AppRepository.swift:7` 一处；`check_localizations.py` 609/609 + 2/2、`All 611 keys` exit 0；新增 6 例 `ReleaseUpdateCheckerTests`，129 + 6 = 135 用例 0 失败；head `c75f2b0`，CI run `41231501665` 三 job 全绿，Release artifact `13053863895`（3,105,244 字节）、Debug artifact `13054018030`（4,628,549 字节）；第 7 节 4 条（#12–#15）登记在交接文档，随 Task 14 B 段验证 |
+| Task 17：开放路线折返（单程趟数） | `implemented` | `.outAndBack(trips:)` 由 `completedLaps` 奇偶决定方向（偶数趟回起点、奇数趟停终点），恢复时按奇偶还原并把 `completedLaps` 夹到 `trips`；全量 135 → 147（+12）0 失败，head `76d41f1`，CI run `41236893110` 三 job 全绿，Release artifact `13055889161`（3,107,748 字节）、Debug artifact `13055378342`（4,635,484 字节）；第 7 节 1 条（#16），随 Task 14 B 段验证 |
+| Task 18：路线编辑器卫星/混合底图 | `implemented` | `MapDisplayStyle.mapStyle` 成为唯一映射点（`AppPreferences.swift:47`），Home 与编辑器共用；编辑器面板内可就地切换，无障碍字号下降级为 `.menu`；147 → 153（+6）0 失败，head `94cc7a9`，CI run `41263004257` 三 job 全绿，Release artifact `13066740244`（3,109,098 字节）、Debug artifact `13065689661`（4,637,760 字节）；第 7 节 2 条（#17、#19），随 Task 14 B 段验证 |
 
 ## 交接记录
 
@@ -718,10 +720,10 @@
 - 规则加固：`Documentation/AIDevelopment.md` 第 7 节和 `AGENTS.md` 的“自动完成与同步”已把 `git commit --amend`、`git rebase`、`git push --force`、`git push --force-with-lease` 明确列为对已推送历史的禁止操作，并规定远端拒绝普通 push 时停止报告而不是改用 force
 - 更新时间：2026-10-31
 
-### 2026-10-31 Task 14 验证记录
+### 2026-10-31 Task 14 验证记录（已被 2026-11-01 记录取代）
 
 - 任务：Task 14 - 完整验证
-- 状态：`implemented_unverified`
+- 状态：`superseded`（只保留当时证据；当前状态见文末 2026-11-01 记录）
 - 分支与基线：`feat/manual-running-routes`，验证前 HEAD `25129d9`，与 `fork` 远端一致，工作树干净；整体差异基线 `b68dac0`
 - 修改文件：`.github/workflows/xcode-27.yml`（+10，仅追加 `Build Release` 步骤）、`Documentation/ImplementationStatus.md`。未改 `RoamControl/`、`RoamControlTests/`、`project.pbxproj`、版本号与构建号：本次验证没有发现真实缺陷，因此没有补测试也没有改代码
 - 提交：`9b4984a`（`ci: verify release build`）、本文档提交（`docs(routes): record Task 14 verification`）。无 `fix` 提交
@@ -731,8 +733,7 @@
 - 新增测试：0。本次只验证，没有失败用例可复现，因此没有为了凑数写测试
 - 日志警告：路线相关文件无警告；仅有既有的 `Ignoring --strip-bitcode because --sign was not passed` 与 `appintentsmetadataprocessor` 提示，与路线代码无关
 - 本地无法验证的事实：本机为 Windows（`uname` 为 MINGW64），`which xcodebuild` 与 `which swift` 均为空，测试与 Debug/Release 构建全部在 `xcode-27` runner 上完成，本地没有任何 `xcodebuild` 结果
-- 未验证内容（模拟器，全部未做）：画并保存闭环矩形、重启后仍在、重开几何一致；重命名；删除；`Continuous` 启动后暂停 10 秒进度不变再恢复；跨接缝 ≥3 次且圈数与圈内进度连续；`jitter=0` 标记落在路线上；`jitter=5 m` 移动仍局部连续；有限圈完成后 Done、折线消失、真实位置恢复；固定位置启动/停止/恢复真实位置；Apple walking 预览/启动/停止
-- 未验证内容（真机与配对环境，全部未做）：配对并打开 LocalDevVPN 后跑已知闭环 ≥10 分钟；切后台后移动继续且圈进度速率不变；Stop 后真实位置恢复；运行中强制退出、重启、恢复卡显示路线名/圈数/圈内进度且 Resume 从保存位置继续；固定位置与 Apple walking 未被路线功能破坏
+- 未验证内容（模拟器与真机，当时全部未做）：逐项清单已由交接文档第 7 节 19 行取代，不再在此重复；当时本机无 macOS、模拟器与配对真机
 - 单元级证据（不能替代手工验收）：暂停不改进度 `RouteRunnerTests.testPauseDoesNotAdvanceProgress`、`testResumeContinuesFromPausedCoordinate`；接缝 `testContinuousRouteWrapsWithoutASeamJump`、`testCompletedLapIncrementsExactlyOnceAtSeam`、`testLargeAdvanceCanCrossMultipleLaps`、`testThousandLapsDoNotAccumulateLapError`；抖动 `testZeroJitterReturnsExactGroundCoordinate`、`testJitterNeverExceedsRadius`、`testJitterRemainsSmoothBetweenOneSecondSamples`；有限圈 `testFiniteLapRunFinishesAfterRequestedLapCount`、`testFinishedRunnerIsTerminal`；持久化 `RouteStoreTests.testSaveAndLoadRoundTripsRoutes`、`testSaveUsesAtomicReplacement`、`testCorruptedFileThrowsAndRemainsUnchanged`；固定位置与 Apple walking 兼容 `RouteRecoveryTests.testExistingFixedLocationRecordStillDecodes`、`testExistingWalkingRecordStillDecodes`、`testFixedFactoryKeepsLegacyShape`
 - 固定位置与 Apple walking 回归（静态检查）：`git diff b68dac0 -- RoamControl/Features/Home/HomeView.swift` 只在这些流程原有的 guard 上并列增加 `routeSession.locksRouteInput`，并在启动/恢复路线时调用 `walkingSimulation.reset()` 与 `walkingRoutePlanner.clear()`；`startLocationSession(at:)`、`walkingRoutePlanner.preview`、`walkingSimulation.start` 的调用链没有逻辑改动，`locksRouteInput` 在 `.idle`/`.failed` 为 false，未跑路线时行为与改动前一致。`SessionRecoveryRecord` 中 fixed 与 walking 的解码路径保留并有测试覆盖。运行时行为仍属未验证
 - 已知风险：自动化只覆盖模型层，`HomeView`/`RouteRunCard`/`RouteLibraryView`/`RouteRunSetupView`/`SessionRecoveryView` 的接线没有 XCTest 覆盖，手工项未做即无 UI 层证据；Release 配置到本次才纳入 CI，此前是空缺而非“一直通过”；真机设备会话（配对、LocalDevVPN、`updateLocation` 逐秒回传）与后台节流从未在真实设备上验证，是当前最大未知
@@ -784,10 +785,12 @@
 - 已知风险：`String.localized` 对用户数据（地点名、路名、路线名）也做一次 catalog 查表，未命中时回退原文，若某条用户数据恰好与某个 key 相同会被翻译成中文；`diagnosticsText` 复制出的诊断报告沿用本地化后的状态词，未拆出英文专用副本
 - 下一步：只剩真机验收 —— 安装 Release 产物，按 Settings > Language 三项切换（简体中文 / English / Follow System）各重启一次，检查 Home、Saved Places、Settings、My Routes、Route Editor、Route Run、Recovery、全部弹窗与错误提示，并按任务书截 7 张图；顺带回归 Task 10 历史与 Task 12 Routes 图标。验收通过后由验收方把本任务升为 `completed`
 - 更新时间：2026-10-31
-### 2026-10-31 Task 14 最终验收：0.10.0 / 62
+### 2026-10-31 Task 14 最终验收：0.10.0 / 62（已被 2026-11-01 记录取代）
+
+- 取代说明：本节状态改为 `superseded`，只保留当时证据；当前有效状态与真机清单见文末 2026-11-01 记录与交接文档第 7 节
 
 - 任务：Task 14 - 完整验证（0.10.0 / 62 最终验收）
-- 状态：`implemented_unverified`
+- 状态：`superseded`
 - 分支与基线：`feat/manual-running-routes`，验证前 HEAD `ff1d3bc`，与 `fork` 远端一致，工作树干净；整体差异基线 `b68dac0`
 - 版本：`MARKETING_VERSION = 0.10.0`、`CURRENT_PROJECT_VERSION = 62`，Debug 与 Release 两个配置都改（`project.pbxproj:248`、`:253`、`:273`、`:278`）。静态确认：`rg -c "= 61;"` 与 `rg -c "0\.9\.2"` 在 pbxproj 内均 0 命中，`CURRENT_PROJECT_VERSION = 62;` 与 `MARKETING_VERSION = 0.10.0;` 各 2 处。本机为 Windows 无 `xcodebuild`，`-showBuildSettings` 没有运行；版本值由 pbxproj 静态检查与 `PYTHONUTF8=1 python scripts/test-release-invariants.py`（输出 `Build 62 release, scheduler and consent-gate source checks passed`，exit 0）覆盖，`scripts/test-release-invariants.py` 的 3 处版本断言随之更新
 - 文档状态修正：`DeviceCoordinateAdapter.live` 的三处过期描述（`:13`、`:86`、`:765`）由 `.none` 改为 `.gcj02ToWGS84`；`rg -n "保持 \.none|仍为 \.none" Documentation` 0 命中（exit=1）；代码侧确认 `RoamControl/Services/Location/DeviceCoordinateAdapter.swift:37` 为 `static let live = DeviceCoordinateAdapter(conversion: .gcj02ToWGS84)`，与 Task 15 真机 A/B 结论一致
@@ -796,11 +799,7 @@
 - 自动化门禁（本机 Windows 可跑部分）：`python scripts/check_localizations.py` → `609/609` + `2/2`，`All 611 keys have non-empty zh-Hans values.`，exit 0；`rg -n "import (SwiftUI|MapKit)|AppModel" RoamControl/Features/Routes/Core RoamControl/Features/Routes/Models` 无输出 exit=1；`rg -n "MKRoute|MKMapPoint|MKPolyline"` 同两目录无输出 exit=1；同一目录 `rg -c "import Foundation"` 命中 7 个文件，证明不是空扫；`rg -n "point\.topleft\.down\.to\.point\.right\.curvepath" RoamControl` 0 命中（任务书该串少写 `bottom`，实际在用的 `point.topleft.down.to.point.bottomright.curvepath` 仍有 2 处：`RoamControl/Features/Routes/Views/RouteSymbol.swift:6`、`RoamControl/Features/Map/WalkingRoutePreviewCard.swift:118`，属 Task 12 已修的正确符号名，未改动）
 - CI 结果：run [41203728405](https://github.com/FaHits/Roam-Control/actions/runs/41203728405)，head `fe01fb9`，`conclusion=success`。`test` job 13:02:12Z→13:11:53Z：`Check localization catalogs` 通过、119 行 `Test case … passed`、0 行 `failed`、`** TEST SUCCEEDED **`、`Build Debug` 与 `Build Release` 均 `** BUILD SUCCEEDED **`。`unsigned-ipa` 13:11:55Z→13:12:51Z success，artifact `RoamControl-unsigned-ipa` id `13043941317`，3,138,686 字节。`unsigned-ipa-debug` 13:11:56Z→13:12:30Z success（`Probe (Debug)` self-check 命中），artifact `RoamControl-unsigned-debug-ipa` id `13044041974`，4,707,863 字节
 - 新增测试：0。119 用例全部为既有用例（Task 15 后由 98 增至 113，Task 10/16 各补用例后为 119）
-- 真机与模拟器验收：全部 `not_run`。本机 `which xcodebuild` / `xcrun` / `simctl` / `idevice_id` 全为空，无 macOS、无 iOS 模拟器、无配对设备，未产生任何运行时证据
-- 模拟器清单（逐项 `not_run`）：画并保存闭环矩形、重启后仍在、重开几何一致；重命名；删除；`Continuous` 暂停 10 秒进度不变再恢复；跨接缝 ≥3 次且圈数与圈内进度连续；`jitter=0` 标记落在路线上；`jitter=5 m` 移动局部连续；有限圈完成后 Done、折线消失、真实位置恢复；固定位置启动/停止/恢复；Apple walking 预览/启动/停止
-- 真机清单（逐项 `not_run`）：天安门-城楼与岭南师范学院田径场蓝点 ≤20 m；经过田径场的路线起点与轨迹 ≤30 m；Update Location 四图；Stop & Restore 30 秒内收敛；路线库与图标、路线跨接缝、暂停、抖动、有限圈、运行卡、后台 10 分钟、强制退出恢复卡、设备失败时 `.savedRoute` 仍在、Saved Places 不写路线点、固定位置与 Apple walking 不回归
-- 中文与语言（Task 16，逐项 `not_run`）：Language 三项切换各重启；各页面与弹窗中文完整性；长文案不截断、默认与放大一档字号；本地网络与定位权限弹窗中文；English 无中文残留；Follow System 双向
-- 截图：0/15 未产出（`Task15-*` 8 张、`Task12-home-routes-icon.png`、`Task10-saved-places-history.png`、`Task16-*` 5 张）
+- 真机与模拟器验收：当时全部 `not_run`（本机 Windows，无 `xcodebuild` / `xcrun` / `simctl` / `idevice_id`，无模拟器与配对真机）；这段逐项清单已由交接文档第 7 节 19 行取代，不再在此重复
 - 状态判定：自动化门禁 + 单元测试 + Debug + Release 全过，但真机手工清单与截图未做，按任务书不得写 `completed` → Task 14 保持 `implemented_unverified`。Task 15 / 10 / 12 / 16 同样保持 `implemented_unverified`，未因 CI 绿而升级；Task 13 保持 `completed`（其真机强制退出恢复项仍属未验证）
 - 已知风险：版本号已标 0.10.0 / 62，但该版本没有任何真机运行证据，产物 IPA 只有 14 天保留期；版本升级本身没有改动任何路线、恢复、设备会话代码，所以 CI 绿不代表四项真机验收已过
 - 下一步：按顺序补真机项 —— Task 15 坐标与 Stop 五项、Task 10/11/12/13 路线系统 11 项、Task 16 语言三项；每项截图入库后再把对应任务升为 `completed`
@@ -985,4 +984,34 @@
   - 系统字号调到无障碍字号后，样式控件退化为 `Map Style` 菜单（不再分段），编辑面板无挤压、无截断
   - 卫星底图与 GCJ-02 坐标偏移是否目视不一致：按 prompt 明确不在本任务调坐标或加校准常量，仅作为观察项记录，若不一致另开任务处理
 - 下一步：按交接文档第 3 节完成 Task 18 后进入 **Task 14**（批量真机验收，顺序 9R → 19 → 16R → 20 → 17 → 18 → 14）
+- 更新时间：2026-11-01
+
+### 2026-11-01 Task 14 最终回归记录：A 段交付与 B 段真机清单
+
+- 任务：Task 14 - 完整验证（A 段 = 自动化门禁与交付物；B 段 = 交接文档第 7 节 19 项真机行为，由用户执行）
+- 状态：`implemented`（A 段全部完成；B 段 19 项尚未执行，因此不写 `completed`）
+- 分支与基线：`feat/manual-running-routes`，起点 HEAD `a7b68b2`，与 `fork` 远端一致，工作树干净；整体差异基线 `b68dac0`
+- 修改文件：`README.md`（删掉未发布的 beta 下载与 Build 61 说法，下载说明改为「fork 未发布、CI 产 unsigned IPA 需自签」，版本徽章指向 0.10.0 / 62，统计与安全链接指向 fork 与 CHANGELOG）、`CHANGELOG.md`（新增 `[0.10.0] - 待发布（真机验收进行中）` 条目）、`.github/ISSUE_TEMPLATE/config.yml`（安全报告链接指向 fork 的 security advisories）、`Documentation/ImplementationStatus.md`、`.planning/2026-10-30-roam-route-system/progress.md`。未改 `RoamControl/`、`RoamControlTests/`、`project.pbxproj`、版本号与构建号、坐标适配层、CI workflow：本轮只验证与文档收尾，没有发现真实缺陷，因此没有 `fix` 提交
+- 提交：`c027584`（`docs(repo): drop stale beta-preview claims and point docs at the fork`）、本文档提交（`docs(routes): record the Task 14 final verification`）
+- 自动化门禁（10 条，逐条实测，本机 Windows 可跑部分）
+
+| # | 门禁 | 结果 |
+| --- | --- | --- |
+| 1 | `python scripts/check_localizations.py` | pass：`Localizable.xcstrings: 613/613`、`InfoPlist.xcstrings: 2/2`、`All 615 keys have non-empty zh-Hans values.`，exit 0 |
+| 2 | 匿名统计残留 `rg -n "UsageAnalytics\|ProductInteraction\|DeviceID\|PurposeAnalytics" RoamControl RoamControlTests` | pass：0 命中（exit 1） |
+| 3 | 架构边界 `rg -n "import (SwiftUI\|MapKit)\|AppModel" RoamControl/Features/Routes/Core RoamControl/Features/Routes/Models` | pass：0 命中（exit 1） |
+| 4 | 架构边界 `rg -n "MKRoute\|MKMapPoint\|MKPolyline" RoamControl/Features/Routes/Core RoamControl/Features/Routes/Models` | pass：0 命中（exit 1） |
+| 5 | 坐标适配 `DeviceCoordinateAdapter.live` | pass：`RoamControl/Services/Location/DeviceCoordinateAdapter.swift:37` 为 `static let live = DeviceCoordinateAdapter(conversion: .gcj02ToWGS84)`（任务书给的 `RoamControl/Services/DeviceCoordinateAdapter.swift` 路径不存在，文件在 `Services/Location/` 下） |
+| 6 | 版本残留 `rg -n "0\.9\.2\|CURRENT_PROJECT_VERSION = 61" Documentation RoamControl.xcodeproj README.md` | pass：0 命中；pbxproj `:248`/`:273` 为 `CURRENT_PROJECT_VERSION = 62;`，`:253`/`:278` 为 `MARKETING_VERSION = 0.10.0;` |
+| 7 | 旧仓库名 `rg -n "seanhowarthdev" RoamControl RoamControlTests .github README.md Documentation` | pass：0 命中（改前 README.md:61、README.md:127、config.yml:4 三处已改） |
+| 8 | Issues 开关 `gh api repos/FaHits/Roam-Control --jq .has_issues` | pass：`true` |
+| 9 | 私密漏洞报告 `gh api repos/FaHits/Roam-Control/private-vulnerability-reporting` | pass：`{"enabled":true}` |
+| 10 | 全量单元测试 + Debug/Release 构建 | pass：见下条 CI（本机无 `xcodebuild`，全部来自 `xcode-27` runner） |
+
+- CI：run [41271064818](https://github.com/FaHits/Roam-Control/actions/runs/41271064818)（head `c027584`）`conclusion=success`；`test` job `Check localization catalogs` 通过、153 行 `Test case … passed`、0 行 `failed`、`** TEST SUCCEEDED **`、`Build Debug` 与 `Build Release` 均 `** BUILD SUCCEEDED **`；`unsigned-ipa` success、`unsigned-ipa-debug` success
+- 产物（B 段装机源，取自该 run）：Release IPA artifact `RoamControl-unsigned-ipa` id `13068894830` / 3,109,116 字节；Debug IPA artifact `RoamControl-unsigned-debug-ipa` id `13069935430` / 4,643,761 字节；字节取自 `gh api repos/FaHits/Roam-Control/actions/runs/41271064818/artifacts` 的 `size_in_bytes`，unsigned IPA 字节不可复现。IPA 只有 14 天保留期，过期后从同 head 的 run 重新下载
+- 新增测试：0（153 用例全部为既有用例）。本轮没有失败用例可复现，因此没有为凑数补测试
+- 未验证项（19 项真机行为，全部 `未验证`）：逐条登记在 [`Documentation/Handoffs/2026-10-31-rework-handoff.md`](Handoffs/2026-10-31-rework-handoff.md) 第 7 节，#1–#7 = 9R、#8–#9 = 19、#10–#11 = 16R、#12–#15 = 20、#16 = 17、#17 与 #19 = 18、#18 = 历史回归（15/10/12/13）。本机为 Windows，`which xcodebuild` / `xcrun` / `simctl` / `idevice_id` 全为空，没有 macOS、iOS 模拟器与配对真机，未产生任何运行时证据；CI 绿只证明测试与 Debug/Release 构建通过，不代表任何一项真机行为通过
+- 已知风险：153 个用例只覆盖模型层与纯逻辑，`HomeView` / `RouteRunCard` / `RouteLibraryView` / `RouteRunSetupView` / `SessionRecoveryView` 的接线仍无 UI 层自动化；真机设备会话（配对、LocalDevVPN、后台节流、强制退出恢复）从未在任何构建上跑过；`Documentation/Privacy.md` 仍在描述已删除的匿名统计，属于规划会话的权限范围，本轮未改，登记为遗留
+- 下一步：用户按第 7 节顺序执行 B 段（坐标与 Stop → 9R → 19 → 16R → 20 → 17 → 18 → 历史回归 → 无障碍字号），逐行把 `未验证` 改成 `pass` 或 `fail`；全部 pass 后由验收方把 Task 14 升为 `completed`，出现 fail 时另开 `fix` 任务
 - 更新时间：2026-11-01
