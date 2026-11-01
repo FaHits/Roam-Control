@@ -11,12 +11,12 @@
 - 源码基线：`a7b68b2`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 14 - 最终全量回归 —— `implemented`（A 段门禁与产物已交付，最终 HEAD `28472c6`，CI run `41271600000` 三 job 全绿、153 用例 0 失败；同代码状态的过程记录 run `41271064818`（head `c027584`）只留作过程记录，不是装机源；2026-11-01 用户在 build `88ba4ff`（run `41272520335`，Release artifact `13069868630` / 3,109,102 字节）实机跑完交接文档第 7 节 28 项，全部 pass；真机另暴露两条设计问题（见第 7 节后「真机暴露的设计问题」：语言弹窗按 enum 判定、缺少显式「保持在当前点」），第一条以 14G 修正，第二条归入 0.10.0 之后的任务，故仍不写 `completed`）
-- 任务状态：Task 14 `implemented`（自动化门禁、CI 与最终 IPA 已交付；19 项真机行为待用户 B 段回填第 7 节，未标 `completed`）；Task 9R / 19 / 16R / 20 / 17 / 18 全部 `implemented`，真机项与交接文档第 7 节逐行对齐（9R #1–#7、19 #8–#9、16R #10–#11、20 #12–#15、17 #16、18 #17 与 #19、历史回归 #18）；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
+- 当前任务：Task 14 - 最终全量回归 —— `implemented`（A 段门禁与产物已交付，最终 HEAD `28472c6`，CI run `41271600000` 三 job 全绿、153 用例 0 失败；同代码状态的过程记录 run `41271064818`（head `c027584`）只留作过程记录，不是装机源；2026-11-01 用户在 build `88ba4ff`（run `41272520335`，Release artifact `13069868630` / 3,109,102 字节）实机跑完交接文档第 7 节 28 项，全部 pass；真机另暴露两条设计问题（见第 7 节后「真机暴露的设计问题」：语言弹窗按 enum 判定、缺少显式「保持在当前点」），第一条由 14G 收到 14H：14H 把判定改成「`Bundle.preferredLocalizations` 反映的显示语言」对比「选择将要生效的语言」，并让 `apply()` 无条件执行（14G 只比较存储偏好的解析值，未重启场景仍误判，那条路径已删除）；第二条归入 0.10.0 之后的任务，故仍不写 `completed`）
+- 任务状态：Task 14 `implemented`（自动化门禁、CI 与最终 IPA 已交付；第 7 节 28 项真机行为首轮全部 pass，未标 `completed`）；Task 9R / 19 / 16R / 20 / 17 / 18 全部 `implemented`，真机项与交接文档第 7 节逐行对齐（9R #1–#7、19 #8–#9、16R #10–#11、20 #12–#15、17 #16、18 #17 与 #19、历史回归 #18）；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
 - Task 17 收尾口径：代码/测试 run `41236893110`（head `76d41f1`）与最终 HEAD run `41237968926`（head `b414c21`，含文档提交）三 job 均 success；最终 HEAD 产物 Release `RoamControl-unsigned-ipa` id `13056249465` / 3,107,749 字节、Debug `RoamControl-unsigned-debug-ipa` id `13056740573` / 4,635,484 字节
-- 当前执行窗口：Task 14 A 段已交付；下一步为用户 B 段实机验证，按第 7 节顺序（坐标与 Stop → 9R → 19 → 16R → 20 → 17 → 18 → 历史回归 → 无障碍字号）逐行回填交接文档
+- 当前执行窗口：Task 14 收尾；下一步为用户用 14H 产物（Run `41289235750` / Release artifact `13077195268` / 3,109,539 字节）重测 L1 / L3 / L6 三项，三项绿则把 Task 14 标 `completed`，并打 `v0.10.0` 与 `v0.10.0-fa.1`
 - 并行任务：无。Task 16 的返工已在 Task 16R 内完成，语言弹窗与英文残留项以 Task 16R 记录为准
-- 最近完成：Task 14 A 段（10 条自动化门禁、README / CHANGELOG / Issue 模板收尾、最终 Release IPA 作为 B 段装机源），最终 HEAD `28472c6` CI run `41271600000` 三 job 全绿（同代码状态的过程记录 run `41271064818` / head `c027584` 非装机源）
+- 最近完成：Task 14H（语言重启提示改为比较显示语言，`AppLanguage.requiresRestart` 删除，新增 `displayed` / `shouldPromptRestart` / `recordSystemLanguageIfUnoverridden`；14G 的解析值比较在未重启场景仍误判、且弹窗分支让 `apply()` 不落地，一并修掉），HEAD `1b1ff42` CI run `41289235750` 三 job 全绿、158 用例 0 失败
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Views/RouteRunCard.swift`
   - `RoamControl/Features/Map/MapViewModel.swift`
