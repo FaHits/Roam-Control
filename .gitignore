@@ -34,3 +34,8 @@ Secrets.plist
 
 # Local private configuration
 Configuration/Local.private.xcconfig
+
+# Internal working notes (kept locally, not published)
+Documentation/Handoffs/
+Documentation/Plans/
+landing/

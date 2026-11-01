@@ -6,8 +6,8 @@
 
 所有实现以仓库内容为准：
 
-- 路线设计：`Documentation/Plans/ManualRunningRoutesDesign.md`
-- 逐任务计划：`Documentation/Plans/ManualRunningRoutesImplementation.md`
+- 路线设计：`Documentation/Plans/ManualRunningRoutesDesign.md`（只保留在本地，不入库）
+- 逐任务计划：`Documentation/Plans/ManualRunningRoutesImplementation.md`（同上）
 - 当前进度：`Documentation/ImplementationStatus.md`
 - 版本规范：`VERSIONING.md`
 - Git 分支和实际差异：当前仓库状态

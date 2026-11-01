@@ -1,6 +1,6 @@
 # 手绘闭环路线实施状态
 
-本文件是跨 AI 窗口的当前进度来源。任务方法以 `Documentation/Plans/ManualRunningRoutesImplementation.md` 为准，设计和架构以 `Documentation/Plans/ManualRunningRoutesDesign.md` 为准。
+本文件是跨 AI 窗口的当前进度来源。任务方法以 `Documentation/Plans/ManualRunningRoutesImplementation.md` 为准，设计和架构以 `Documentation/Plans/ManualRunningRoutesDesign.md` 为准。`Documentation/Plans/` 与 `Documentation/Handoffs/` 自 2026-11-01 起只在本地保留、不再入库，文中对这两个目录的引用因此只对本地工作副本有效。
 
 ## 当前交接
 

@@ -64,7 +64,7 @@ The suite runs 158 unit tests covering route geometry, persistence, the runner, 
 
 ## Builds
 
-Roam Control is not distributed through the App Store or TestFlight. Release **0.10.0 (62)** is published on the [Releases page](https://github.com/FaHits/Roam-Control/releases/tag/v0.10.0) as an unsigned release IPA (`RoamControl-unsigned.ipa`); it must be signed with your own Apple account before it can be installed. The same release carries `RoamControl-unsigned-debug.ipa` as a troubleshooting attachment.
+Roam Control is not distributed through the App Store or TestFlight. Release **0.10.0 (62)** is published on the [Releases page](https://github.com/FaHits/Roam-Control/releases/tag/v0.10.0) as an unsigned release IPA (`RoamControl-unsigned.ipa`); it must be signed with your own Apple account before it can be installed. A debug build is available from the CI run's `unsigned-ipa-debug` artifact when one is needed for troubleshooting.
 
 You will need:
 
@@ -124,7 +124,7 @@ The native engine is a narrow Rust-to-Swift bridge around the MIT-licensed [`ide
 
 ## Versioning and releases
 
-App version, build number and the route file format's `schemaVersion` are managed separately; the rules are in [VERSIONING.md](VERSIONING.md). `v0.10.0` is the first release of the route system, and `v0.10.0-fa.1` marks the fork's own test build of the same commit. Release notes live in [CHANGELOG.md](CHANGELOG.md), and the per-task engineering ledger in [ImplementationStatus.md](Documentation/ImplementationStatus.md).
+App version, build number and the route file format's `schemaVersion` are managed separately; the rules are in [VERSIONING.md](VERSIONING.md). `v0.10.0` is the first release of the route system. Release notes live in [CHANGELOG.md](CHANGELOG.md), and the per-task engineering ledger in [ImplementationStatus.md](Documentation/ImplementationStatus.md).
 
 ## Documentation
 
