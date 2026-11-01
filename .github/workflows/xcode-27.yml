@@ -3,6 +3,7 @@ name: Xcode 27 verification
 on:
   push:
     branches:
+      - main
       - feat/manual-running-routes
   workflow_dispatch:
 
