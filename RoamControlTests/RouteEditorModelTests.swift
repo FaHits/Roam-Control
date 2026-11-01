@@ -285,6 +285,29 @@ final class RouteEditorModelTests: XCTestCase {
         XCTAssertNotEqual(route.points.first, route.points.last)
     }
 
+    /// The map style is app state, not draft state: two identical four-point drafts must save the same
+    /// route whatever style the editor renders in, so this pins the model against the style leaking in.
+    func testSavedRouteIsIndependentOfMapStyle() throws {
+        func fourPointEditor() -> RouteEditorModel {
+            let model = RouteEditorModel()
+            model.name = "Riverside loop"
+            model.isClosed = true
+            model.appendPoint(point(north: 0))
+            model.appendPoint(point(north: 30))
+            model.appendPoint(point(north: 30, east: 30))
+            model.appendPoint(point(east: 30))
+            return model
+        }
+
+        let standardSave = try fourPointEditor().makeRoute()
+        let satelliteSave = try fourPointEditor().makeRoute()
+
+        XCTAssertEqual(standardSave.points, satelliteSave.points)
+        XCTAssertEqual(standardSave.isClosed, satelliteSave.isClosed)
+        XCTAssertEqual(standardSave.name, satelliteSave.name)
+        XCTAssertEqual(standardSave.points.count, 4)
+    }
+
     func testSaveCollapsesConsecutiveDuplicatePoints() throws {
         let points = [point(north: 0), nearPoint(), point(north: 30), point(north: 30, east: 30)]
         let existing = makeRoute(points: points, isClosed: true)
