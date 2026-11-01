@@ -9,13 +9,13 @@
 </p>
 
 <p align="center">
-  <strong>Current development build:</strong> 0.10.0 (62) · not yet published · <strong>Requires:</strong> iOS 27+
+  <strong>Current release:</strong> 0.10.0 (62) · <a href="https://github.com/FaHits/Roam-Control/releases/tag/v0.10.0">Download unsigned IPA</a> · <strong>Requires:</strong> iOS 27+
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/iOS-27%2B-blue" alt="iOS 27+">
   <img src="https://img.shields.io/badge/UI-SwiftUI-orange" alt="SwiftUI">
-  <img src="https://img.shields.io/badge/Development-0.10.0%20(62)-purple" alt="Development build 0.10.0 (62)">
+  <img src="https://img.shields.io/badge/Release-0.10.0%20(62)-purple" alt="Release 0.10.0 (62)">
   <img src="https://img.shields.io/badge/License-PolyForm%20NC%201.0.0-blue" alt="PolyForm Noncommercial 1.0.0">
 </p>
 
@@ -57,7 +57,7 @@ Roam Control is a source-available SwiftUI app for location-based development, q
 
 ## Builds
 
-Roam Control is not distributed through the App Store or TestFlight, and this fork has not published a release yet. The current development build is **0.10.0 (62)**; there is no download on GitHub. The `Xcode 27 verification` workflow builds an unsigned IPA from every commit on the development branch, and that IPA has to be signed with your own Apple account before it can be installed.
+Roam Control is not distributed through the App Store or TestFlight. Release **0.10.0 (62)** is published on the [Releases page](https://github.com/FaHits/Roam-Control/releases/tag/v0.10.0) as an unsigned release IPA (`RoamControl-unsigned.ipa`); it must be signed with your own Apple account before it can be installed. The same release carries a debug IPA as a troubleshooting attachment. The `Xcode 27 verification` workflow rebuilds an unsigned IPA from every commit on the development branch.
 
 You will need:
 

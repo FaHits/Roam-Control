@@ -51,9 +51,9 @@ Roam Control 0.9.2 Preview - Build 58. Public validation preview; Beta 6 / Build
 - The Build 52 restoration delay was not reproduced. Affected-user pairing/session reports and other-VPN interference remain open; no universal fix is claimed.
 - Walking-session foreground/background continuity and Stop & Restore also passed owner-device smoke testing on Build 53.
 
-## [0.10.0] - 待发布（真机验收进行中）
+## [0.10.0] - 2026-11-01
 
-尚未在 GitHub 发布 release，也没有可下载的构建。以下条目描述代码层面的行为；需要真机判定的表现统一登记在 `Documentation/Handoffs/2026-10-31-rework-handoff.md` 第 7 节，尚未标记为已验证。
+已在 GitHub 发布：[v0.10.0](https://github.com/FaHits/Roam-Control/releases/tag/v0.10.0)，附带 unsigned Release IPA（`RoamControl-unsigned.ipa`），安装前需用你自己的 Apple 账号签名。构建 0.10.0 (62)。真机验收已完成 28 项，逐项结论登记在 `Documentation/Handoffs/2026-10-31-rework-handoff.md` 第 7 节。
 
 ### Added
 
@@ -66,7 +66,7 @@ Roam Control 0.9.2 Preview - Build 58. Public validation preview; Beta 6 / Build
 
 ### Changed
 
-- 反馈、Issue 与更新检查地址统一由 `AppRepository` 派生并指向 `FaHits/Roam-Control`；未发布 release 时显示「该仓库尚未发布版本。」，不再显示上游版本号。
+- 反馈、Issue 与更新检查地址统一由 `AppRepository` 派生并指向 `FaHits/Roam-Control`，不再显示上游版本号；仓库没有 release 时提示「该仓库尚未发布版本。」，0.10.0 发布后更新检查读到 `v0.10.0`。
 - 注入到设备会话的坐标在唯一注入边界做 GCJ-02 → WGS-84 转换。
 - 移除可选匿名统计全链路：设置分区、Onboarding 共享卡、上报客户端、自托管与 TelemetryDeck 目的地，以及 `PrivacyInfo.xcprivacy` 中的采集条目。
 - 路线库删除改为确认后才移除数据，确认框打开期间行不再塌陷。

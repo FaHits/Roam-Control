@@ -4,19 +4,20 @@
 
 ## 当前交接
 
-> 2026-11-01 Task 14 A 段交付：10 条自动化门禁全过，README / CHANGELOG / Issue 模板按 fork 现状改写，任务状态统一为 `implemented`；19 项真机行为登记在 [`Documentation/Handoffs/2026-10-31-rework-handoff.md`](Handoffs/2026-10-31-rework-handoff.md) 第 7 节，由用户执行 B 段后逐行回填。2026-10-31 的返工方案仍以该交接文档为准。
+> 2026-11-01 0.10.0 发布：真机 28 项（R1–R7、S1–S2、L1–L5、F1–F4、T1–T3、M1–M3、H1–H4）全部 PASS，14H 修复后 L1 / L6 / L3 在同一次构建复测 PASS，执行人 = 项目所有者；代码状态提交 `b47cb55` 的 CI run `41289851759` 三 job 全绿（158 用例 0 失败），标签 `v0.10.0` 与 `v0.10.0-fa.1` 均指向该提交，GitHub Release `v0.10.0` 附 unsigned Release IPA。Task 14 状态据此改为 `completed`。
 
 - 功能：手绘闭环路线与拟人跑步模拟
 - 当前分支：`feat/manual-running-routes`
 - 源码基线：`a7b68b2`
 - 目标版本：`0.10.0`
 - 目标构建号：`62`
-- 当前任务：Task 14 - 最终全量回归 —— `implemented`（A 段门禁与产物已交付，最终 HEAD `28472c6`，CI run `41271600000` 三 job 全绿、153 用例 0 失败；同代码状态的过程记录 run `41271064818`（head `c027584`）只留作过程记录，不是装机源；2026-11-01 用户在 build `88ba4ff`（run `41272520335`，Release artifact `13069868630` / 3,109,102 字节）实机跑完交接文档第 7 节 28 项，全部 pass；真机另暴露两条设计问题（见第 7 节后「真机暴露的设计问题」：语言弹窗按 enum 判定、缺少显式「保持在当前点」），第一条由 14G 收到 14H：14H 把判定改成「`Bundle.preferredLocalizations` 反映的显示语言」对比「选择将要生效的语言」，并让 `apply()` 无条件执行（14G 只比较存储偏好的解析值，未重启场景仍误判，那条路径已删除）；第二条归入 0.10.0 之后的任务，故仍不写 `completed`）
-- 任务状态：Task 14 `implemented`（自动化门禁、CI 与最终 IPA 已交付；第 7 节 28 项真机行为首轮全部 pass，未标 `completed`）；Task 9R / 19 / 16R / 20 / 17 / 18 全部 `implemented`，真机项与交接文档第 7 节逐行对齐（9R #1–#7、19 #8–#9、16R #10–#11、20 #12–#15、17 #16、18 #17 与 #19、历史回归 #18）；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
+- 发布记录：`v0.10.0` 与 `v0.10.0-fa.1` 两个 annotated 标签均指向 `b47cb55`；release `RoamControl 0.10.0 (Build 62)`（非 prerelease）附 `RoamControl-unsigned.ipa` / 3,109,546 字节，release `0.10.0 (Build 62) — fork test build` 为 prerelease、无附件；构建号保持 62 未递增
+- 当前任务：0.10.0 已发布；下一版待启动 —— 发布依据：交接文档第 7 节 28 项真机全部 PASS 且在 `b47cb55` 复测 L1 / L6 / L3 PASS；装机源 run `41289851759`（head `b47cb55`）三 job 全绿、158 用例 0 失败，产物 Release artifact `13077026408` / 3,109,546 字节、Debug artifact `13077340646` / 4,645,770 字节；版本保持 0.10.0 / 62（本次只加标签，不递增构建号）
+- 任务状态：Task 14 `completed`（依据：交接文档第 7 节 28 项真机 PASS，执行人 = 项目所有者，日期 2026-11-01；14H 修复后 L1 / L6 / L3 于 build `b47cb55` 复测 PASS）；Task 9R / 19 / 16R / 20 / 17 / 18 全部 `implemented`，真机项与第 7 节逐行对齐（9R #1–#7、19 #8–#9、16R #10–#11、20 #12–#15、17 #16、18 #17 与 #19、历史回归 #18）；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`
 - Task 17 收尾口径：代码/测试 run `41236893110`（head `76d41f1`）与最终 HEAD run `41237968926`（head `b414c21`，含文档提交）三 job 均 success；最终 HEAD 产物 Release `RoamControl-unsigned-ipa` id `13056249465` / 3,107,749 字节、Debug `RoamControl-unsigned-debug-ipa` id `13056740573` / 4,635,484 字节
-- 当前执行窗口：Task 14 收尾；下一步为用户用 14H 产物（Run `41289235750` / Release artifact `13077195268` / 3,109,539 字节）重测 L1 / L3 / L6 三项，三项绿则把 Task 14 标 `completed`，并打 `v0.10.0` 与 `v0.10.0-fa.1`
+- 当前执行窗口：Task 14I 收尾完成，0.10.0 生命周期结束；下一版待启动（版本号与构建号在下一版开工时才动）
 - 并行任务：无。Task 16 的返工已在 Task 16R 内完成，语言弹窗与英文残留项以 Task 16R 记录为准
-- 最近完成：Task 14H（语言重启提示改为比较显示语言，`AppLanguage.requiresRestart` 删除，新增 `displayed` / `shouldPromptRestart` / `recordSystemLanguageIfUnoverridden`；14G 的解析值比较在未重启场景仍误判、且弹窗分支让 `apply()` 不落地，一并修掉），HEAD `1b1ff42` CI run `41289235750` 三 job 全绿、158 用例 0 失败
+- 最近完成：Task 14I（发布收尾：`test(language)` 让快照用例名副其实、CHANGELOG / README 改为已发布口径、交接文档第 7 节 L1 / L6 / L3 回填与第 8 节新增第 3 条已知限制，打 `v0.10.0` 与 `v0.10.0-fa.1` 并建 release）；代码状态 run `41289851759`、158 用例 0 失败，发布提交的文档 run 为过程记录
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Views/RouteRunCard.swift`
   - `RoamControl/Features/Map/MapViewModel.swift`
@@ -141,7 +142,7 @@
 | Task 11：运行中进度持久化 | `completed` | Xcode 27.1 下 4 个新测试与全量 96 个测试通过 |
 | Task 12：运行卡片与主页整合 | `implemented_unverified` | 返工修复 Routes 按钮空图标（`RouteSymbol.library`，无效符号名全仓 0 命中）；CI run `41193407036` 114 用例 0 失败、Debug/Release 构建通过，Release IPA artifact `13039403715`；真机截图 `Task12-routes-icon.png` 未做 |
 | Task 13：中断路线恢复 | `completed` | Xcode 27.1 下新增 2 个测试、全量 98 个测试与 Debug 构建均通过；手工强制退出恢复未验证 |
-| Task 14：完整验证 | `implemented` | A 段 10 条自动化门禁全过：`check_localizations.py` 613/613 + 2/2（`All 615 keys`，exit 0）、analytics 关键词 0 命中、两条架构边界 rg 无输出、`DeviceCoordinateAdapter.swift:37` 取 `.gcj02ToWGS84`、pbxproj 无 `0.9.2` / `61` 残留、`seanhowarthdev` 全仓 0 命中、`has_issues=true` 且 `private-vulnerability-reporting.enabled=true`；版本 `0.10.0` / `62` 未变；最终 HEAD `28472c6`，CI run `41271600000` 三 job 全绿、153 用例 0 失败、Debug 与 Release 构建均 `** BUILD SUCCEEDED **`，Release IPA artifact `13069906753`（3,109,112 字节）、Debug IPA `13069387607`（4,643,768 字节）；同代码状态的过程记录 run `41271064818`（head `c027584`，artifact `13068894830` / `13069935430`）非装机源，仅留作过程记录；19 项真机行为待用户 B 段验证，未写 `completed` |
+| Task 14：完整验证 | `completed` | 最终依据：交接文档第 7 节 28 项真机全部 PASS（执行人 = 项目所有者，2026-11-01），14H 修复后 L1 / L6 / L3 于 build `b47cb55` 复测 PASS；装机源 run `41289851759`（head `b47cb55`）三 job 全绿、158 用例 0 失败，产物 Release `13077026408` / 3,109,546 字节、Debug `13077340646` / 4,645,770 字节；A 段 10 条自动化门禁此前已全过（`check_localizations.py` `All 615 keys` exit 0、analytics 关键词 0 命中、两条架构边界 rg 无输出、坐标取 `.gcj02ToWGS84`、pbxproj 0.10.0 / 62） |
 | Task 15：统一中国大陆坐标域 | `implemented_unverified` | 方向已由真机 A/B 实测确定：MapKit raw 为 GCJ-02、DVT 期望 WGS-84，`DeviceCoordinateAdapter.swift:36` 取 `.gcj02ToWGS84`，只转换一次且仅在注入边界；CI run `41186642773` 113 用例 0 失败、Debug/Release 构建通过，产 Release IPA `13037307005` 与 Debug IPA `13037142318`；真机回归（天安门城楼、田径场、路线、Update、Stop & Restore）未做 |
 | Task 19：移除匿名统计/共享数据全链路 | `implemented` | Task 19F 收尾补正完成：删三处死回调（`LocalDeviceSessionCoordinator.onFailure` / `onRecoveryNeeded`、`OnDevicePairingCoordinator.onFailure`）与两个私有 `failureSnapshot(...)` 工厂，`FailureDiagnosticSnapshot` 随之删除，`FailureDiagnostics.swift` 收敛为 `FailureStage` / `FailureDisposition` / `SchedulerFailureReason` 三个类型（131 行）；删孤儿本地化 key `Privacy`，`check_localizations.py` 604/604 + 2/2、`All 606 keys` exit 0；`rg -n "UsageAnalytics|sharesAnonymousUsageStatistics|AnonymousUsage|What Is Shared|Share Anonymous"` exit 1，`Telemetry` 只剩 4 处 `BackgroundSessionTelemetry`；`rg -n "failureSnapshot\(|FailureDiagnosticSnapshot"` 无输出；123 用例 0 失败（未删未增）；最终代码状态 CI run `41223835438`（head `3ffd834`）三 job 全绿，Release IPA artifact `13050992072`（3,101,262 字节）、Debug IPA `13051995426`（4,623,883 字节）；第 7 节 2 条（#8–#9） |
 | Task 16R：语言弹窗与剩余英文残留返工 | `implemented` | 语言切换只在生效语言真正改变时写入并弹窗：`AppLanguage.effective(...)` 由 `AppleLanguages` 覆盖值推导（无覆盖回落到系统偏好），`requiresRestart(comparedTo:)` 供 `SettingsView` 判定；Onboarding 三页 `title/message`、`PairingSetupView` 的 `requirementRow` / `instructionRow` / `pairingDetail(title:)`、`ConnectionHealthView.healthRow(title:)` 改 `LocalizedStringKey`；`ConnectionHealthView.restorationText(for:)` 把四个内部英文状态映射成本地化文案（内部值不变），`"None"` 两处显示改 `String(localized:)`；`Localizable.xcstrings` 604 → 609 key（+4 恢复状态、+1 a11y 逗号），合计 611；新增 6 例 AppLanguage/映射测试，全量 129 用例 0 失败；head `b7797d1`，CI run `41227597504` 三 job 全绿，Release artifact `13052626294`（3,104,532 字节）、Debug artifact `13053106037`（4,626,145 字节）；第 7 节 2 条（#10–#11）登记在交接文档，随 Task 14 B 段验证 |
@@ -992,7 +993,7 @@
 - 任务：Task 14 - 完整验证（A 段 = 自动化门禁与交付物；B 段 = 交接文档第 7 节 19 项真机行为，由用户执行）
 - 状态：`implemented`（A 段全部完成；B 段 19 项尚未执行，因此不写 `completed`）
 - 分支与基线：`feat/manual-running-routes`，起点 HEAD `a7b68b2`，与 `fork` 远端一致，工作树干净；整体差异基线 `b68dac0`
-- 修改文件：`README.md`（删掉未发布的 beta 下载与 Build 61 说法，下载说明改为「fork 未发布、CI 产 unsigned IPA 需自签」，版本徽章指向 0.10.0 / 62，统计与安全链接指向 fork 与 CHANGELOG）、`CHANGELOG.md`（新增 `[0.10.0] - 待发布（真机验收进行中）` 条目）、`.github/ISSUE_TEMPLATE/config.yml`（安全报告链接指向 fork 的 security advisories）、`Documentation/ImplementationStatus.md`、`.planning/2026-10-30-roam-route-system/progress.md`。未改 `RoamControl/`、`RoamControlTests/`、`project.pbxproj`、版本号与构建号、坐标适配层、CI workflow：本轮只验证与文档收尾，没有发现真实缺陷，因此没有 `fix` 提交
+- 修改文件：`README.md`（删掉未发布的 beta 下载与 Build 61 说法，下载说明改为「fork 未发布、CI 产 unsigned IPA 需自签」，版本徽章指向 0.10.0 / 62，统计与安全链接指向 fork 与 CHANGELOG）、`CHANGELOG.md`（新增 `[0.10.0]` 条目，当时标题写「进行中」，已由 14I 改为发布日）、`.github/ISSUE_TEMPLATE/config.yml`（安全报告链接指向 fork 的 security advisories）、`Documentation/ImplementationStatus.md`、`.planning/2026-10-30-roam-route-system/progress.md`。未改 `RoamControl/`、`RoamControlTests/`、`project.pbxproj`、版本号与构建号、坐标适配层、CI workflow：本轮只验证与文档收尾，没有发现真实缺陷，因此没有 `fix` 提交
 - 提交：`c027584`（`docs(repo): drop stale beta-preview claims and point docs at the fork`，纯文档提交、非装机源）、`28472c6`（`docs(routes): record the Task 14 final verification`）
 - 自动化门禁（10 条，逐条实测，本机 Windows 可跑部分）
 

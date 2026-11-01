@@ -316,12 +316,12 @@
 | R7 | 9R | 输入新名但不点 Rename，下滑关 sheet | 名称保持原样 | pass |
 | S1 | 19 | Settings 逐段扫 | 无 Privacy 分区、无统计开关 | pass |
 | S2 | 19 | 删 App 重装走 Onboarding | 3 页，无统计选择卡 | pass |
-| L1 | 16R | 选当前语言（简体中文） | 不弹重启提示 | pass（首轮，build `88ba4ff` / run `41272520335`、Release artifact `13069868630`）；14H 后待重测 |
+| L1 | 16R | 选当前语言（简体中文） | 不弹重启提示 | pass（14H 修复后在 build `b47cb55`（run `41289851759`，artifact `13077026408`）复测通过） |
 | L2 | 16R | 切 English | 弹重启提示，重启后英文 | pass |
-| L3 | 16R | 先重启进英文界面，再从 English 切回简体中文 | 弹重启提示，重启后中文 | pass（首轮）；14H 后待重测（回归，确认该弹的仍弹；补上前提「先重启进英文」） |
+| L3 | 16R | 先重启进英文界面，再从 English 切回简体中文 | 弹重启提示，重启后中文 | pass（14H 修复后在 build `b47cb55`（run `41289851759`，artifact `13077026408`）复测通过）（回归，确认该弹的仍弹） |
 | L4 | 16R | 中文界面看 Onboarding 三页 | 无英文句子 | pass |
 | L5 | 16R | 中文界面看设备设置页与连接检查页 | 无英文句子 | pass |
-| L6 | 16R/14G/14H | 系统中文、当前「简体中文」，改选「跟随系统」 | 不弹重启提示，且选择真的落地（下次启动跟随系统，第 8 节问题 1 的修复验收） | 待重测（14G 判定模型已废，需用 14H 产物重测） |
+| L6 | 16R/14G/14H | 系统中文、当前「简体中文」，改选「跟随系统」 | 不弹重启提示，且选择真的落地（下次启动跟随系统，第 8 节问题 1 的修复验收） | pass（14H 修复后在 build `b47cb55`（run `41289851759`，artifact `13077026408`）复测通过） |
 | F1 | 20 | Report a Bug | 打开 `FaHits/Roam-Control/issues/new`，模板 bug_report，无 `seanhowarthdev` | pass |
 | F2 | 20 | Request a Feature | 同仓库，模板 feature_request | pass |
 | F3 | 20 | 联网点 Check for Updates | 显示「该仓库尚未发布版本。」类文案，无版本号 | pass |
@@ -343,3 +343,5 @@
 
 1. **语言弹窗判定比的是 enum，不是解析后的生效语言**。`AppLanguage.requiresRestart(comparedTo:)` 现在是 `self != current`，两个 case 不同就弹。系统语言为中文时：`跟随系统` → `简体中文` 不弹（两者解析结果相同，碰巧对），再从 `简体中文` 回到 `跟随系统` 却弹重启提示（`.system != .simplifiedChinese`，但生效语言仍是中文）。用户预期：解析出的生效语言不变就不弹。14G 只修了表面——把选择项解析成「存储偏好解析值」再比，仍有未重启场景误判，且 `guard … else { return }` 让不需要弹窗时 `apply()` 也不执行，选择没落地。14H 改为比较「显示语言」（`Bundle.preferredLocalizations` 反映此刻界面语言）与「选择将要生效的语言」，并让 `apply()` 无条件执行。
 2. **跑完与暂停后缺少显式的「保持在当前点」状态**。现状：暂停时位置其实已经保持（movement 循环在 `.paused` 直接 `continue`，不再注入新坐标），跑完后也停在终点直到点 `Done`；但界面只有一个 `Done`，footer 还写着「Tap Done to end the session and restore your real location」，等于把「保持」做成隐含副作用，没有可预期的入口。用户要求把「保持在此点」变成一等状态：暂停即保持且有明确文案；跑完给「保持终点」与「完成并恢复真实位置」两个出口；闭环与开放路线都适用。属新行为，落在 0.10.0 之后的任务，不阻塞本轮。
+
+3. **语言快照只在「启动时没有 `appLanguage` 覆盖」的启动里刷新**（已知限制，不做修复）。触发条件：App 里已有 `appLanguage` 覆盖（选过英文或简体中文，而不是「跟随系统」），此时在系统设置里改动系统语言；随后在 App 里选「跟随系统」。后果：`recordSystemLanguageIfUnoverridden` 在那些启动里从不写入，`systemLanguageSnapshot` 还是旧值，判定按旧快照比较，于是这一次会漏弹重启提示，重启后静默切到新的系统语言。自愈：再启动一次，此时已无覆盖（选择是「跟随系统」），快照按新的系统语言刷新，之后判定恢复正确。不做修复的理由：没有干净的公开 API 能在存在 `AppleLanguages` 覆盖时读到「未被覆盖的系统语言」，任何绕路（读 `.GlobalDomain`、监听系统语言变化通知、解析 `AppleLocale`）都会引入跨 domain 猜测或额外的状态机，代价高于一次静默切换。
