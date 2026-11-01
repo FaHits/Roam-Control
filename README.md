@@ -57,7 +57,7 @@ Roam Control is a source-available SwiftUI app for location-based development, q
 
 ## Builds
 
-Roam Control is not distributed through the App Store or TestFlight. Release **0.10.0 (62)** is published on the [Releases page](https://github.com/FaHits/Roam-Control/releases/tag/v0.10.0) as an unsigned release IPA (`RoamControl-unsigned.ipa`); it must be signed with your own Apple account before it can be installed. The same release carries a debug IPA as a troubleshooting attachment. The `Xcode 27 verification` workflow rebuilds an unsigned IPA from every commit on the development branch.
+Roam Control is not distributed through the App Store or TestFlight. Release **0.10.0 (62)** is published on the [Releases page](https://github.com/FaHits/Roam-Control/releases/tag/v0.10.0) as an unsigned release IPA (`RoamControl-unsigned.ipa`); it must be signed with your own Apple account before it can be installed. The same release carries `RoamControl-unsigned-debug.ipa` as a troubleshooting attachment. The `Xcode 27 verification` workflow rebuilds an unsigned IPA from every commit on the development branch.
 
 You will need:
 

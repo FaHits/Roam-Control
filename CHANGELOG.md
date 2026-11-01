@@ -66,7 +66,7 @@ Roam Control 0.9.2 Preview - Build 58. Public validation preview; Beta 6 / Build
 
 ### Changed
 
-- 反馈、Issue 与更新检查地址统一由 `AppRepository` 派生并指向 `FaHits/Roam-Control`，不再显示上游版本号；仓库没有 release 时提示「该仓库尚未发布版本。」，0.10.0 发布后更新检查读到 `v0.10.0`。
+- 反馈、Issue 与更新检查地址统一由 `AppRepository` 派生并指向 `FaHits/Roam-Control`，不再显示上游版本号；仓库没有 release 时显示 `This repository has no published release yet.`，0.10.0 发布后更新检查读到 `v0.10.0`。
 - 注入到设备会话的坐标在唯一注入边界做 GCJ-02 → WGS-84 转换。
 - 移除可选匿名统计全链路：设置分区、Onboarding 共享卡、上报客户端、自托管与 TelemetryDeck 目的地，以及 `PrivacyInfo.xcprivacy` 中的采集条目。
 - 路线库删除改为确认后才移除数据，确认框打开期间行不再塌陷。
