@@ -57,14 +57,6 @@
 	<string>Roam Control uses location updates to keep fixed and walking sessions running in the background, and to recenter on your real position after a session stops.</string>
 	<key>RoamControlBuildTimestamp</key>
 	<string>$(ROAMCONTROL_BUILD_TIMESTAMP)</string>
-	<key>RoamControlTelemetryAppID</key>
-	<string>$(ROAMCONTROL_TELEMETRY_APP_ID)</string>
-	<key>RoamControlTelemetryNamespace</key>
-	<string>$(ROAMCONTROL_TELEMETRY_NAMESPACE)</string>
-	<key>RoamControlSelfHostedTelemetryEndpoint</key>
-	<string>https://seanhowarth.ddns.net/roam-telemetry/api/events</string>
-	<key>RoamControlSelfHostedTelemetryToken</key>
-	<string>$(ROAMCONTROL_SELFHOSTED_TELEMETRY_TOKEN)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

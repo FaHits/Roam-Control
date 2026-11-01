@@ -6,6 +6,10 @@ All notable public changes to Roam Control are recorded here.
 
 Roam Control 0.9.2 Preview - Build 58. Public validation preview; Beta 6 / Build 57 remains the recommended release until validation.
 
+### Removed
+
+- Removed the unused `StatusCard` view and the telemetry keys in `RoamControl-Info.plist` and both `xcconfig` files; nothing has read them since the reporting path was deleted in Task 19.
+
 ### Fixed
 
 - Build 58: derive pairing and location continued-processing task prefixes only from the runtime bundle identifier; require the exact runtime-rooted permitted wildcard and stop before registration when it is missing. Remove cross-bundle fallback and development-team plist variants. Preserve Build 57 telemetry and the existing immediate-failure scheduling strategy.

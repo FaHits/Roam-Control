@@ -115,7 +115,7 @@ struct WalkingRoutePreviewCard: View {
         let distance = RouteMetric(
             title: showsProgress ? "Remaining" : "Distance",
             value: distanceText,
-            symbol: "point.topleft.down.to.point.bottomright.curvepath"
+            symbol: RouteSymbol.library
         )
         let duration = RouteMetric(
             title: simulation.phase == .arrived ? "Status" : "Walking",
