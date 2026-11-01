@@ -9,14 +9,13 @@
 </p>
 
 <p align="center">
-  <strong>Public beta preview:</strong> 0.9.2 Build 61 · <strong>Requires:</strong> iOS 27+
+  <strong>Current development build:</strong> 0.10.0 (62) · not yet published · <strong>Requires:</strong> iOS 27+
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/iOS-27%2B-blue" alt="iOS 27+">
   <img src="https://img.shields.io/badge/UI-SwiftUI-orange" alt="SwiftUI">
-  <img src="https://img.shields.io/badge/Preview-Build%2061-purple" alt="Build 61 Preview">
-  <img src="https://img.shields.io/badge/Current-Build%2061-lightgrey" alt="Current Build 61">
+  <img src="https://img.shields.io/badge/Development-0.10.0%20(62)-purple" alt="Development build 0.10.0 (62)">
   <img src="https://img.shields.io/badge/License-PolyForm%20NC%201.0.0-blue" alt="PolyForm Noncommercial 1.0.0">
 </p>
 
@@ -35,7 +34,7 @@ Roam Control is a source-available SwiftUI app for location-based development, q
 </p>
 
 <p align="center">
-  <img src="Documentation/Images/README/privacy.png" width="240" alt="Privacy-first anonymous statistics choice">
+  <img src="Documentation/Images/README/privacy.png" width="240" alt="Privacy-first design">
   <img src="Documentation/Images/README/settings.png" width="240" alt="Roam Control settings">
 </p>
 
@@ -56,11 +55,9 @@ Roam Control is a source-available SwiftUI app for location-based development, q
 - Choose automatic, light or dark appearance and standard, satellite or hybrid maps.
 - Use Dynamic Type, VoiceOver and Reduce Motion.
 
-## Install the public beta
+## Builds
 
-Roam Control is not distributed through the App Store or TestFlight. The current public beta preview is **0.9.2 Build 61**. Download the `RoamControl-0.9.2-build61.ipa` attached to the [Build 61 release](https://github.com/seanhowarthdev/Roam-Control/releases/tag/v0.9.2-preview-build.61) and sign it with SideStore using your own Apple account.
-
-> **Current testers:** Build 61 supersedes Builds 56–60 for current beta testing. Earlier builds remain available for reference but should not be used for new installations.
+Roam Control is not distributed through the App Store or TestFlight, and this fork has not published a release yet. The current development build is **0.10.0 (62)**; there is no download on GitHub. The `Xcode 27 verification` workflow builds an unsigned IPA from every commit on the development branch, and that IPA has to be signed with your own Apple account before it can be installed.
 
 You will need:
 
@@ -87,11 +84,9 @@ The pairing record is stored in the iPhone Keychain and is never uploaded.
 
 Locations, coordinates, searches, favourites, history, walking routes and pairing records stay on the iPhone.
 
-Anonymous usage statistics are optional and off by default. When enabled, a narrow first-party sender reports only a fixed set of activity events, app version/build, hashed random installation identifier and fixed failure/scheduler categories to the maintainer-operated service and, in configured beta builds, TelemetryDeck. It never sends locations, searches, routes, pairing data, device names, raw error messages or diagnostic reports. No third-party analytics SDK is embedded.
+This build does not collect usage statistics and embeds no third-party analytics SDK; it sends nothing to any analytics service.
 
-The public project contains the self-hosted ingestion URL but no ingestion token, TelemetryDeck identifiers or Apple signing team. A checkout therefore sends no statistics unless the builder deliberately supplies a private local configuration.
-
-Read [Privacy](Documentation/Privacy.md) for the exact event and retention disclosure.
+Read [Privacy](Documentation/Privacy.md) for the on-device data disclosure.
 
 ## Responsible use
 
@@ -124,7 +119,7 @@ The native engine is a narrow Rust-to-Swift bridge around the MIT-licensed [`ide
 - [Responsible use](Documentation/ResponsibleUse.md)
 - [Build and release guide](Documentation/BuildAndRelease.md)
 - [Regression checklist](Documentation/RegressionChecklist.md)
-- [0.9.2 release notes](https://github.com/seanhowarthdev/Roam-Control/releases/tag/v0.9.2)
+- [Changelog](CHANGELOG.md)
 - [Beta 1 release notes](Documentation/PublicBetaRelease.md)
 - [Security policy](SECURITY.md)
 - [Third-party notices](Documentation/Licensing/THIRD_PARTY_NOTICES.md)

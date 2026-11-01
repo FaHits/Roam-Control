@@ -51,6 +51,32 @@ Roam Control 0.9.2 Preview - Build 58. Public validation preview; Beta 6 / Build
 - The Build 52 restoration delay was not reproduced. Affected-user pairing/session reports and other-VPN interference remain open; no universal fix is claimed.
 - Walking-session foreground/background continuity and Stop & Restore also passed owner-device smoke testing on Build 53.
 
+## [0.10.0] - 待发布（真机验收进行中）
+
+尚未在 GitHub 发布 release，也没有可下载的构建。以下条目描述代码层面的行为；需要真机判定的表现统一登记在 `Documentation/Handoffs/2026-10-31-rework-handoff.md` 第 7 节，尚未标记为已验证。
+
+### Added
+
+- 手绘闭环路线：点击加点的编辑器、每条路线的跑步配置、路线库持久化到 `Application Support/RoamControl/routes.json`，支持重命名与删除。
+- 开放路线可按趟数折返：偶数趟停在起点，奇数趟停在终点，运行卡显示 `1/3`、`2/3` 形式的趟数指标而不是 `Laps`。
+- 拟人跑步模拟：速度波动、步频与平滑 GPS 抖动；抖动只影响上报坐标，不移动已保存的路线进度。
+- 运行卡片与主页整合；中断的运行可从恢复卡继续，恢复卡显示路线名、圈数与圈内进度。
+- 地图样式（standard / satellite / hybrid）在主地图与路线编辑器之间共用一套映射，编辑器跟随当前样式并可原地切换。
+- 简体中文与语言切换：`AppLanguage` 由生效语言推导是否需要重启提示，本地化目录覆盖 615 个 key。
+
+### Changed
+
+- 反馈、Issue 与更新检查地址统一由 `AppRepository` 派生并指向 `FaHits/Roam-Control`；未发布 release 时显示「该仓库尚未发布版本。」，不再显示上游版本号。
+- 注入到设备会话的坐标在唯一注入边界做 GCJ-02 → WGS-84 转换。
+- 移除可选匿名统计全链路：设置分区、Onboarding 共享卡、上报客户端、自托管与 TelemetryDeck 目的地，以及 `PrivacyInfo.xcprivacy` 中的采集条目。
+- 路线库删除改为确认后才移除数据，确认框打开期间行不再塌陷。
+
+### Fixed
+
+- 第三方输入法（如微信输入法）在未提交候选文字时 Rename 按钮不可用。
+- 空名称或纯空白名称不再静默保存，改为提示「路线名称不能为空。」
+- 路线编辑器的地图样式浮层补 `import SwiftUI`，修复样式控件不渲染。
+
 ## [0.9.1] - 2026-09-10
 
 First beta polish release, corresponding to app version 0.9.1 Build 47.
