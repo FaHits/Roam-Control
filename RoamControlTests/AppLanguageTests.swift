@@ -151,6 +151,7 @@ final class AppLanguageTests: XCTestCase {
     }
 
     func testRecordSystemLanguageKeepsSnapshotWhenOverridden() {
+        defaults.set(AppLanguage.simplifiedChinese.rawValue, forKey: AppLanguage.storageKey)
         AppLanguage.simplifiedChinese.apply(to: defaults)
 
         AppLanguage.recordSystemLanguageIfUnoverridden(

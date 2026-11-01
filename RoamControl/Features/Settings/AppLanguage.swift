@@ -85,11 +85,16 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     /// the value is latched while the override is still absent.
     static let systemSnapshotKey = "systemLanguageSnapshot"
 
+    /// `AppleLanguages` cannot answer "is an override in place?": the system
+    /// domain carries one for every app, so reading it looks like an override
+    /// even on a first launch. The selection this app stored is the honest
+    /// signal — it only exists once somebody picked a language.
     static func recordSystemLanguageIfUnoverridden(
         defaults: UserDefaults = .standard,
         systemIdentifiers: [String] = Locale.preferredLanguages
     ) {
-        guard defaults.object(forKey: appleLanguagesKey) == nil else { return }
+        let selection = defaults.string(forKey: storageKey).flatMap(AppLanguage.init(rawValue:))
+        guard selection == nil || selection == .system else { return }
         defaults.set(systemIdentifiers, forKey: systemSnapshotKey)
     }
 
