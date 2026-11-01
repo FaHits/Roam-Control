@@ -75,7 +75,7 @@ struct HomeView: View {
                         }
                     }
                 }
-                .roamControlMapStyle(appModel.mapDisplayStyle)
+                .mapStyle(appModel.mapDisplayStyle.mapStyle)
                 .mapControls {
                     MapScaleView()
                 }
@@ -820,20 +820,6 @@ private struct CompassRoseDial: View {
 private extension GeoCoordinate {
     var mapCoordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func roamControlMapStyle(_ style: MapDisplayStyle) -> some View {
-        switch style {
-        case .standard:
-            mapStyle(.standard(elevation: .realistic))
-        case .satellite:
-            mapStyle(.imagery(elevation: .realistic))
-        case .hybrid:
-            mapStyle(.hybrid(elevation: .realistic))
-        }
     }
 }
 

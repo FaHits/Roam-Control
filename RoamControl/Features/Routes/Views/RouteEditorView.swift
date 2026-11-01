@@ -12,6 +12,7 @@ struct RouteEditorView: View {
     let onSave: (RouteDefinition) -> Void
     let onCancel: () -> Void
 
+    @Environment(AppModel.self) private var appModel
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var model: RouteEditorModel
     @State private var cameraPosition: MapCameraPosition
@@ -49,7 +50,7 @@ struct RouteEditorView: View {
                         }
                     }
                 }
-                .mapStyle(.standard(elevation: .realistic))
+                .mapStyle(appModel.mapDisplayStyle.mapStyle)
                 .onTapGesture { location in
                     guard let coordinate = proxy.convert(location, from: .local) else {
                         return
@@ -127,6 +128,8 @@ struct RouteEditorView: View {
 
     private func panelContent(isClosed: Binding<Bool>) -> some View {
         VStack(alignment: .leading, spacing: 14) {
+            stylePicker
+
             HStack(spacing: 10) {
                 metric(title: "Points", value: "\(model.effectivePointCount)")
                 metric(title: "Distance", value: distanceText)
@@ -156,6 +159,35 @@ struct RouteEditorView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
+    }
+
+    /// The editor keeps no style of its own: the picker writes straight to `AppModel`, so the choice
+    /// is shared with Home and survives leaving the editor.
+    @ViewBuilder
+    private var stylePicker: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            Picker("Map Style", selection: mapStyleBinding) {
+                ForEach(MapDisplayStyle.allCases) { style in
+                    Text(style.title).tag(style)
+                }
+            }
+            .pickerStyle(.menu)
+        } else {
+            Picker("Map Style", selection: mapStyleBinding) {
+                ForEach(MapDisplayStyle.allCases) { style in
+                    Text(style.title).tag(style)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+        }
+    }
+
+    private var mapStyleBinding: Binding<MapDisplayStyle> {
+        Binding(
+            get: { appModel.mapDisplayStyle },
+            set: appModel.setMapDisplayStyle
+        )
     }
 
     @ViewBuilder
