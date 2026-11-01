@@ -6,6 +6,15 @@
 
 > 2026-11-01 0.10.0 发布：真机 28 项（R1–R7、S1–S2、L1–L5、F1–F4、T1–T3、M1–M3、H1–H4）全部 PASS，14H 修复后 L1 / L6 / L3 在同一次构建复测 PASS，执行人 = 项目所有者；代码状态提交 `b47cb55` 的 CI run `41289851759` 三 job 全绿（158 用例 0 失败），标签 `v0.10.0` 与 `v0.10.0-fa.1` 均指向该提交，GitHub Release `v0.10.0` 附 unsigned Release IPA。Task 14 状态据此改为 `completed`。
 
+> 2026-11-01 Task 22 完成：代码层清理（死代码 / 遥测残留 / 符号字面量）。提交 `0597439`（`chore(cleanup): drop unused StatusCard and telemetry configuration keys`，6 文件），`fork/feat/manual-running-routes` 与本地 HEAD 一致（`059743996558c90bb32ce77cf592a9ddd583ecaf`）。CI run `41321756708` 三 job 全 success（`test` 6m32s、`unsigned-ipa-debug` 38s、`unsigned-ipa` 48s，`2026-11-01T15:32:41Z`→`15:40:07Z`），`test` job 输出 `** TEST SUCCEEDED **`、158 用例 0 失败；产物 `RoamControl-unsigned-ipa` id `13089384915` / 3,109,421 字节、`RoamControl-unsigned-debug-ipa` id `13089024048` / 4,639,557 字节。
+>
+> - 2.1 删除 `RoamControl/Features/Home/StatusCard.swift`（无引用死代码）；2.2 删除 `Configuration/RoamControl-Info.plist` 四个遥测 key 与两个 xcconfig 各三个遥测变量；2.3 `RoamControl/Features/Map/WalkingRoutePreviewCard.swift:118` 改用 `RouteSymbol.library`。三项均 `done`。
+> - 未改：版本 `0.10.0` / `62`、坐标注入边界 `RoamControl/Services/Location/DeviceCoordinateAdapter.swift:37` 的 `.gcj02ToWGS84`（grep 计数仍为 8）、UI 文案与本地化 key 集合、CI workflow 与 `scripts/check_localizations.py`。
+> - 本地化：`613/613`、`2/2`、`All 615 keys have non-empty zh-Hans values.`（exit 0）。
+> - 静态验收：`StatusCard` 0 命中、`Configuration` 下 `Telemetry|TELEMETRY` 0 命中（均 exit 1）、符号字面量只剩 `RoamControl/Features/Routes/Views/RouteSymbol.swift:6`。
+> - 未验证项：本机无 macOS，构建与测试结论全部来自 CI；plist 只做 `plistlib` 静态解析；本次不改运行时行为，无真机验证项。
+> - 已知遗留：`Documentation/BuildAndRelease.md:92-93` 仍列三个已删遥测变量并引用已删除的 `UsageAnalyticsService.swift`（第 85-100 行整段过时），按任务书范围未动；下一窗口第一步就是决定是否清掉这段。
+
 - 功能：手绘闭环路线与拟人跑步模拟
 - 当前分支：`feat/manual-running-routes`
 - 源码基线：`a7b68b2`
@@ -21,7 +30,7 @@
 - Task 17 收尾口径：代码/测试 run `41236893110`（head `76d41f1`）与最终 HEAD run `41237968926`（head `b414c21`，含文档提交）三 job 均 success；最终 HEAD 产物 Release `RoamControl-unsigned-ipa` id `13056249465` / 3,107,749 字节、Debug `RoamControl-unsigned-debug-ipa` id `13056740573` / 4,635,484 字节
 - 当前执行窗口：Task 14I 收尾完成，0.10.0 生命周期结束；下一版待启动（版本号与构建号在下一版开工时才动）
 - 并行任务：无。Task 16 的返工已在 Task 16R 内完成，语言弹窗与英文残留项以 Task 16R 记录为准
-- 最近完成：Task 14I（发布收尾：`test(language)` 让快照用例名副其实、CHANGELOG / README 改为已发布口径、交接文档第 7 节 L1 / L6 / L3 回填与第 8 节新增第 3 条已知限制，打 `v0.10.0` 与 `v0.10.0-fa.1` 并建 release）；代码状态 run `41289851759`、158 用例 0 失败，发布提交的文档 run 为过程记录
+- 最近完成：Task 22（代码层清理：删 `StatusCard.swift`、删 plist 与两个 xcconfig 的遥测残留、符号字面量改用 `RouteSymbol.library`）；代码提交 `0597439` 的 run `41321756708` 三 job 全绿、158 用例 0 失败。此前 Task 14I 为 0.10.0 发布收尾（代码状态 run `41289851759`）
 - 已完成工程修改：
   - `RoamControl/Features/Routes/Views/RouteRunCard.swift`
   - `RoamControl/Features/Map/MapViewModel.swift`
