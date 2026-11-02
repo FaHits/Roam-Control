@@ -1131,3 +1131,35 @@
 - 已知风险：`RouteLibraryRow` / `EmptyRouteRow` / `RenameSheet` 只有编译与模型级覆盖，没有 UI 自动化；`.sheet(item:)` 下滑关闭时依赖 SwiftUI 自动把绑定置 nil，`onCancel` 只覆盖左上交互相；路线列表行内图标开放路线用 `scribble`，与闭环的 `RouteSymbol.library` 视觉区分度靠肉眼确认
 - 下一步：下一窗口先读本文件与计划章节，再取 Task 25；Task 24 的真机项随 Task 14 B 段验收
 - 更新时间：2026-11-02
+
+### 2026-11-02 Task 25：海外地点搜索开关
+
+- 任务：Task 25 - 海外地点搜索开关（用户直接指令即任务规格，实施计划文件无对应章节）
+- 状态：`implemented`（head `10fd3db` 的 CI run `41458437657` 三 job 全绿、188 用例 0 失败）
+- 分支与基线：`feat/manual-running-routes`，起点 HEAD `d68e10a`（182 用例、637 key、0.10.0 / 62）
+- 修改文件：新增 `RoamControl/Features/Map/MapSearchQuery.swift`（纯逻辑，仅 `import Foundation`）、`RoamControlTests/MapSearchQueryTests.swift`、`RoamControlTests/AppPreferencesTests.swift`；改 `RoamControl/App/AppModel.swift`、`RoamControl/Features/Map/MapViewModel.swift`、`RoamControl/Features/Settings/SettingsView.swift`、`RoamControl/Features/Home/HomeView.swift`、`RoamControl/Resources/Localizable.xcstrings`（新增 3 key）。未改坐标换算、路线与运动学、默认地图样式与运行参数
+- 默认关闭：`overseasPlaceSearchEnabled` 默认 `false`，reset 回 `false`；关闭时 `MapSearchQuery.normalized` 原样返回，`request.region` / `regionPriority` / `selectSuggestion` 的 title-only 分支 / `placeDescription` 的 regionName 追加全部不执行
+- 开启时：`searchCompleter.region` 与 `request.region` 都取 `cameraPosition.region`，`regionPriority = .default`；查询词先取最后一段（逗号 / 顿号 / 分号 / 换行），零结果再拿整句查一次；结果副标题带 `addressRepresentations.regionName`，取不到退回 `placemark.country`
+- 关闭时的清场：`MKLocalSearchCompleter.region` 没有「取消设置」接口，`applyOverseasSearchRegion()` 在关闭时写入 `(0, 0)` 的 180×360 世界范围，避免残留海外偏置
+- 门禁（逐条实测）
+
+| # | 门禁 | 结果 |
+| --- | --- | --- |
+| 1 | 全量测试 | pass：188 用例（182 + 6），`test` job 0 失败、`** TEST SUCCEEDED **` |
+| 2 | CI 三 job | pass：`test` 17m33s、`unsigned-ipa` 1m16s、`unsigned-ipa-debug` 1m40s 全 success |
+| 3 | 两个产物 | pass：`RoamControl-unsigned-ipa` id `13150370012` / 3,145,886 字节；`RoamControl-unsigned-debug-ipa` id `13149710838` / 4,758,760 字节 |
+| 4 | `PYTHONUTF8=1 python scripts/check_localizations.py` | pass：`638/638`、`InfoPlist 2/2`、`All 640 keys have non-empty zh-Hans values.`，exit 0 |
+| 5 | 坐标 grep（`gcj02ToWGS84\|offsetDegrees\|coordinateOffset`） | pass：8（与起点一致） |
+| 6 | 两条架构 grep（Routes/Core + Models） | pass：均 0 命中 |
+| 7 | `MapSearchQuery.swift` 依赖 | pass：仅 `import Foundation`，无 SwiftUI / MapKit |
+| 8 | `overseasPlaceSearchEnabled` 命中 | pass：19 行，覆盖 AppModel 定义 / 读写 / SettingsView / HomeView / MapViewModel |
+| 9 | 版本 | pass：`MARKETING_VERSION = 0.10.0`、`CURRENT_PROJECT_VERSION = 62` 未动 |
+
+- 新增测试：6 例，全量 182 → 188。`MapSearchQueryTests`：`testNormalizedLeavesQueryUntouchedWhenOverseasDisabled`（关闭时 `"  Tokyo, Shibuya Crossing "` 逐字节不变）、`testNormalizedTakesTrailingSegmentWhenOverseasEnabled`（逗号 / 顿号 / 分号三类分隔均取末段）、`testNormalizedKeepsSingleTokenWhenOverseasEnabled`（`"Tokyo"` 仍为 `"Tokyo"`）、`testNormalizedDropsEmptySegments`（连续分隔与纯分隔输入分别得到 `"Shibuya"`、`"Tokyo"`、`""`）；`AppPreferencesTests`：`testOverseasPlaceSearchDefaultsToDisabled`（新实例为 `false`）、`testOverseasPlaceSearchPersistsAcrossInstances`（写入后新实例读到同值，关闭后新实例回到 `false`）
+- 提交：`b114aeb`（`feat(map): add an overseas place search toggle`，8 文件 +252 / −13）、`10fd3db`（`fix(map): return an empty normalized query when every segment is blank`，1 文件 +1 / −7）
+- 返工记录：首个 push `b114aeb` 的 run `41455449411` 在 `test` job 失败（exit 65，19m9s），唯一失败用例 `MapSearchQueryTests.testNormalizedDropsEmptySegments()`。原因是全空段时的兜底返回 `raw.trimmingCharacters(in: .whitespacesAndNewlines)`，对 `" , , "` 会留下逗号得到 `","`；`10fd3db` 改为直接返回 `segments.last ?? ""`，零段即空串
+- CI：run [41458437657](https://github.com/FaHits/Roam-Control/actions/runs/41458437657)（head `10fd3db`）`conclusion=success`；`test` 188 用例 0 失败、Debug 与 Release 均 `** BUILD SUCCEEDED **`
+- 未验证项：真机上的搜索观感、海外地名的实际命中率、`cameraPosition.region` 在缩放/拖动后的偏置是否合适、关闭开关后世界范围兜底是否仍让 completer 轻微偏向赤道附近，均登记到第 7 节随 Task 14 B 段验收
+- 已知风险：`MKLocalSearchCompleter.region` 无法真正「无区域」，关闭态只能写世界范围近似复原；`selectSuggestion` 在开启时只用 `title`，若 `title` 本身不含城市而同名地点很多，仍可能出现歧义
+- 下一步：下一窗口先读本文件与计划章节；Task 25 的真机项随 Task 14 B 段验收
+- 更新时间：2026-11-02
