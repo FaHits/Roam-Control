@@ -86,7 +86,7 @@ struct RenameSheet: View {
 }
 
 final class RenameTextFieldHandle {
-    weak var field: UIView?
+    weak var field: UITextField?
 
     /// `text(in:)` includes marked text that a SwiftUI binding never receives, so a Chinese layout
     /// no longer drops the characters still being composed.
@@ -104,7 +104,7 @@ struct RenameTextField: UIViewRepresentable {
     let handle: RenameTextFieldHandle
     let onChange: () -> Void
 
-    func makeUIView(context: Context) -> UIView {
+    func makeUIView(context: Context) -> UITextField {
         let textField = UITextField()
         textField.text = initialText
         textField.font = .preferredFont(forTextStyle: .body)
@@ -131,7 +131,7 @@ struct RenameTextField: UIViewRepresentable {
         return textField
     }
 
-    func updateUIView(_ uiView: UIView, context: Context) {
+    func updateUIView(_ uiView: UITextField, context: Context) {
         handle.field = uiView
         context.coordinator.onChange = onChange
     }
@@ -147,7 +147,7 @@ struct RenameTextField: UIViewRepresentable {
             onChange()
         }
 
-        @objc func editingEndedOnExit(_ sender: UIView) {
+        @objc func editingEndedOnExit(_ sender: UITextField) {
             sender.resignFirstResponder()
             onChange()
         }
