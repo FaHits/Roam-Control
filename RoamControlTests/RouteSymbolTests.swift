@@ -3,10 +3,12 @@ import UIKit
 @testable import RoamControl
 
 final class RouteSymbolTests: XCTestCase {
-    func testLibrarySymbolExists() {
-        XCTAssertNotNil(
-            UIImage(systemName: RouteSymbol.library),
-            "\(RouteSymbol.library) is not a valid SF Symbol"
-        )
+    func testRouteSymbolsExist() {
+        for name in [RouteSymbol.library, RouteSymbol.open] {
+            XCTAssertNotNil(
+                UIImage(systemName: name),
+                "\(name) is not a valid SF Symbol"
+            )
+        }
     }
 }

@@ -273,7 +273,7 @@ private struct RouteLibraryRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            Image(systemName: route.isClosed ? RouteSymbol.library : "scribble")
+            Image(systemName: route.isClosed ? RouteSymbol.library : RouteSymbol.open)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.blue)
                 .frame(width: 32, height: 32)

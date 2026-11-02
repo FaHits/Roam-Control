@@ -4,4 +4,5 @@ import Foundation
 /// ship as an empty circle, and so the symbol is checked by a test instead of by eye.
 enum RouteSymbol {
     static let library = "point.topleft.down.to.point.bottomright.curvepath"
+    static let open = "scribble"
 }
