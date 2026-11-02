@@ -1,5 +1,5 @@
-// Safe public defaults. A checkout builds without analytics and without using
-// the repository owner's Apple development team.
+// Safe public defaults. A checkout builds without using the repository owner's
+// Apple development team, and nothing here configures any outbound reporting.
 DEVELOPMENT_TEAM =
 
 #include? "Local.private.xcconfig"

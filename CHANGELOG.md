@@ -4,11 +4,15 @@ All notable public changes to Roam Control are recorded here.
 
 ## [Unreleased]
 
-Roam Control 0.9.2 Preview - Build 58. Public validation preview; Beta 6 / Build 57 remains the recommended release until validation.
+Cleanup after 0.10.0, not yet released.
 
 ### Removed
 
 - Removed the unused `StatusCard` view and the telemetry keys in `RoamControl-Info.plist` and both `xcconfig` files; nothing has read them since the reporting path was deleted in Task 19.
+
+## 0.9.2 preview series (historical)
+
+Roam Control 0.9.2 Preview - Build 58. Public validation preview; Beta 6 / Build 57 remains the recommended release until validation.
 
 ### Fixed
 

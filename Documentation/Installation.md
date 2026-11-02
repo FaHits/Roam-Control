@@ -27,7 +27,7 @@ When updating, install the newer IPA over the existing copy. Deleting the app fi
 2. Select the Roam Control target and choose your own team under **Signing & Capabilities**.
 3. Select a connected iPhone and press **Run**.
 
-The tracked build configuration has no Apple team or TelemetryDeck destination. Xcode may save your selected team locally. Do not commit signing material or `Configuration/Local.private.xcconfig`.
+The tracked build configuration has no Apple team. Xcode may save your selected team locally. Do not commit signing material or `Configuration/Local.private.xcconfig`.
 
 The simulator can test the interface but cannot complete the physical iPhone pairing handshake or start a real location session.
 

@@ -118,15 +118,9 @@ Settings offers automatic, light and dark appearance plus standard, satellite an
 
 An active location session uses an iOS continued-processing task so it can remain reliable while Roam Control is in the background. iOS shows this task in the Dynamic Island and controls its presentation. You can swipe it up to keep it compact, but Roam Control continues to report task progress so iOS can keep the session running reliably.
 
-## Anonymous usage statistics
+## Data collection
 
-The final introduction page shows **Share Anonymous Usage Statistics** before setup completes. It is off by default and sends nothing unless you choose to switch it on. The choice can be changed at any time under **Settings → Privacy**.
-
-When enabled, Roam Control reports only a small fixed list of activity counts: the app opening or returning to the foreground, app version/build, completed onboarding or pairing, starting a fixed or walking session, updating an already-active location, connection-help prompts, manual retries and successful sessions after retry, and fixed failure-stage, scheduler-reason, operation and recoverable/terminal categories (pairing, location or restoration). No raw error messages are sent. Roam Control adds an event time for its self-hosted service; TelemetryDeck adds its own approximate event time. Roam Control never includes coordinates, place names, searches, favourites, history, routes, pairing records, PINs, Apple ID, device name or diagnostics.
-
-A random installation identifier is stored in local app storage and irreversibly hashed before sending. No per-launch session identifier is sent. Turning sharing off stops new reporting, cancels in-progress requests where possible and removes the local identifier, but it cannot withdraw anonymous events already received by either service. Configured beta builds send the same fixed event in parallel to Roam Control's maintainer-operated service and TelemetryDeck. The self-hosted HTTPS service necessarily receives ordinary connection metadata such as the source IP address, although it is not included in the event body. Daily maintenance deletes events older than 90 days from the live SQLite database; no fixed deletion schedule is promised for database backups or web-server access logs. TelemetryDeck says it does not store IP addresses and may retain anonymous events for roughly 7–10 years without guaranteeing an exact deletion date. Counts therefore describe participating installations rather than every installation.
-
-Open **Settings → Privacy → What Is Shared** for the same disclosure inside the app. The complete policy is in [Privacy](Privacy.md).
+Roam Control keeps no usage statistics and sends no analytics. The only network traffic is the local developer tunnel that drives location simulation and, when you tap the version check, a query to this repository's release feed; both are described in [Privacy](Privacy.md).
 
 ## Favourites, history and reset
 
@@ -134,7 +128,6 @@ Open **Settings → Privacy → What Is Shared** for the same disclosure inside 
 - History stores the 30 most recently used locations.
 - **Replay Introduction** shows onboarding without deleting anything.
 - **Reset Roam Control** removes pairing, favourites, history and preferences, then returns to onboarding.
-- Reset also removes the anonymous statistics identifier.
 - Resetting Roam Control does not uninstall or reconfigure LocalDevVPN.
 
 ## Troubleshooting

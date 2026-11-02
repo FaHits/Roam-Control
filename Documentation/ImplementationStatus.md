@@ -13,7 +13,7 @@
 > - 本地化：`613/613`、`2/2`、`All 615 keys have non-empty zh-Hans values.`（exit 0）。
 > - 静态验收：`StatusCard` 0 命中、`Configuration` 下 `Telemetry|TELEMETRY` 0 命中（均 exit 1）、符号字面量只剩 `RoamControl/Features/Routes/Views/RouteSymbol.swift:6`。
 > - 未验证项：本机无 macOS，构建与测试结论全部来自 CI；plist 只做 `plistlib` 静态解析；本次不改运行时行为，无真机验证项。
-> - 已知遗留：`Documentation/BuildAndRelease.md:92-93` 仍列三个已删遥测变量并引用已删除的 `UsageAnalyticsService.swift`（第 85-100 行整段过时），按任务书范围未动；下一窗口第一步就是决定是否清掉这段。
+> - 已知遗留（已在文档收尾提交中解决）：`Documentation/BuildAndRelease.md` 原「Privacy statistics configuration」整段与 `Documentation/UserGuide.md` 的匿名统计章节、`Documentation/RegressionChecklist.md` 的 12 条统计用例、`Documentation/Installation.md` 的 TelemetryDeck 措辞都还在描述 Task 19 已删除的功能；这四篇改为「不收集统计」的现状描述，`CHANGELOG` 的 `[Unreleased]` 与 0.9.2 历史段分开。
 
 - 功能：手绘闭环路线与拟人跑步模拟
 - 当前分支：`feat/manual-running-routes`
