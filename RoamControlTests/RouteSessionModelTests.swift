@@ -321,6 +321,67 @@ final class RouteSessionModelTests: XCTestCase {
         XCTAssertTrue(droppedModel.locksRouteInput)
         XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
     }
+
+    // MARK: - Carrying a run across measuring conventions
+
+    func testContinueAfterFinishOnOpenRouteStaysWhereTheRunEnded() throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        model.deviceSessionIsActive = { _ in true }
+        let geometry = try RouteGeometry(points: openRoute.points, isClosed: openRoute.isClosed)
+        try model.prepare(route: openRoute, profile: steadyProfile(), mode: .once, progress: zeroProgress)
+        model.debugBeginRunning()
+
+        let ended = try XCTUnwrap(model.debugTick(delta: geometry.totalDistance))
+        XCTAssertEqual(ended.phase, .finished)
+        model.debugSetPhase(.finished)
+
+        let endCoordinate = try XCTUnwrap(model.snapshot).groundCoordinate
+        model.continueAfterFinish(additionalLaps: 1, using: appModel)
+
+        // The return trip measures backwards from the far end, so the run has to come back to the
+        // point it stopped at, not to the route's first point.
+        let continued = try XCTUnwrap(model.snapshot)
+        XCTAssertEqual(continued.groundCoordinate.latitude, endCoordinate.latitude, accuracy: 1e-6)
+        XCTAssertEqual(continued.groundCoordinate.longitude, endCoordinate.longitude, accuracy: 1e-6)
+        XCTAssertEqual(continued.totalDistance, geometry.totalDistance, accuracy: 1e-6)
+        XCTAssertEqual(continued.completedLaps, 1)
+    }
+
+    func testContinueAfterFinishOnOpenRouteKeepsRunningAfterOneTick() throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        model.deviceSessionIsActive = { _ in true }
+        let geometry = try RouteGeometry(points: openRoute.points, isClosed: openRoute.isClosed)
+        try model.prepare(route: openRoute, profile: steadyProfile(), mode: .once, progress: zeroProgress)
+        model.debugBeginRunning()
+        _ = model.debugTick(delta: geometry.totalDistance)
+        model.debugSetPhase(.finished)
+
+        model.continueAfterFinish(additionalLaps: 1, using: appModel)
+        let ticked = try XCTUnwrap(model.debugTick(delta: 10))
+
+        XCTAssertEqual(model.phase, .running)
+        XCTAssertEqual(ticked.phase, .running)
+        XCTAssertEqual(ticked.completedLaps, 1)
+        XCTAssertGreaterThan(ticked.distanceInLap, 0)
+        XCTAssertLessThan(ticked.distanceInLap, geometry.totalDistance)
+    }
+
+    func testCarriedProgressKeepsConventionAcrossModes() {
+        let finishedLap = RouteRunProgress(distanceInLap: 120, completedLaps: 1, elapsedTime: 60)
+
+        // Same convention: the distance stays where it is.
+        XCTAssertEqual(RouteSessionModel.carriedProgress(finishedLap, from: .once, to: .laps(2)), finishedLap)
+        XCTAssertEqual(RouteSessionModel.carriedProgress(finishedLap, from: .laps(2), to: .laps(4)), finishedLap)
+
+        // A finished open route re-bases to the far end: the return trip starts there.
+        let finishedOpen = RouteRunProgress(distanceInLap: 1_200, completedLaps: 1, elapsedTime: 600)
+        let rebased = RouteSessionModel.carriedProgress(finishedOpen, from: .once, to: .outAndBack(trips: 2))
+        XCTAssertEqual(rebased.distanceInLap, 0)
+        XCTAssertEqual(rebased.completedLaps, 1)
+        XCTAssertEqual(rebased.elapsedTime, 600)
+    }
 }
 
 private struct StubPairingService: PairingService {

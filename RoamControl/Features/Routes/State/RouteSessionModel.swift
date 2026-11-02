@@ -326,7 +326,7 @@ final class RouteSessionModel {
                 geometry: geometry,
                 profile: profile,
                 mode: nextMode,
-                progress: progress(of: runner.snapshot)
+                progress: Self.carriedProgress(progress(of: runner.snapshot), from: mode, to: nextMode)
             )
         } catch {
             errorMessage = String(localized: "The run could not continue. Restore this iPhone's location and start the route again.")
@@ -397,6 +397,24 @@ final class RouteSessionModel {
                 endsAtStart: total % 2 == 0
             )
         }
+    }
+
+    /// Re-bases a carried run when the extension changes the measuring convention. A finished
+    /// open-route `.once` ends with `distanceInLap == lapLength`, but the follow-up `.outAndBack`
+    /// return trip measures backwards from the far end, so carrying that distance would place the
+    /// new runner at the start and finish the extra trip on its first tick. Same-convention
+    /// upgrades (`.once` → `.laps`, `.laps` → `.laps`, `.outAndBack` → `.outAndBack`) keep it.
+    static func carriedProgress(
+        _ progress: RouteRunProgress,
+        from: RouteRunMode,
+        to: RouteRunMode
+    ) -> RouteRunProgress {
+        guard case .once = from, case .outAndBack = to else { return progress }
+        return RouteRunProgress(
+            distanceInLap: 0,
+            completedLaps: progress.completedLaps,
+            elapsedTime: progress.elapsedTime
+        )
     }
 
     func stop(using appModel: AppModel) {
