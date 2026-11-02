@@ -180,7 +180,7 @@ final class RouteSessionModel {
         switch phase {
         case .preparing, .running, .paused, .stopping:
             return
-        case .idle, .holding, .failed:
+        case .idle, .holding, .finished, .failed:
             break
         }
         guard case .paired = appModel.pairingStatus else {
@@ -533,6 +533,18 @@ final class RouteSessionModel {
         case .running, .finished:
             break
         }
+    }
+
+    /// Ends the run: movement stops and the recovery record turns back into a fixed location.
+    private func finish(at target: LocationTarget, using appModel: AppModel) {
+        cancelMovement()
+        phase = .finished
+        appModel.finishActiveRouteRecovery(at: target)
+    }
+
+    private func cancelMovement() {
+        movementTask?.cancel()
+        movementTask = nil
     }
 
     /// The injected coordinate the session is already holding, so a hold or a continuation keeps
