@@ -20,12 +20,6 @@ enum MapSearchQuery {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
 
-        if let last = segments.last, segments.count >= 2 {
-            return last
-        }
-        if let only = segments.first {
-            return only
-        }
-        return raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return segments.last ?? ""
     }
 }
