@@ -4,6 +4,14 @@
 
 ## 当前交接
 
+> 2026-11-02 Task 26 版本收尾：0.11.0 / 63。`RoamControl.xcodeproj/project.pbxproj` 四处改 `CURRENT_PROJECT_VERSION = 63`、`MARKETING_VERSION = 0.11.0`；`RouteSymbol` 收编最后一个字面量（新增 `static let open = "scribble"`，`RoamControl/Features/Routes/Views/RouteLibraryView.swift:276` 改用 `RouteSymbol.open`，`RouteSymbolTests` 由 `testLibrarySymbolExists` 扩成 `testRouteSymbolsExist` 循环校验两个常量，用例总数不变）；`CHANGELOG.md` 新增 `## [0.11.0] - 待发布（真机验收进行中）` 段，并把原 `[Unreleased]` 里那条 Removed 收进同一段的 `### Removed`（不留空段）；`Documentation/RegressionChecklist.md` 新增 `0.11.0 device regression` 10 条勾选项；`Documentation/UserGuide.md` 在「Choose a location」「Walking routes」两节内补海外地点搜索、`Run Profile`、保持位置、接着跑四段。未改 README / `VERSIONING.md` / 坐标换算 / `HumanizedMotionModel` / `RunProfile` 实现，未打 tag、未建 release。
+>
+> - 测试：188 → 188（本次未新增用例；仅把既有符号测试扩成两个常量的循环断言）。
+> - 本地门禁：`PYTHONUTF8=1 python scripts/check_localizations.py` → `638/638`、`2/2`、`All 640 keys have non-empty zh-Hans values.`（exit 0）；坐标 grep 8；两条架构 rg 0 命中；pbxproj 内 `0.9.2` / `= 61;` / `0.10.0` 均 0 命中。
+> - 规格冲突一处：`rg -n '"scribble"' RoamControl` 实测 **1** 命中，命中行就是新增的 `RoamControl/Features/Routes/Views/RouteSymbol.swift:7` 常量本身；`--glob '!**/RouteSymbol.swift'` 后 0 命中（调用点已全部收编）。「归零」与「把字面量搬进该 enum」两条要求互斥，此处按「调用点归零 + 字面量唯一」交付。
+> - CI（head `c6cf2bd`，run `41464810087`）：`test` / `unsigned-ipa` / `unsigned-ipa-debug` 三 job 全 success，188 用例 0 失败，产物 `RoamControl-unsigned-ipa` 3,145,949 字节、`RoamControl-unsigned-debug-ipa` 4,759,147 字节。
+> - 未验证：`Documentation/RegressionChecklist.md` 的 0.11.0 真机十项，未执行。
+
 > 2026-11-02 Task 23 实现：拟人化运动 v2。速度模型改为「目标速度 × 起跑爬升 × 体力衰减 × 收尾减速 × (1 + 波动)」，最后 clamp ≥ 0.3 m/s，仍只依赖 `(elapsed, profile, remainingDistance)`，不读时钟。`RunProfile` 新增 `rampDuration`（默认 20 s，0...60）、`fatiguePerMinute`（默认 0.018，0...0.05）、`cooldownDistance`（默认 120 m，0...300）、`minSpeedFraction`（默认 0.6，0.1...1.0，不进设置界面），四个字段全部 `decodeIfPresent` + 默认值，旧 `routeRunProfile` 与 `SessionRecoveryRecord.runProfile` 解出来等于默认值；`validate()` 新增四种错误。`HumanizedMotionModel.speedMetersPerSecond` 改三参签名（旧二参版删除，全仓只剩新签名），`RouteRunner` 在构造与 `advance` 时按 `targetLaps × lapLength − coveredDistance` 传剩余距离，`.continuous` 传 `nil`。设置界面：常用区「速度 / 像人的程度 / 体力衰减 / 起跑爬升」，高级折叠区（默认收起）「步频 / 步频波动 / GPS 抖动 / 收尾减速 / seed」。`Localizable.xcstrings` 626 → 634 key。
 >
 > - 测试：168 → 178。新增 `HumanizedMotionModelTests` 7 例（`testRampStartsAtThirtyPercentAndReachesTarget`、`testRampIsMonotonicNonDecreasing`、`testFatigueDropsAboutEighteenPercentOverTenMinutes`、`testFatigueNeverFallsBelowMinSpeedFraction`、`testCooldownOnlyAppliesInsideTheFinalMetres`、`testContinuousRunNeverCooldowns`、`testSpeedStaysPositiveAndDeterministic`）、`RunProfileTests` 2 例（`testNewMotionFieldsDefaultWhenDecodingAnOlderProfile`、`testMotionFieldRangesAreValidated`）、`RouteRunnerTests` 1 例（`testCoolDownSlowsTheFinalMetresOfALap`，验证调用点确实把剩余距离传进模型）。既有速度断言按新公式重写（`assertBounds` 现在乘三层包络），三个测试文件的 `steadyProfile` 显式关掉三层包络以保持稳态语义。
@@ -1162,4 +1170,38 @@
 - 未验证项：真机上的搜索观感、海外地名的实际命中率、`cameraPosition.region` 在缩放/拖动后的偏置是否合适、关闭开关后世界范围兜底是否仍让 completer 轻微偏向赤道附近，均登记到第 7 节随 Task 14 B 段验收
 - 已知风险：`MKLocalSearchCompleter.region` 无法真正「无区域」，关闭态只能写世界范围近似复原；`selectSuggestion` 在开启时只用 `title`，若 `title` 本身不含城市而同名地点很多，仍可能出现歧义
 - 下一步：下一窗口先读本文件与计划章节；Task 25 的真机项随 Task 14 B 段验收
+- 更新时间：2026-11-02
+
+### 2026-11-02 Task 26：版本收尾与交付物（0.11.0 / 63）
+
+- 任务：Task 26 - 版本收尾与交付物（用户直接指令即任务规格，实施计划文件无对应章节）
+- 状态：`implemented`（head `c6cf2bd` 的 CI run `41464810087` 三 job 全绿、188 用例 0 失败；本记录所在提交只改文档，其 run 由规划会话复核）
+- 分支与基线：`feat/manual-running-routes`，起点 HEAD `49e242a`（188 用例、640 key、0.10.0 / 62）
+- 版本：`0.11.0` / `63`。**未打 tag、未建 release**——这两步由规划会话在真机验收通过后执行
+- 修改文件：`RoamControl.xcodeproj/project.pbxproj`（4 处）、`RoamControl/Features/Routes/Views/RouteSymbol.swift`（+1 行常量）、`RoamControl/Features/Routes/Views/RouteLibraryView.swift`（1 行改常量）、`RoamControlTests/RouteSymbolTests.swift`（既有用例扩成双常量循环）、`CHANGELOG.md`、`Documentation/RegressionChecklist.md`、`Documentation/UserGuide.md`、本文件
+- 本次范围：版本号、`RouteSymbol` 收编、CHANGELOG 0.11.0 正式段、状态记录、真机回归 10 条、用户指南四处补充
+- 明确不做：不改 `README.md`（`Current release: 0.10.0 (62)` 在发布前仍是事实）、不打 tag、不建 release、不改 `VERSIONING.md`、不动坐标换算、不动 `HumanizedMotionModel` / `RunProfile` 实现（Task 23 已定稿）、不新增第三方依赖、不动 GitHub 设置
+- 门禁（逐条实测）
+
+| # | 门禁 | 结果 |
+| --- | --- | --- |
+| 1 | `rg -n "MARKETING_VERSION\|CURRENT_PROJECT_VERSION" RoamControl.xcodeproj/project.pbxproj` | pass：4 行，`:248` / `:273` = `63`，`:253` / `:278` = `0.11.0` |
+| 2 | 全量测试 | pass：188 用例（与基线一致），`test` job 0 失败、`** TEST SUCCEEDED **` |
+| 3 | CI 三 job | pass：`test` 9m41s、`unsigned-ipa` 1m30s、`unsigned-ipa-debug` 1m04s 全 success |
+| 4 | 两个产物 | pass：`RoamControl-unsigned-ipa` id `13152705256` / 3,145,949 字节；`RoamControl-unsigned-debug-ipa` id `13153111217` / 4,759,147 字节 |
+| 5 | `PYTHONUTF8=1 python scripts/check_localizations.py` | pass：`638/638`、`InfoPlist 2/2`、`All 640 keys have non-empty zh-Hans values.`，exit 0 |
+| 6 | `rg -n '"scribble"' RoamControl` | **1 命中**（= `RouteSymbol.swift:7` 常量本身）；排除该文件后 0 命中。规格「归零」与「字面量搬进 enum」互斥，按调用点归零交付 |
+| 7 | 坐标 grep（`gcj02ToWGS84\|offsetDegrees\|coordinateOffset`） | pass：8（与基线一致） |
+| 8 | 两条架构 grep（Routes/Core + Models） | pass：均 0 命中 |
+| 9 | `rg -n "0\.9\.2\|= 61;" RoamControl.xcodeproj/project.pbxproj` | pass：0 命中 |
+| 10 | `rg -n "0\.10\.0" RoamControl.xcodeproj/project.pbxproj` | pass：0 命中（版本已升） |
+| 11 | `README.md` 未改 | pass：`git diff --name-only` 不含该文件 |
+
+- 新增测试：无。`RoamControlTests/RouteSymbolTests.swift` 的 `testLibrarySymbolExists` 改名为 `testRouteSymbolsExist`，断言体改为 `for name in [RouteSymbol.library, RouteSymbol.open]` 的循环，用例总数仍 188
+- 提交：`c6cf2bd`（`feat(routes): name the open-route symbol and bump to 0.11.0 (63)`，4 文件 +13 / −10）；文档收尾提交见 `git log -1 --stat`
+- CHANGELOG 数据处理：原 `## [Unreleased]` 段只有「Cleanup after 0.10.0, not yet released.」和一条 Removed；按「它属于 0.11.0 的一部分，不要单独留空段」的要求，该 Removed 条目原文收进 0.11.0 的 `### Removed`，`[Unreleased]` 段头一并移除
+- CI：run [41464810087](https://github.com/FaHits/Roam-Control/actions/runs/41464810087)（head `c6cf2bd`）`conclusion=success`；`test` 14:44:31Z→14:54:12Z（188 行 `Test case … passed`、0 行 `failed`、Debug 与 Release 均 `** BUILD SUCCEEDED **`）、`unsigned-ipa` 14:54:15Z→14:55:45Z、`unsigned-ipa-debug` 14:54:19Z→14:55:23Z
+- 未验证项：`Documentation/RegressionChecklist.md` 的 `0.11.0 device regression` 10 条（跑完三出口、暂停三出口、保持 3 分钟坐标不动、保持中接着跑、闭环接着跑趟数与回程方向、开放接着跑不瞬移、起跑 20 秒加速、最后 120 m 减速、15 分钟长跑掉速、搜索开关开/关对照）全部**未执行**，无真机、无截图能力，留待规划会话实机批量验收
+- 已知风险：11.0 的 CHANGELOG 段头写「待发布（真机验收进行中）」，发布时需要规划会话把它改成实际发布日期；`README.md` 的 `Current release` 行同理
+- 下一步：规划会话实机验收 → 改 README 与 CHANGELOG 段头 → 打 tag / 建 release
 - 更新时间：2026-11-02

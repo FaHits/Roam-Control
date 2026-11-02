@@ -79,6 +79,19 @@ Use this checklist before packaging an IPA or declaring a development build stab
 - [ ] New Location allows a new destination without restoring the real location first.
 - [ ] Stop & Restore requires confirmation and restores the real location.
 
+## 0.11.0 device regression
+
+- [ ] A finished run shows three exits: Hold Here, Continue Run and Finish & Restore.
+- [ ] A paused run shows three exits: Resume, Hold Here and Stop & Restore.
+- [ ] Three minutes after Hold Here the map point has not moved and Find My on the device still reports that point.
+- [ ] Continue Run while holding resumes from the current point and adds to the completed trip count.
+- [ ] A closed route run once and then continued shows 2 laps, and the return leg runs in the correct direction.
+- [ ] An open route run once and then continued walks back from the far end without jumping to the start.
+- [ ] Speed climbs from slow to the target value within the first 20 seconds, visible on the run card.
+- [ ] The last 120 m before the finish are clearly slower.
+- [ ] A run longer than 15 minutes drifts slowly slower.
+- [ ] With Settings → Search on, overseas places are searchable; with it off, search behaves as it does in 0.10.0.
+
 ## Recovery
 
 - [ ] Force-closing during a fixed session shows interrupted-session recovery on relaunch.

@@ -26,6 +26,8 @@ Use any of these methods:
 - Open the heart/list button to choose a favourite or recent location.
 - Use **Resume** when Roam Control offers the last used location.
 
+**Settings → Search** contains a switch called **Search places outside China**. With it on, searches are biased towards the map area you are looking at, English and local-language queries are accepted, and each result names its country or region. With it off, search behaves as it does in 0.10.0 and stays limited to places inside China.
+
 Choosing a search result clears the search box automatically. The close button on a selected-location card clears a dropped pin or selection. The copy button copies the readable place and address.
 
 ## Start a fixed location
@@ -72,10 +74,13 @@ Only startup needs this temporary change. After the secure location session is a
 4. Choose a walking pace.
 5. Tap **Start Walking**.
 
+Starting a run opens **Run Setup**, which shows the route and how it repeats together with a **Run Profile** card with **Speed**, **Human Likeness**, **Fatigue** and **Ramp-Up**. **Advanced** holds cadence, cadence variation, GPS jitter, cool-down distance and the noise seed. The defaults are a 20-second ramp-up, 1.8% of speed lost per minute and a cool-down over the last 120 m, so a run no longer holds one flat pace.
+
 During the walk:
 
 - **Pause** holds the current simulated point.
 - **Resume** continues from that point.
+- **Hold Here** keeps the simulated location at the paused point: movement stops and the iPhone keeps reporting that place. **Resume From Here** carries on from the same point.
 - The walk can continue while another app is in front.
 - **Stop & Restore** ends the walk and restores the real location after confirmation.
 
@@ -84,6 +89,8 @@ At the destination:
 - **Walk Route Back** reverses the journey.
 - **New Location** keeps the active connection and lets you choose another destination.
 - **Stop & Restore** ends the session and restores the real location.
+
+A finished run offers **Hold Here**, **Continue Run** and **Finish & Restore**. **Continue Run** carries on along the same route from where it ended and adds to the count: a closed route run once continues as a second lap, and an open route run once walks back from the far end instead of restarting. Holding a run across an app restart is not supported yet; that is planned for the next release.
 
 For UK regional settings, short distances are shown in yards and longer distances in miles.
 

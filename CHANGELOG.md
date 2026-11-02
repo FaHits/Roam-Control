@@ -2,9 +2,23 @@
 
 All notable public changes to Roam Control are recorded here.
 
-## [Unreleased]
+## [0.11.0] - 待发布（真机验收进行中）
 
-Cleanup after 0.10.0, not yet released.
+### Added
+
+- Five session states: running, paused, held, finished and finishing. A paused or finished run can either hold the simulated location where it stopped — the device keeps reporting that point and stops advancing — or finish and restore the real location.
+- Continue Run: a finished or held run can carry on along the same route, and the trip and lap counters continue from what was already done — a `.once` closed route continues as `.laps(2)`, an open route as `.outAndBack(trips: 2)`. Holding across an app restart is planned for the next release.
+- Humanised motion v2: ramp-up from 30% to full speed over the first 20 seconds, fatigue drift of 1.8% per minute (floored at 60% of the target), and a cool-down that ends at 35% speed over the last 120 m, on top of the existing smoothed speed variation. Run Setup keeps Speed, Human Likeness, Fatigue and Ramp-Up in the Run Profile card and moves Cadence, Cadence Variation, GPS Jitter, Cool-Down and the noise seed into the Advanced disclosure.
+- The route library is a grouped list now: each section carries its count, and every row shows an icon, the route name, the distance or route type, and the update time, matching the saved-places screen.
+- Settings → Search: an overseas place search switch. With it on, searches are biased to the current map region, English and local-language queries are accepted, and each result names its country or region.
+
+### Changed
+
+- Renaming goes through the shared `RenameSheet`, so the route screen and the saved-places screen use one implementation that keeps the marked text of Chinese input methods.
+
+### Fixed
+
+- Continuing a finished `.once` open route no longer jumps back to the start and ends at once; progress restarts under the new mode's accounting.
 
 ### Removed
 
