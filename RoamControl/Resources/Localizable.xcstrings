@@ -4065,6 +4065,22 @@
         }
       }
     },
+    "No matching place found. If this is an overseas place, turn on Search places outside China in Settings.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matching place found. If this is an overseas place, turn on Search places outside China in Settings."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有找到匹配地点。如果是海外地点，可以在设置里开启海外地点搜索。"
+          }
+        }
+      }
+    },
     "Ran %lld laps. Adding %lld more makes %lld laps in total.": {
       "localizations": {
         "en": {
@@ -7249,6 +7265,22 @@
         }
       }
     },
+    "Search places outside China": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search places outside China"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索中国以外的地点"
+          }
+        }
+      }
+    },
     "Search, choose or drop a location.": {
       "localizations": {
         "en": {
@@ -7277,6 +7309,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "搜索、收藏、历史或路线"
+          }
+        }
+      }
+    },
+    "Searches overseas places in English or the local language and centers results on the matching country.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Searches overseas places in English or the local language and centers results on the matching country."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开启后会用英文或当地语言查询海外地点，并把结果定位到对应国家。"
           }
         }
       }

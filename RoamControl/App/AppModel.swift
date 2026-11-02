@@ -10,6 +10,7 @@ final class AppModel {
     private static let historyKey = "locationHistory"
     private static let appearanceKey = "appAppearance"
     private static let mapDisplayStyleKey = "mapDisplayStyle"
+    private static let overseasPlaceSearchKey = "overseasPlaceSearchEnabled"
     private static let activeSessionRecoveryKey = "activeSessionRecovery"
 
     private let preferences: UserDefaults
@@ -24,6 +25,7 @@ final class AppModel {
     private(set) var locationHistory: [LocationTarget]
     private(set) var appearance: AppAppearance
     private(set) var mapDisplayStyle: MapDisplayStyle
+    private(set) var overseasPlaceSearchEnabled: Bool
     private(set) var interruptedSession: SessionRecoveryRecord?
     private(set) var isRestoringInterruptedSession = false
     private(set) var interruptedSessionError: String?
@@ -58,6 +60,7 @@ final class AppModel {
         self.mapDisplayStyle = MapDisplayStyle(
             rawValue: preferences.string(forKey: Self.mapDisplayStyleKey) ?? ""
         ) ?? .standard
+        self.overseasPlaceSearchEnabled = preferences.bool(forKey: Self.overseasPlaceSearchKey)
         self.interruptedSession = Self.recoveryRecord(in: preferences)
 
         deviceSession.onPhaseChange = { [weak self] phase in
@@ -145,6 +148,11 @@ final class AppModel {
         preferences.set(style.rawValue, forKey: Self.mapDisplayStyleKey)
     }
 
+    func setOverseasPlaceSearchEnabled(_ enabled: Bool) {
+        overseasPlaceSearchEnabled = enabled
+        preferences.set(enabled, forKey: Self.overseasPlaceSearchKey)
+    }
+
     func completeOnboarding() {
         preferences.set(true, forKey: Self.onboardingKey)
         shouldPresentDeviceSetup = true
@@ -171,6 +179,7 @@ final class AppModel {
         locationHistory = []
         appearance = .automatic
         mapDisplayStyle = .standard
+        overseasPlaceSearchEnabled = false
         interruptedSession = nil
         activeSessionRecovery = nil
         isRestoringInterruptedSession = false

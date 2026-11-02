@@ -456,6 +456,7 @@ struct HomeView: View {
             }
         }
         .task {
+            mapModel.overseasPlaceSearchEnabled = appModel.overseasPlaceSearchEnabled
             await appModel.restorePairingStatus()
             if let interruptedLocation = appModel.interruptedSession?.lastReportedLocation {
                 mapModel.center(on: interruptedLocation)
@@ -523,6 +524,9 @@ struct HomeView: View {
             shouldRefreshRealLocationWhenActive = false
             guard case .idle = appModel.deviceSession.phase else { return }
             mapModel.showRealLocationAfterSession()
+        }
+        .onChange(of: appModel.overseasPlaceSearchEnabled) { _, enabled in
+            mapModel.overseasPlaceSearchEnabled = enabled
         }
         .sheet(isPresented: $isShowingDeviceSetup) {
             PairingSetupView()

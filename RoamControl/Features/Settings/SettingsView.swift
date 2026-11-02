@@ -57,6 +57,14 @@ struct SettingsView: View {
                     Text("Close the app and open it again to apply the new language.")
                 }
 
+                Section {
+                    Toggle("Search places outside China", isOn: overseasPlaceSearchBinding)
+                } header: {
+                    Text("Search")
+                } footer: {
+                    Text("Searches overseas places in English or the local language and centers results on the matching country.")
+                }
+
                 Section("Device") {
                     NavigationLink {
                         ConnectionHealthView()
@@ -271,6 +279,13 @@ struct SettingsView: View {
         Binding(
             get: { appModel.mapDisplayStyle },
             set: appModel.setMapDisplayStyle
+        )
+    }
+
+    private var overseasPlaceSearchBinding: Binding<Bool> {
+        Binding(
+            get: { appModel.overseasPlaceSearchEnabled },
+            set: appModel.setOverseasPlaceSearchEnabled
         )
     }
 

@@ -12,6 +12,12 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
     var isFindingRealLocation = false
     var errorMessage: String?
     var cameraPosition: MapCameraPosition
+    var overseasPlaceSearchEnabled = false {
+        didSet {
+            guard oldValue != overseasPlaceSearchEnabled else { return }
+            applyOverseasSearchRegion()
+        }
+    }
 
     @ObservationIgnored
     private let searchCompleter = MKLocalSearchCompleter()
@@ -66,6 +72,9 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
             return
         }
 
+        if overseasPlaceSearchEnabled {
+            applyOverseasSearchRegion()
+        }
         searchCompleter.queryFragment = trimmedQuery
     }
 
@@ -110,9 +119,11 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
         searchQuery = suggestion.title
         searchSuggestions = []
 
-        let query = [suggestion.title, suggestion.subtitle]
-            .filter { !$0.isEmpty }
-            .joined(separator: ", ")
+        let query = overseasPlaceSearchEnabled
+            ? suggestion.title
+            : [suggestion.title, suggestion.subtitle]
+                .filter { !$0.isEmpty }
+                .joined(separator: ", ")
         await performSearch(for: query)
     }
 
@@ -238,19 +249,24 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
     }
 
     private func performSearch(for query: String) async {
-
         isSearching = true
         errorMessage = nil
         searchSuggestions = []
         defer { isSearching = false }
 
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = query
+        let normalizedQuery = overseasPlaceSearchEnabled
+            ? MapSearchQuery.normalized(query, overseas: true)
+            : query
 
         do {
-            let response = try await MKLocalSearch(request: request).start()
-            guard let item = response.mapItems.first else {
-                errorMessage = String(localized: "No matching place found.")
+            var item = try await firstMapItem(for: normalizedQuery)
+            if item == nil, overseasPlaceSearchEnabled, normalizedQuery != query {
+                item = try await firstMapItem(for: query)
+            }
+            guard let item else {
+                errorMessage = overseasPlaceSearchEnabled
+                    ? String(localized: "No matching place found.")
+                    : String(localized: "No matching place found. If this is an overseas place, turn on Search places outside China in Settings.")
                 return
             }
 
@@ -275,6 +291,30 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
         } catch {
             errorMessage = String(localized: "Search is unavailable right now.")
         }
+    }
+
+    private func firstMapItem(for query: String) async throws -> MKMapItem? {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        if overseasPlaceSearchEnabled, let region = cameraPosition.region {
+            request.region = region
+            request.regionPriority = .default
+        }
+        return try await MKLocalSearch(request: request).start().mapItems.first
+    }
+
+    private var overseasSearchRegion: MKCoordinateRegion? {
+        guard overseasPlaceSearchEnabled else { return nil }
+        return cameraPosition.region
+    }
+
+    private func applyOverseasSearchRegion() {
+        // MKLocalSearchCompleter.region cannot be unset, so a world span is the
+        // neutral value once the preference is turned off.
+        searchCompleter.region = overseasSearchRegion ?? MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+            span: MKCoordinateSpan(latitudeDelta: 180, longitudeDelta: 360)
+        )
     }
 
     private func selectCoordinate(
@@ -402,13 +442,24 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
             item.address?.fullAddress
         ]
 
+        var detail = "Location details unavailable"
         for candidate in candidates {
-            let detail = candidate?.trimmingCharacters(in: invisibleCharacters) ?? ""
-            if !detail.isEmpty {
-                return detail
+            let value = candidate?.trimmingCharacters(in: invisibleCharacters) ?? ""
+            if !value.isEmpty {
+                detail = value
+                break
             }
         }
-        return "Location details unavailable"
+
+        guard overseasPlaceSearchEnabled else { return detail }
+
+        let region = item.addressRepresentations?.regionName ?? item.placemark.country
+        guard
+            let region,
+            !region.isEmpty,
+            !detail.localizedCaseInsensitiveContains(region)
+        else { return detail }
+        return "\(detail), \(region)"
     }
 
     private func requestCurrentLocation(
