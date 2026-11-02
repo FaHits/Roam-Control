@@ -1098,3 +1098,36 @@
 - 产物：`RoamControl-unsigned-ipa` id `13134752774` / 3,133,817 字节；`RoamControl-unsigned-debug-ipa` id `13133259940` / 4,740,494 字节
 - 未验证项：开放路线接跑的真机表现（回程是否从终点平滑往回走、弹层终点说明与实际一致）登记第 7 节
 - 更新时间：2026-11-02
+
+### 2026-11-02 Task 24：路线页与共享重命名弹层
+
+- 任务：Task 24 - 路线页列表重做 + 地点页改用共享 `RenameSheet`
+- 状态：`implemented`（head `fc433bd` 的 CI run `41447216090` 三 job 全绿、182 用例 0 失败）
+- 分支与基线：`feat/manual-running-routes`，起点 HEAD `80d0e41`（178 用例、636 key、0.10.0 / 62）
+- 修改文件：新增 `RoamControl/Features/Shared/RenameSheet.swift`（`RenameSheetModel` 纯逻辑 + `RenameSheet` 视图 + `UITextField` 包装）、`RoamControlTests/RenameSheetModelTests.swift`；改 `RoamControl/Features/Routes/Views/RouteLibraryView.swift`、`RoamControl/Features/Map/SavedPlacesView.swift`、`RoamControl/Resources/Localizable.xcstrings`（新增 `My Routes`）。未改：`RouteNameValidator`、路线库模型与存储、坐标适配层、版本 `0.10.0` / `62`、CI workflow
+- 语义落地：校验只在 `RenameSheetModel`（`trimmedName` / `canSubmit` / `submit()`），视图不写判断；空名禁止提交，改成同名允许提交；两个页面的私有重命名实现全部删掉，路线页的 `RouteRenameSheet`、`RouteRenameTextFieldHandle`、`RouteRenameTextField`（旧 290-398 行）连根移除，`UITextField` 只剩共享包装一处
+- 列表重做：`.listStyle(.insetGrouped)`，`Section` 标题 `My Routes` + 右侧数量；行结构对齐 `SavedPlaceRow`（32pt tinted 圆角图标、headline 标题、`327 m · 闭合` 副标题、`更新于 …` caption、右侧 chevron，跑动中换 `lock.fill`）；空态 `EmptyRouteRow` 放进 Section 内；侧滑保持 Rename 蓝 / Delete 红，Delete 仍走原有确认 alert 且 `allowsFullSwipe: false`
+- 门禁（逐条实测）
+
+| # | 门禁 | 结果 |
+| --- | --- | --- |
+| 1 | `PYTHONUTF8=1 python scripts/check_localizations.py` | pass：`635/635`、`InfoPlist 2/2`、`All 637 keys have non-empty zh-Hans values.`，exit 0 |
+| 2 | `rg -n "UITextField" RoamControl` | pass：只剩 `RenameSheet.swift` 一个文件（5 行：89/107/108/134/150） |
+| 3 | `rg -n "RouteRenameSheet" RoamControl` | pass：0 命中 |
+| 4 | `rg -n '\.alert\("Rename' RoamControl` | pass：0 命中 |
+| 5 | `rg -n "gcj02ToWGS84\|offsetDegrees\|coordinateOffset" RoamControl \| wc -l` | pass：8（与起点一致） |
+| 6 | `git diff --check` / `git status --short` | pass：无空白错误；提交范围仅本任务 5 个文件 |
+| 7 | 版本 | pass：`MARKETING_VERSION = 0.10.0`、`CURRENT_PROJECT_VERSION = 62` 未动 |
+| 8 | 全量测试 + Debug/Release 构建 | pass：run `41447216090` 的 `test` job 182 用例 0 失败、`** TEST SUCCEEDED **`、Debug 与 Release 均 `** BUILD SUCCEEDED **` |
+
+- 新增测试：4 例，全量 178 → 182。`RenameSheetModelTests`：`testRenameSheetModelRejectsWhitespaceOnlyName`（`" 
+	 "` → `trimmedName` 空、`canSubmit == false`、`submit() == nil`）、`testRenameSheetModelTrimsSurroundingWhitespace`（`"  Riverside Loop
+"` → `submit() == "Riverside Loop"`）、`testRenameSheetModelAllowsRenamingToTheSameName`（初始名未改也能提交）、`testRenameSheetModelKeepsSubmittedNameWhenValid`（`"Hill Repeats"` 三处一致）
+- 提交：`dc858a3`（`feat(routes): share the rename sheet and rebuild the route library list`，5 文件 +310 / −178）、`fc433bd`（`fix(routes): keep the shared rename field typed as a text field`，1 文件 +4 / −4）
+- 返工记录：首个 push `dc858a3` 的 run `41446990089` 在 `test` job 编译失败（exit 65）：包装层把控件声明成 `UIView`，而 `textRange(from:to:)` / `text(in:)` 属 `UITextInput`，`UIView` 上没有这些成员，共 4 条 error。`fc433bd` 把 `RenameTextFieldHandle.field`、`makeUIView` / `updateUIView` 参数、`editingEndedOnExit` 的形参都改为 `UITextField`，`UITextField` 字样仍只出现在 `RenameSheet.swift`
+- CI：run [41447216090](https://github.com/FaHits/Roam-Control/actions/runs/41447216090)（head `fc433bd`）`conclusion=success`。`test` 12:45:02Z→12:51:10Z（6m08s，182 行 `Test case … passed`、0 行 `failed`、`** TEST SUCCEEDED **`、Debug 与 Release 均 `** BUILD SUCCEEDED **`）；`unsigned-ipa` 12:51:13Z→12:52:05Z success；`unsigned-ipa-debug` 12:51:13Z→12:52:13Z success
+- 产物（取自 run `41447216090`）：Release IPA artifact `RoamControl-unsigned-ipa` id `13142932998` / 3,140,090 字节；Debug IPA artifact `RoamControl-unsigned-debug-ipa` id `13143755384` / 4,746,258 字节；字节取自 `gh api repos/FaHits/Roam-Control/actions/runs/41447216090/artifacts` 的 `size_in_bytes`，unsigned IPA 字节不可复现，artifact 保留 14 天
+- 未验证项：列表观感与地点页是否真的对齐（图标 tint、间距、Section 标题字重）、小屏与无障碍大字号下三行行高是否挤压、中文输入法的 marked text 在真机上是否仍不丢字、`.height(300)` 弹层在最小机型键盘弹起时是否够高，均登记到第 7 节随 Task 14 B 段一起验收
+- 已知风险：`RouteLibraryRow` / `EmptyRouteRow` / `RenameSheet` 只有编译与模型级覆盖，没有 UI 自动化；`.sheet(item:)` 下滑关闭时依赖 SwiftUI 自动把绑定置 nil，`onCancel` 只覆盖左上交互相；路线列表行内图标开放路线用 `scribble`，与闭环的 `RouteSymbol.library` 视觉区分度靠肉眼确认
+- 下一步：下一窗口先读本文件与计划章节，再取 Task 25；Task 24 的真机项随 Task 14 B 段验收
+- 更新时间：2026-11-02
