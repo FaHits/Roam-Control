@@ -10,7 +10,6 @@ struct SavedPlacesView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var favouriteBeingRenamed: LocationTarget?
-    @State private var favouriteName = ""
     @State private var clearTarget: ClearTarget?
     @State private var editMode: EditMode = .inactive
 
@@ -136,25 +135,19 @@ struct SavedPlacesView: View {
                     Button("Done") { dismiss() }
                 }
             }
-            .alert(
-                "Rename Favourite",
-                isPresented: Binding(
-                    get: { favouriteBeingRenamed != nil },
-                    set: { if !$0 { favouriteBeingRenamed = nil } }
+            .sheet(item: $favouriteBeingRenamed) { location in
+                RenameSheet(
+                    title: "Rename Favourite",
+                    message: "Give this saved place a name that is easy to recognise.",
+                    initialName: location.name,
+                    onCancel: {
+                        favouriteBeingRenamed = nil
+                    },
+                    onSubmit: { name in
+                        onRenameFavourite(location, name)
+                        favouriteBeingRenamed = nil
+                    }
                 )
-            ) {
-                TextField("Favourite name", text: $favouriteName)
-                Button("Cancel", role: .cancel) {
-                    favouriteBeingRenamed = nil
-                }
-                Button("Save") {
-                    guard let favouriteBeingRenamed else { return }
-                    onRenameFavourite(favouriteBeingRenamed, favouriteName)
-                    self.favouriteBeingRenamed = nil
-                }
-                .disabled(favouriteName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            } message: {
-                Text("Give this saved place a name that is easy to recognise.")
             }
             .confirmationDialog(
                 clearConfirmationTitle,
@@ -182,7 +175,6 @@ struct SavedPlacesView: View {
     }
 
     private func beginRenaming(_ location: LocationTarget) {
-        favouriteName = location.name
         favouriteBeingRenamed = location
     }
 

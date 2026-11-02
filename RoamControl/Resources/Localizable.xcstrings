@@ -3953,6 +3953,22 @@
         }
       }
     },
+    "My Routes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "My Routes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的路线"
+          }
+        }
+      }
+    },
     "Name": {
       "localizations": {
         "en": {

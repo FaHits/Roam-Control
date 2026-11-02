@@ -90,12 +90,14 @@ struct RouteLibraryView: View {
             Text("This route will be permanently removed.")
         }
         .sheet(item: $routePendingRename) { route in
-            RouteRenameSheet(
+            RenameSheet(
+                title: "Rename Route",
+                message: "Enter a new name for this route.",
                 initialName: route.name,
                 onCancel: {
                     routePendingRename = nil
                 },
-                onRename: { name in
+                onSubmit: { name in
                     rename(route, to: name)
                 }
             )
@@ -104,77 +106,54 @@ struct RouteLibraryView: View {
 
     private var routeList: some View {
         List {
-            if model.routes.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: RouteSymbol.library)
-                        .font(.system(size: 36))
-                        .foregroundStyle(.secondary)
-                    Text("Draw a route to start a repeatable run.")
-                        .font(.body)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 48)
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            } else {
-                ForEach(model.routes) { route in
-                    Button {
-                        routeForSetup = route
-                    } label: {
-                        routeRow(route)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(isRouteActive)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        if !isRouteActive {
-                            Button("Delete") {
-                                routePendingDeletion = route
+            Section {
+                if model.routes.isEmpty {
+                    EmptyRouteRow(
+                        symbol: RouteSymbol.library,
+                        message: "Draw a route to start a repeatable run."
+                    )
+                } else {
+                    ForEach(model.routes) { route in
+                        Button {
+                            routeForSetup = route
+                        } label: {
+                            RouteLibraryRow(
+                                route: route,
+                                distanceText: distanceText(for: route),
+                                showsLock: isRouteActive
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isRouteActive)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            if !isRouteActive {
+                                Button("Delete") {
+                                    routePendingDeletion = route
+                                }
+                                .tint(.red)
+                                Button("Rename") {
+                                    beginRename(route)
+                                }
+                                .tint(.blue)
                             }
-                            .tint(.red)
-                            Button("Rename") {
-                                beginRename(route)
-                            }
-                            .tint(.blue)
                         }
                     }
                 }
-            }
-        }
-        .listStyle(.plain)
-    }
+            } header: {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("My Routes")
 
-    private func routeRow(_ route: RouteDefinition) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text(route.name)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 8)
 
-                HStack(spacing: 8) {
-                    Text(distanceText(for: route))
-                    Text(route.isClosed ? "Closed" : "Open")
+                    if !model.routes.isEmpty {
+                        Text(model.routes.count.formatted())
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-                Text("Updated \(route.updatedAt.formatted(date: .abbreviated, time: .shortened))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                .textCase(nil)
             }
-
-            Spacer(minLength: 8)
-
-            Image(systemName: isRouteActive ? "lock.fill" : "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.tertiary)
-                .accessibilityHidden(true)
         }
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
+        .listStyle(.insetGrouped)
     }
 
     private var activeRunBanner: some View {
@@ -287,112 +266,64 @@ struct RouteLibraryView: View {
     }
 }
 
-private struct RouteRenameSheet: View {
-    let initialName: String
-    let onCancel: () -> Void
-    let onRename: (String) -> Void
-
-    @State private var fieldHandle = RouteRenameTextFieldHandle()
-    @State private var errorMessage: String?
+private struct RouteLibraryRow: View {
+    let route: RouteDefinition
+    let distanceText: String
+    let showsLock: Bool
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Enter a new name for this route.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: route.isClosed ? RouteSymbol.library : "scribble")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.blue)
+                .frame(width: 32, height: 32)
+                .background(
+                    .blue.opacity(0.15),
+                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                )
+                .accessibilityHidden(true)
 
-                    RouteRenameTextField(initialText: initialName, handle: fieldHandle)
-                        .frame(minHeight: 44)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(route.name)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                    if let errorMessage {
-                        Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(18)
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Text("Updated \(route.updatedAt.formatted(date: .abbreviated, time: .shortened))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .background(Color(uiColor: .systemGroupedBackground))
-            .navigationTitle("Rename Route")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Rename") {
-                        guard let name = RouteNameValidator.normalizedName(
-                            from: fieldHandle.currentText
-                        ) else {
-                            errorMessage = String(localized: "Route name cannot be empty.")
-                            return
-                        }
-                        onRename(name)
-                    }
-                    .accessibilityIdentifier("routeRenameConfirm")
-                }
-            }
+
+            Spacer(minLength: 8)
+
+            Image(systemName: showsLock ? "lock.fill" : "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
         }
-        .presentationDetents([.medium])
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+
+    private var subtitle: String {
+        let shape = route.isClosed ? String(localized: "Closed") : String(localized: "Open")
+        return "\(distanceText) · \(shape)"
     }
 }
 
-private final class RouteRenameTextFieldHandle {
-    weak var textField: UITextField?
+private struct EmptyRouteRow: View {
+    let symbol: String
+    let message: LocalizedStringKey
 
-    /// `text(in:)` includes marked text that the SwiftUI binding never receives.
-    var currentText: String {
-        guard let textField else {
-            return ""
-        }
-        guard let range = textField.textRange(
-            from: textField.beginningOfDocument,
-            to: textField.endOfDocument
-        ) else {
-            return textField.text ?? ""
-        }
-        return textField.text(in: range) ?? textField.text ?? ""
-    }
-}
-
-private struct RouteRenameTextField: UIViewRepresentable {
-    let initialText: String
-    let handle: RouteRenameTextFieldHandle
-
-    func makeUIView(context: Context) -> UITextField {
-        let textField = UITextField()
-        textField.text = initialText
-        textField.font = .preferredFont(forTextStyle: .body)
-        textField.adjustsFontForContentSizeCategory = true
-        textField.borderStyle = .roundedRect
-        textField.clearButtonMode = .whileEditing
-        textField.returnKeyType = .done
-        textField.delegate = context.coordinator
-        textField.accessibilityIdentifier = "routeRenameField"
-        handle.textField = textField
-
-        DispatchQueue.main.async {
-            textField.becomeFirstResponder()
-        }
-        return textField
-    }
-
-    func updateUIView(_ textField: UITextField, context: Context) {
-        handle.textField = textField
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-
-    final class Coordinator: NSObject, UITextFieldDelegate {
-        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-            textField.resignFirstResponder()
-            return true
-        }
+    var body: some View {
+        Label(message, systemImage: symbol)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .padding(.vertical, 8)
     }
 }
