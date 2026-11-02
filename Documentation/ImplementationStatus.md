@@ -4,6 +4,13 @@
 
 ## 当前交接
 
+> 2026-11-02 Task 23 实现：拟人化运动 v2。速度模型改为「目标速度 × 起跑爬升 × 体力衰减 × 收尾减速 × (1 + 波动)」，最后 clamp ≥ 0.3 m/s，仍只依赖 `(elapsed, profile, remainingDistance)`，不读时钟。`RunProfile` 新增 `rampDuration`（默认 20 s，0...60）、`fatiguePerMinute`（默认 0.018，0...0.05）、`cooldownDistance`（默认 120 m，0...300）、`minSpeedFraction`（默认 0.6，0.1...1.0，不进设置界面），四个字段全部 `decodeIfPresent` + 默认值，旧 `routeRunProfile` 与 `SessionRecoveryRecord.runProfile` 解出来等于默认值；`validate()` 新增四种错误。`HumanizedMotionModel.speedMetersPerSecond` 改三参签名（旧二参版删除，全仓只剩新签名），`RouteRunner` 在构造与 `advance` 时按 `targetLaps × lapLength − coveredDistance` 传剩余距离，`.continuous` 传 `nil`。设置界面：常用区「速度 / 像人的程度 / 体力衰减 / 起跑爬升」，高级折叠区（默认收起）「步频 / 步频波动 / GPS 抖动 / 收尾减速 / seed」。`Localizable.xcstrings` 626 → 634 key。
+>
+> - 测试：168 → 178。新增 `HumanizedMotionModelTests` 7 例（`testRampStartsAtThirtyPercentAndReachesTarget`、`testRampIsMonotonicNonDecreasing`、`testFatigueDropsAboutEighteenPercentOverTenMinutes`、`testFatigueNeverFallsBelowMinSpeedFraction`、`testCooldownOnlyAppliesInsideTheFinalMetres`、`testContinuousRunNeverCooldowns`、`testSpeedStaysPositiveAndDeterministic`）、`RunProfileTests` 2 例（`testNewMotionFieldsDefaultWhenDecodingAnOlderProfile`、`testMotionFieldRangesAreValidated`）、`RouteRunnerTests` 1 例（`testCoolDownSlowsTheFinalMetresOfALap`，验证调用点确实把剩余距离传进模型）。既有速度断言按新公式重写（`assertBounds` 现在乘三层包络），三个测试文件的 `steadyProfile` 显式关掉三层包络以保持稳态语义。
+> - 实测因子（纯函数，本机可算）：起跑 t=0 为 0.30、t=10 s 为 0.65、t≥20 s 为 1.00；体力默认 0.018/min，10 分钟 0.82（−18%），1 小时 0.60（撞 `minSpeedFraction`）；收尾默认 120 m，剩余 ≥120 m 为 1.00、剩余 60 m 为 0.675、剩余 0 m 为 0.35。
+> - 本地门禁（本机 Windows，无 `xcodebuild`）：`check_localizations.py` `634/634`、`2/2`、`All 636 keys have non-empty zh-Hans values.`（exit 0）；坐标 grep 仍 8；两条架构边界 rg 无输出；`walkBreak|休息|步行间歇` 0 命中；版本仍 0.10.0 / 62；`git diff --check` 干净。
+> - 未验证：构建与测试结论来自 CI；真机观感（起跑是否像人、掉速是否可察觉、收尾减速幅度）留待实机验收。
+
 > 2026-11-01 0.10.0 发布：真机 28 项（R1–R7、S1–S2、L1–L5、F1–F4、T1–T3、M1–M3、H1–H4）全部 PASS，14H 修复后 L1 / L6 / L3 在同一次构建复测 PASS，执行人 = 项目所有者；代码状态提交 `b47cb55` 的 CI run `41289851759` 三 job 全绿（158 用例 0 失败），标签 `v0.10.0` 与 `v0.10.0-fa.1` 均指向该提交，GitHub Release `v0.10.0` 附 unsigned Release IPA。Task 14 状态据此改为 `completed`。
 
 > 2026-11-01 Task 22 完成：代码层清理（死代码 / 遥测残留 / 符号字面量）。提交 `0597439`（`chore(cleanup): drop unused StatusCard and telemetry configuration keys`，6 文件），`fork/feat/manual-running-routes` 与本地 HEAD 一致（`059743996558c90bb32ce77cf592a9ddd583ecaf`）。CI run `41321756708` 三 job 全 success（`test` 6m32s、`unsigned-ipa-debug` 38s、`unsigned-ipa` 48s，`2026-11-01T15:32:41Z`→`15:40:07Z`），`test` job 输出 `** TEST SUCCEEDED **`、158 用例 0 失败；产物 `RoamControl-unsigned-ipa` id `13089384915` / 3,109,421 字节、`RoamControl-unsigned-debug-ipa` id `13089024048` / 4,639,557 字节。
@@ -40,8 +47,8 @@
   - release `RoamControl 0.10.0 (Build 62)` 资产二：`RoamControl-unsigned-debug.ipa` / 4,672,282 字节 / `sha256:fc790677a14b593ebf94a262d9863d9ee50fb09e72e851b490d539864e967736`，来源同一 run `41289851759` 的 artifact `13077340646`（zip 4,645,770 字节）。
   - release `0.10.0 (Build 62) — fork test build` 为 prerelease、无附件。
   - 一句口径：release 上的两个资产都取自被真机验证的代码提交 `b47cb55` 的构建，不是文档提交 `fea4783` 的构建。
-- 当前任务：0.10.0 已发布；下一版待启动 —— 发布依据：交接文档第 7 节 28 项真机全部 PASS 且在 `b47cb55` 复测 L1 / L6 / L3 PASS；装机源 run `41289851759`（head `b47cb55`）三 job 全绿、158 用例 0 失败，产物 Release artifact `13077026408` / 3,109,546 字节、Debug artifact `13077340646` / 4,645,770 字节；版本保持 0.10.0 / 62（本次只加标签，不递增构建号）
-- 任务状态：Task 14 `completed`（依据：交接文档第 7 节 28 项真机 PASS，执行人 = 项目所有者，日期 2026-11-01；14H 修复后 L1 / L6 / L3 于 build `b47cb55` 复测 PASS）；Task 9R / 19 / 16R / 20 / 17 / 18 全部 `implemented`，真机项与第 7 节逐行对齐（9R #1–#7、19 #8–#9、16R #10–#11、20 #12–#15、17 #16、18 #17 与 #19、历史回归 #18）；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`；Task 21 为 `implemented`（head `4490e2e` 的 run `41425423279` 三 job 全绿、165 用例 0 失败，真机项待第 7 节）
+- 当前任务：Task 23 拟人化运动 v2 已实现（`implemented_unverified`，等 CI）；0.10.0 仍为已发布版本，版本号与构建号未动 —— 发布依据：交接文档第 7 节 28 项真机全部 PASS 且在 `b47cb55` 复测 L1 / L6 / L3 PASS；装机源 run `41289851759`（head `b47cb55`）三 job 全绿、158 用例 0 失败，产物 Release artifact `13077026408` / 3,109,546 字节、Debug artifact `13077340646` / 4,645,770 字节；版本保持 0.10.0 / 62（本次只加标签，不递增构建号）
+- 任务状态：Task 14 `completed`（依据：交接文档第 7 节 28 项真机 PASS，执行人 = 项目所有者，日期 2026-11-01；14H 修复后 L1 / L6 / L3 于 build `b47cb55` 复测 PASS）；Task 9R / 19 / 16R / 20 / 17 / 18 全部 `implemented`，真机项与第 7 节逐行对齐（9R #1–#7、19 #8–#9、16R #10–#11、20 #12–#15、17 #16、18 #17 与 #19、历史回归 #18）；`DeviceCoordinateAdapter.live` 保持 `.gcj02ToWGS84`；Task 21 为 `implemented`（head `4490e2e` 的 run `41425423279` 三 job 全绿、165 用例 0 失败，真机项待第 7 节）；Task 23 为 `implemented_unverified`（拟人化运动四层，178 用例，CI 待跑）
 - Task 17 收尾口径：代码/测试 run `41236893110`（head `76d41f1`）与最终 HEAD run `41237968926`（head `b414c21`，含文档提交）三 job 均 success；最终 HEAD 产物 Release `RoamControl-unsigned-ipa` id `13056249465` / 3,107,749 字节、Debug `RoamControl-unsigned-debug-ipa` id `13056740573` / 4,635,484 字节
 - 当前执行窗口：Task 14I 收尾完成，0.10.0 生命周期结束；下一版待启动（版本号与构建号在下一版开工时才动）
 - 并行任务：无。Task 16 的返工已在 Task 16R 内完成，语言弹窗与英文残留项以 Task 16R 记录为准

@@ -6,6 +6,16 @@ final class HumanizedMotionModelTests: XCTestCase {
     private let profile = RunProfile.running
     private let sampleTimes: [TimeInterval] = [0, 0.25, 1, 7.25, 61, 600, 3_600, 86_400]
 
+    /// Roughly 414 m square loop, the same one `RouteRunnerTests` drives.
+    private var square: [GeoCoordinate] {
+        [
+            ground,
+            GeoCoordinate(latitude: 31.2304, longitude: 121.4747),
+            GeoCoordinate(latitude: 31.2314, longitude: 121.4747),
+            GeoCoordinate(latitude: 31.2314, longitude: 121.4737)
+        ]
+    }
+
     // MARK: - Profile
 
     func testProfileRoundTripsThroughCodable() throws {
@@ -79,8 +89,8 @@ final class HumanizedMotionModelTests: XCTestCase {
 
         for elapsed in sampleTimes {
             XCTAssertEqual(
-                first.speedMetersPerSecond(at: elapsed, profile: profile),
-                second.speedMetersPerSecond(at: elapsed, profile: profile),
+                first.speedMetersPerSecond(at: elapsed, profile: profile, remainingDistance: nil),
+                second.speedMetersPerSecond(at: elapsed, profile: profile, remainingDistance: nil),
                 "speed at \(elapsed)"
             )
             XCTAssertEqual(
@@ -130,20 +140,247 @@ final class HumanizedMotionModelTests: XCTestCase {
         elapsedSamples.append(1_234.567)
         elapsedSamples.append(86_400.125)
 
-        assertBounds(model: model, profile: profile, at: elapsedSamples)
+        assertBounds(model: model, profile: profile, at: elapsedSamples, remainingDistance: nil)
 
         var wide = profile
         wide.speedVariationFraction = 0.35
         wide.cadenceVariationFraction = 0.35
         XCTAssertNoThrow(try wide.validate())
-        assertBounds(model: model, profile: wide, at: elapsedSamples)
+        assertBounds(model: model, profile: wide, at: elapsedSamples, remainingDistance: nil)
+        assertBounds(model: model, profile: wide, at: elapsedSamples, remainingDistance: 40)
 
+        // With every factor switched off the speed is exactly the target again.
         var steady = profile
         steady.speedVariationFraction = 0
         steady.cadenceVariationFraction = 0
+        steady.rampDuration = 0
+        steady.fatiguePerMinute = 0
+        steady.cooldownDistance = 0
+        XCTAssertNoThrow(try steady.validate())
         for elapsed in sampleTimes {
-            XCTAssertEqual(model.speedMetersPerSecond(at: elapsed, profile: steady), steady.targetSpeedMetersPerSecond)
-            XCTAssertEqual(model.cadenceStepsPerMinute(at: elapsed, profile: steady), steady.targetCadenceStepsPerMinute)
+            XCTAssertEqual(
+                model.speedMetersPerSecond(at: elapsed, profile: steady, remainingDistance: 0),
+                steady.targetSpeedMetersPerSecond
+            )
+            XCTAssertEqual(
+                model.cadenceStepsPerMinute(at: elapsed, profile: steady),
+                steady.targetCadenceStepsPerMinute
+            )
+        }
+    }
+
+    // MARK: - Ramp-up
+
+    func testRampStartsAtThirtyPercentAndReachesTarget() {
+        let ramping = makeProfile(ramp: 20)
+
+        XCTAssertEqual(HumanizedMotionModel.rampFactor(at: 0, profile: ramping), 0.3, accuracy: 1e-12)
+        XCTAssertEqual(HumanizedMotionModel.rampFactor(at: 10, profile: ramping), 0.65, accuracy: 1e-12)
+        XCTAssertEqual(HumanizedMotionModel.rampFactor(at: 20, profile: ramping), 1.0, accuracy: 1e-12)
+        XCTAssertEqual(HumanizedMotionModel.rampFactor(at: 600, profile: ramping), 1.0, accuracy: 1e-12)
+        // Before the start the ramp is clamped, never extrapolated below 30%.
+        XCTAssertEqual(HumanizedMotionModel.rampFactor(at: -5, profile: ramping), 0.3, accuracy: 1e-12)
+
+        let noRamp = makeProfile(ramp: 0)
+        for elapsed in sampleTimes {
+            XCTAssertEqual(HumanizedMotionModel.rampFactor(at: elapsed, profile: noRamp), 1.0, accuracy: 1e-12)
+        }
+
+        // The speed itself starts at 30% of the target and is back at it once the ramp is over.
+        var exact = makeProfile(ramp: 20, fatigue: 0, cooldown: 0)
+        exact.speedVariationFraction = 0
+        let model = HumanizedMotionModel(seed: exact.noiseSeed)
+        XCTAssertEqual(
+            model.speedMetersPerSecond(at: 0, profile: exact, remainingDistance: nil),
+            exact.targetSpeedMetersPerSecond * 0.3,
+            accuracy: 1e-12
+        )
+        XCTAssertEqual(
+            model.speedMetersPerSecond(at: 20, profile: exact, remainingDistance: nil),
+            exact.targetSpeedMetersPerSecond,
+            accuracy: 1e-12
+        )
+    }
+
+    func testRampIsMonotonicNonDecreasing() {
+        let ramping = makeProfile(ramp: 20)
+        var previous = HumanizedMotionModel.rampFactor(at: -10, profile: ramping)
+        var elapsed = -10.0
+        while elapsed <= 70 {
+            let current = HumanizedMotionModel.rampFactor(at: elapsed, profile: ramping)
+            XCTAssertGreaterThanOrEqual(current, previous - 1e-12, "ramp dipped at \(elapsed)")
+            previous = current
+            elapsed += 0.1
+        }
+
+        XCTAssertEqual(HumanizedMotionModel.rampFactor(at: 0, profile: ramping), 0.3, accuracy: 1e-12)
+        XCTAssertEqual(HumanizedMotionModel.rampFactor(at: 20, profile: ramping), 1.0, accuracy: 1e-12)
+    }
+
+    // MARK: - Fatigue
+
+    func testFatigueDropsAboutEighteenPercentOverTenMinutes() {
+        let fatiguing = makeProfile(fatigue: 0.018)
+
+        XCTAssertEqual(HumanizedMotionModel.fatigueFactor(at: 0, profile: fatiguing), 1.0, accuracy: 1e-12)
+        XCTAssertEqual(HumanizedMotionModel.fatigueFactor(at: 300, profile: fatiguing), 0.91, accuracy: 1e-12)
+        XCTAssertEqual(HumanizedMotionModel.fatigueFactor(at: 600, profile: fatiguing), 0.82, accuracy: 1e-12)
+
+        var exact = makeProfile(ramp: 0, fatigue: 0.018, cooldown: 0)
+        exact.speedVariationFraction = 0
+        let model = HumanizedMotionModel(seed: exact.noiseSeed)
+        let start = model.speedMetersPerSecond(at: 0, profile: exact, remainingDistance: nil)
+        let tenMinutes = model.speedMetersPerSecond(at: 600, profile: exact, remainingDistance: nil)
+        XCTAssertEqual(tenMinutes / start, 0.82, accuracy: 1e-12)
+    }
+
+    func testFatigueNeverFallsBelowMinSpeedFraction() {
+        let fatiguing = makeProfile(fatigue: 0.05)
+        XCTAssertEqual(fatiguing.minSpeedFraction, 0.6, accuracy: 1e-12)
+
+        for elapsed in [0.0, 300, 600, 3_600, 86_400] {
+            let factor = HumanizedMotionModel.fatigueFactor(at: elapsed, profile: fatiguing)
+            XCTAssertGreaterThanOrEqual(factor, 0.6 - 1e-12, "fatigue factor \(factor) at \(elapsed)")
+        }
+        XCTAssertEqual(
+            HumanizedMotionModel.fatigueFactor(at: 86_400, profile: fatiguing),
+            0.6,
+            accuracy: 1e-12
+        )
+
+        var slowFloor = fatiguing
+        slowFloor.minSpeedFraction = 0.9
+        XCTAssertNoThrow(try slowFloor.validate())
+        XCTAssertEqual(HumanizedMotionModel.fatigueFactor(at: 600, profile: slowFloor), 0.9, accuracy: 1e-12)
+
+        var exact = makeProfile(ramp: 0, fatigue: 0.05, cooldown: 0)
+        exact.speedVariationFraction = 0
+        let model = HumanizedMotionModel(seed: exact.noiseSeed)
+        XCTAssertEqual(
+            model.speedMetersPerSecond(at: 86_400, profile: exact, remainingDistance: nil),
+            exact.targetSpeedMetersPerSecond * exact.minSpeedFraction,
+            accuracy: 1e-12
+        )
+    }
+
+    // MARK: - Cool-down
+
+    func testCooldownOnlyAppliesInsideTheFinalMetres() {
+        let cooling = makeProfile()
+
+        XCTAssertEqual(
+            HumanizedMotionModel.cooldownFactor(remainingDistance: nil, profile: cooling),
+            1.0,
+            accuracy: 1e-12
+        )
+        XCTAssertEqual(
+            HumanizedMotionModel.cooldownFactor(remainingDistance: 500, profile: cooling),
+            1.0,
+            accuracy: 1e-12
+        )
+        XCTAssertEqual(
+            HumanizedMotionModel.cooldownFactor(remainingDistance: 120, profile: cooling),
+            1.0,
+            accuracy: 1e-12
+        )
+        XCTAssertEqual(
+            HumanizedMotionModel.cooldownFactor(remainingDistance: 60, profile: cooling),
+            0.675,
+            accuracy: 1e-12
+        )
+        XCTAssertEqual(
+            HumanizedMotionModel.cooldownFactor(remainingDistance: 0, profile: cooling),
+            0.35,
+            accuracy: 1e-12
+        )
+        // Running past the finish clamps instead of extrapolating below 35%.
+        XCTAssertEqual(
+            HumanizedMotionModel.cooldownFactor(remainingDistance: -10, profile: cooling),
+            0.35,
+            accuracy: 1e-12
+        )
+
+        var previous = HumanizedMotionModel.cooldownFactor(remainingDistance: 0, profile: cooling)
+        var remaining = 0.0
+        while remaining <= 200 {
+            let factor = HumanizedMotionModel.cooldownFactor(remainingDistance: remaining, profile: cooling)
+            XCTAssertGreaterThanOrEqual(factor, previous - 1e-12, "cool-down dipped at \(remaining)")
+            previous = factor
+            remaining += 2
+        }
+
+        let noCoolDown = makeProfile(cooldown: 0)
+        for distance in [0.0, 10, 60, 500] {
+            XCTAssertEqual(
+                HumanizedMotionModel.cooldownFactor(remainingDistance: distance, profile: noCoolDown),
+                1.0,
+                accuracy: 1e-12
+            )
+        }
+    }
+
+    func testContinuousRunNeverCooldowns() throws {
+        let geometry = try RouteGeometry(points: square, isClosed: true)
+        var continuous = RunProfile.running
+        continuous.speedVariationFraction = 0
+        continuous.cadenceVariationFraction = 0
+        continuous.gpsJitterRadiusMeters = 0
+        continuous.rampDuration = 0
+        continuous.fatiguePerMinute = 0
+        continuous.cooldownDistance = 120
+        XCTAssertNoThrow(try continuous.validate())
+
+        var runner = try RouteRunner(geometry: geometry, profile: continuous, mode: .continuous)
+        runner.start()
+
+        for _ in 0..<400 {
+            let snapshot = runner.advance(by: 1)
+            XCTAssertEqual(
+                snapshot.speedMetersPerSecond,
+                continuous.targetSpeedMetersPerSecond,
+                accuracy: 1e-9,
+                "a continuous run slowed down at \(snapshot.totalDistance) m"
+            )
+        }
+        // Well past one full lap, so a wrongly applied cool-down would have fired.
+        XCTAssertGreaterThan(runner.snapshot.totalDistance, geometry.totalDistance)
+    }
+
+    func testSpeedStaysPositiveAndDeterministic() {
+        var worst = RunProfile.running
+        worst.rampDuration = 60
+        worst.fatiguePerMinute = 0.05
+        worst.cooldownDistance = 300
+        worst.minSpeedFraction = 0.1
+        worst.speedVariationFraction = 0.35
+        XCTAssertNoThrow(try worst.validate())
+
+        let first = HumanizedMotionModel(seed: worst.noiseSeed)
+        let second = HumanizedMotionModel(seed: worst.noiseSeed)
+        let remainings: [Double?] = [nil, 0, 0.5, 120, 300, 5_000]
+
+        for elapsed in sampleTimes + [1_234.567, 86_400.125] {
+            for remaining in remainings {
+                let speed = first.speedMetersPerSecond(
+                    at: elapsed,
+                    profile: worst,
+                    remainingDistance: remaining
+                )
+                XCTAssertTrue(speed.isFinite, "speed at \(elapsed)/\(String(describing: remaining))")
+                XCTAssertGreaterThanOrEqual(
+                    speed,
+                    0.3,
+                    "speed \(speed) at \(elapsed)/\(String(describing: remaining))"
+                )
+                XCTAssertEqual(
+                    speed,
+                    second.speedMetersPerSecond(at: elapsed, profile: worst, remainingDistance: remaining)
+                )
+                XCTAssertEqual(
+                    speed,
+                    first.speedMetersPerSecond(at: elapsed, profile: worst, remainingDistance: remaining)
+                )
+            }
         }
     }
 
@@ -232,7 +469,10 @@ final class HumanizedMotionModelTests: XCTestCase {
         cadence: Double? = nil,
         speedVariation: Double? = nil,
         cadenceVariation: Double? = nil,
-        jitter: Double? = nil
+        jitter: Double? = nil,
+        ramp: TimeInterval? = nil,
+        fatigue: Double? = nil,
+        cooldown: Double? = nil
     ) -> RunProfile {
         let base = RunProfile.running
         return RunProfile(
@@ -241,7 +481,10 @@ final class HumanizedMotionModelTests: XCTestCase {
             speedVariationFraction: speedVariation ?? base.speedVariationFraction,
             cadenceVariationFraction: cadenceVariation ?? base.cadenceVariationFraction,
             gpsJitterRadiusMeters: jitter ?? base.gpsJitterRadiusMeters,
-            noiseSeed: base.noiseSeed
+            noiseSeed: base.noiseSeed,
+            rampDuration: ramp ?? base.rampDuration,
+            fatiguePerMinute: fatigue ?? base.fatiguePerMinute,
+            cooldownDistance: cooldown ?? base.cooldownDistance
         )
     }
 
@@ -256,22 +499,35 @@ final class HumanizedMotionModelTests: XCTestCase {
         }
     }
 
+    /// The wobble stays inside `target * (1 ± variation)`, and the three run-shape factors scale
+    /// that band instead of adding to it.
     private func assertBounds(
         model: HumanizedMotionModel,
         profile: RunProfile,
         at elapsedSamples: [TimeInterval],
+        remainingDistance: Double?,
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
-        let speedLower = profile.targetSpeedMetersPerSecond * (1 - profile.speedVariationFraction)
-        let speedUpper = profile.targetSpeedMetersPerSecond * (1 + profile.speedVariationFraction)
         let cadenceLower = profile.targetCadenceStepsPerMinute * (1 - profile.cadenceVariationFraction)
         let cadenceUpper = profile.targetCadenceStepsPerMinute * (1 + profile.cadenceVariationFraction)
 
         for elapsed in elapsedSamples {
-            let speed = model.speedMetersPerSecond(at: elapsed, profile: profile)
-            XCTAssertGreaterThanOrEqual(speed, speedLower, "speed at \(elapsed)", file: file, line: line)
+            let envelope = HumanizedMotionModel.rampFactor(at: elapsed, profile: profile)
+                * HumanizedMotionModel.fatigueFactor(at: elapsed, profile: profile)
+                * HumanizedMotionModel.cooldownFactor(remainingDistance: remainingDistance, profile: profile)
+            let speedLower = profile.targetSpeedMetersPerSecond * (1 - profile.speedVariationFraction) * envelope
+            let speedUpper = profile.targetSpeedMetersPerSecond * (1 + profile.speedVariationFraction) * envelope
+            let speed = model.speedMetersPerSecond(
+                at: elapsed,
+                profile: profile,
+                remainingDistance: remainingDistance
+            )
             XCTAssertLessThanOrEqual(speed, speedUpper, "speed at \(elapsed)", file: file, line: line)
+            // The floor only lifts speeds the factors would otherwise crush.
+            if speedLower >= 0.3 {
+                XCTAssertGreaterThanOrEqual(speed, speedLower, "speed at \(elapsed)", file: file, line: line)
+            }
 
             let cadence = model.cadenceStepsPerMinute(at: elapsed, profile: profile)
             XCTAssertGreaterThanOrEqual(cadence, cadenceLower, "cadence at \(elapsed)", file: file, line: line)

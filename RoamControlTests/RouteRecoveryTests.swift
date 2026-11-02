@@ -352,7 +352,10 @@ final class RouteRecoveryTests: XCTestCase {
             speedVariationFraction: 0,
             cadenceVariationFraction: 0,
             gpsJitterRadiusMeters: 0,
-            noiseSeed: 0x5255_4E31
+            noiseSeed: 0x5255_4E31,
+            rampDuration: 0,
+            fatiguePerMinute: 0,
+            cooldownDistance: 0
         )
     }
 

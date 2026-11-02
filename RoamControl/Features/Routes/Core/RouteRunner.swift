@@ -54,9 +54,18 @@ struct RouteRunner: Sendable {
         max(Self.relativeLapTolerance, lapLength * Self.relativeLapTolerance)
     }
 
+    /// Distance left before the planned finish, or `nil` when the run loops forever.
+    private static func remainingDistance(
+        coveredDistance: Double,
+        targetLaps: Int?,
+        lapLength: Double
+    ) -> Double? {
+        targetLaps.map { max(0, Double($0) * lapLength - coveredDistance) }
+    }
+
     /// Full laps the run ends after, or `nil` when it loops forever. An `.outAndBack` trip counts
     /// like a lap: one traversal of the route.
-    private var targetLaps: Int? {
+    private static func targetLaps(for mode: RouteRunMode) -> Int? {
         switch mode {
         case .once:
             return 1
@@ -68,6 +77,8 @@ struct RouteRunner: Sendable {
             return trips
         }
     }
+
+    private var targetLaps: Int? { Self.targetLaps(for: mode) }
 
     private var isOutAndBack: Bool {
         if case .outAndBack = mode { return true }
@@ -133,7 +144,12 @@ struct RouteRunner: Sendable {
             ),
             speedMetersPerSecond: motion.speedMetersPerSecond(
                 at: progress.elapsedTime,
-                profile: profile
+                profile: profile,
+                remainingDistance: Self.remainingDistance(
+                    coveredDistance: coveredDistance,
+                    targetLaps: Self.targetLaps(for: mode),
+                    lapLength: geometry.totalDistance
+                )
             ),
             cadenceStepsPerMinute: motion.cadenceStepsPerMinute(
                 at: progress.elapsedTime,
@@ -180,7 +196,15 @@ struct RouteRunner: Sendable {
         // The tick is driven by the speed at the new elapsed time, but the jitter stays out of the
         // distance bookkeeping.
         let elapsed = snapshot.elapsedTime + delta
-        let speed = motion.speedMetersPerSecond(at: elapsed, profile: profile)
+        let speed = motion.speedMetersPerSecond(
+            at: elapsed,
+            profile: profile,
+            remainingDistance: Self.remainingDistance(
+                coveredDistance: snapshot.totalDistance,
+                targetLaps: targetLaps,
+                lapLength: lapLength
+            )
+        )
         let step = speed * delta
 
         if geometry.isClosed || isOutAndBack {

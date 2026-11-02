@@ -29,7 +29,10 @@ final class RouteSessionModelTests: XCTestCase {
             speedVariationFraction: 0,
             cadenceVariationFraction: 0,
             gpsJitterRadiusMeters: 0,
-            noiseSeed: 42
+            noiseSeed: 42,
+            rampDuration: 0,
+            fatiguePerMinute: 0,
+            cooldownDistance: 0
         )
     }
 

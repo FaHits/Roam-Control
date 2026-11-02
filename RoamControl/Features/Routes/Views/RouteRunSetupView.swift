@@ -45,6 +45,7 @@ struct RouteRunSetupView: View {
     @State private var modeSelection: ModeSelection
     @State private var lapCount = 1
     @State private var tripCount = 1
+    @State private var showsAdvanced = false
 
     init(
         route: RouteDefinition,
@@ -124,33 +125,76 @@ struct RouteRunSetupView: View {
                 valueText: String(format: "%.1f m/s", profile.targetSpeedMetersPerSecond)
             )
             settingSlider(
-                title: "Cadence",
-                value: $profile.targetCadenceStepsPerMinute,
-                range: 120.0...210.0,
-                step: 1.0,
-                valueText: String(format: "%.0f spm", profile.targetCadenceStepsPerMinute)
-            )
-            settingSlider(
-                title: "Speed Variation",
+                title: "Human Likeness",
                 value: $profile.speedVariationFraction,
-                range: 0.0...0.15,
+                range: 0.0...0.2,
                 step: 0.01,
                 valueText: String(format: "%.0f%%", profile.speedVariationFraction * 100)
             )
             settingSlider(
-                title: "Cadence Variation",
-                value: $profile.cadenceVariationFraction,
-                range: 0.0...0.15,
-                step: 0.01,
-                valueText: String(format: "%.0f%%", profile.cadenceVariationFraction * 100)
+                title: "Fatigue",
+                value: $profile.fatiguePerMinute,
+                range: 0.0...0.05,
+                step: 0.001,
+                valueText: String(
+                    format: String(localized: "%@ per 10 min"),
+                    "-" + String(format: "%.0f%%", profile.fatiguePerMinute * 100 * 10)
+                )
             )
             settingSlider(
-                title: "GPS Jitter",
-                value: $profile.gpsJitterRadiusMeters,
-                range: 0.0...5.0,
-                step: 0.1,
-                valueText: String(format: "%.1f m", profile.gpsJitterRadiusMeters)
+                title: "Ramp-Up",
+                value: $profile.rampDuration,
+                range: 0.0...60.0,
+                step: 1.0,
+                valueText: String(format: "%.0f s", profile.rampDuration)
             )
+
+            DisclosureGroup(isExpanded: $showsAdvanced) {
+                VStack(alignment: .leading, spacing: 18) {
+                    settingSlider(
+                        title: "Cadence",
+                        value: $profile.targetCadenceStepsPerMinute,
+                        range: 120.0...210.0,
+                        step: 1.0,
+                        valueText: String(format: "%.0f spm", profile.targetCadenceStepsPerMinute)
+                    )
+                    settingSlider(
+                        title: "Cadence Variation",
+                        value: $profile.cadenceVariationFraction,
+                        range: 0.0...0.15,
+                        step: 0.01,
+                        valueText: String(format: "%.0f%%", profile.cadenceVariationFraction * 100)
+                    )
+                    settingSlider(
+                        title: "GPS Jitter",
+                        value: $profile.gpsJitterRadiusMeters,
+                        range: 0.0...5.0,
+                        step: 0.1,
+                        valueText: String(format: "%.1f m", profile.gpsJitterRadiusMeters)
+                    )
+                    settingSlider(
+                        title: "Cool-Down",
+                        value: $profile.cooldownDistance,
+                        range: 0.0...300.0,
+                        step: 10.0,
+                        valueText: String(
+                            format: String(localized: "Slow over the last %.0f m"),
+                            profile.cooldownDistance
+                        )
+                    )
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("Seed".localized)
+                        Spacer(minLength: 12)
+                        Text(String(format: "0x%08llX", profile.noiseSeed))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.top, 12)
+            } label: {
+                Text("Advanced")
+                    .font(.subheadline.weight(.semibold))
+            }
         }
         .padding(18)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))

@@ -18,8 +18,8 @@ final class RouteRunnerTests: XCTestCase {
         Array(square.prefix(3))
     }
 
-    /// Zero variation and zero jitter make speed, cadence and the ground coordinate exact, so the
-    /// distance assertions below do not have to absorb motion-model noise.
+    /// Zero variation, zero jitter and a disabled run envelope make speed, cadence and the ground
+    /// coordinate exact, so the distance assertions below do not have to absorb motion-model noise.
     private func steadyProfile(speed: Double = 2.0) -> RunProfile {
         RunProfile(
             targetSpeedMetersPerSecond: speed,
@@ -27,7 +27,10 @@ final class RouteRunnerTests: XCTestCase {
             speedVariationFraction: 0,
             cadenceVariationFraction: 0,
             gpsJitterRadiusMeters: 0,
-            noiseSeed: 0x5255_4E31
+            noiseSeed: 0x5255_4E31,
+            rampDuration: 0,
+            fatiguePerMinute: 0,
+            cooldownDistance: 0
         )
     }
 
@@ -376,6 +379,29 @@ final class RouteRunnerTests: XCTestCase {
         let expectedTicks = Int((1000 * lapLength / speed).rounded(.up))
         XCTAssertLessThanOrEqual(abs(ticks - expectedTicks), 1, "finished after \(ticks) ticks")
         XCTAssertEqual(runner.snapshot.elapsedTime, Double(ticks), accuracy: 1e-9)
+    }
+
+    func testCoolDownSlowsTheFinalMetresOfALap() throws {
+        let geometry = try closedGeometry()
+        let lapLength = geometry.totalDistance
+        var cooling = steadyProfile()
+        cooling.cooldownDistance = 120
+        var runner = try RouteRunner(geometry: geometry, profile: cooling, mode: .once)
+
+        // The start sits a full lap from the finish, so the target speed still applies there.
+        XCTAssertEqual(
+            runner.snapshot.speedMetersPerSecond,
+            cooling.targetSpeedMetersPerSecond,
+            accuracy: 1e-9
+        )
+
+        runner.start()
+        // Stop two metres short, then take one more half-second step inside the cool-down band.
+        _ = runner.advance(by: (lapLength - 2) / cooling.targetSpeedMetersPerSecond)
+        let slow = runner.advance(by: 0.5)
+
+        XCTAssertLessThan(slow.speedMetersPerSecond, cooling.targetSpeedMetersPerSecond * 0.9)
+        XCTAssertGreaterThan(slow.totalDistance, lapLength - 2)
     }
 
     // MARK: - Out and back

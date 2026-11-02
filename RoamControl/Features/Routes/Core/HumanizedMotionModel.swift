@@ -2,10 +2,14 @@ import Foundation
 
 /// Deterministic humanized motion.
 ///
-/// Speed and cadence wobble around the configured target with a smooth, low-frequency drift, and the
-/// reported GPS coordinate is offset by a bounded two-dimensional jitter. Every output is a
-/// pure function of the seed, the elapsed time, the profile and the ground coordinate: the
-/// same inputs always produce the same numbers, and no random source is touched per tick.
+/// Speed is shaped by three factors on top of the configured target: a ramp-up over the first
+/// seconds, a fatigue drift that loses `fatiguePerMinute` of the target per minute, and a
+/// cool-down over the last `cooldownDistance` metres. Cadence wobbles around its own target, and
+/// the reported GPS coordinate is offset by a bounded two-dimensional jitter.
+///
+/// Every output is a pure function of the seed, the elapsed time, the profile, the remaining
+/// distance and the ground coordinate: the same inputs always produce the same numbers, and no
+/// random source or clock is touched per tick.
 ///
 /// The model never moves the ground coordinate and never advances the route; it only turns a
 /// ground position into the coordinate that gets reported.
@@ -38,9 +42,52 @@ struct HumanizedMotionModel: Sendable {
         eastJitterPhases = Array(generated[9..<12])
     }
 
-    func speedMetersPerSecond(at elapsed: TimeInterval, profile: RunProfile) -> Double {
+    /// Late in a run the factors can pull the product below a walk; the floor keeps the reported
+    /// speed plausible instead of letting it collapse to zero.
+    private static let minimumSpeedMetersPerSecond = 0.3
+
+    /// Speed at `elapsed`, multiplied by the three run-shape factors and then by the micro wobble.
+    /// `remainingDistance` is `nil` for a run that has no finish (`.continuous`).
+    func speedMetersPerSecond(
+        at elapsed: TimeInterval,
+        profile: RunProfile,
+        remainingDistance: Double?
+    ) -> Double {
         let wave = Self.wave(at: elapsed, periods: Self.speedPeriods, phases: speedPhases)
-        return profile.targetSpeedMetersPerSecond * (1 + profile.speedVariationFraction * wave)
+        let shaped = profile.targetSpeedMetersPerSecond
+            * Self.rampFactor(at: elapsed, profile: profile)
+            * Self.fatigueFactor(at: elapsed, profile: profile)
+            * Self.cooldownFactor(remainingDistance: remainingDistance, profile: profile)
+        let speed = shaped * (1 + profile.speedVariationFraction * wave)
+        return max(Self.minimumSpeedMetersPerSecond, speed)
+    }
+
+    // MARK: - Run shape
+
+    /// Starts at 30% of the target and reaches 100% after `rampDuration`, smoothly.
+    static func rampFactor(at elapsed: TimeInterval, profile: RunProfile) -> Double {
+        guard profile.rampDuration > 0 else { return 1 }
+        let t = min(max(elapsed / profile.rampDuration, 0), 1)
+        let smooth = t * t * (3 - 2 * t)
+        return 0.3 + 0.7 * smooth
+    }
+
+    /// Loses `fatiguePerMinute` of the target per minute, never going below `minSpeedFraction`.
+    static func fatigueFactor(at elapsed: TimeInterval, profile: RunProfile) -> Double {
+        let minutes = max(elapsed, 0) / 60
+        let raw = 1 - profile.fatiguePerMinute * minutes
+        return max(profile.minSpeedFraction, raw)
+    }
+
+    /// Full speed until the final `cooldownDistance` metres, then down to 35% at the finish.
+    static func cooldownFactor(remainingDistance: Double?, profile: RunProfile) -> Double {
+        guard let remaining = remainingDistance,
+              remaining.isFinite,
+              profile.cooldownDistance > 0,
+              remaining < profile.cooldownDistance else { return 1 }
+        let d = min(max(remaining / profile.cooldownDistance, 0), 1)
+        let smooth = d * d * (3 - 2 * d)
+        return 0.35 + 0.65 * smooth
     }
 
     func cadenceStepsPerMinute(at elapsed: TimeInterval, profile: RunProfile) -> Double {
