@@ -17,6 +17,23 @@ struct SessionRecoveryRecord: Codable, Equatable {
     var routeProgress: RouteRunProgress? = nil
     var runProfile: RunProfile? = nil
     var runMode: RouteRunMode? = nil
+    /// Set when the run was frozen at its current point. Records written before the hold phase
+    /// existed have no such key and decode as `false`.
+    var wasHolding: Bool = false
+
+    enum CodingKeys: String, CodingKey {
+        case kind
+        case lastReportedLocation
+        case destination
+        case walkingPaceMetresPerSecond
+        case startedAt
+        case updatedAt
+        case savedRoute
+        case routeProgress
+        case runProfile
+        case runMode
+        case wasHolding
+    }
 
     var isWalkingRoute: Bool {
         kind == .walkingRoute && destination != nil
@@ -75,5 +92,27 @@ struct SessionRecoveryRecord: Codable, Equatable {
             runProfile: profile,
             runMode: mode
         )
+    }
+}
+
+extension SessionRecoveryRecord {
+    /// Hand-written so the memberwise initialiser and the factories above keep working, and so a
+    /// record written before the hold phase existed still decodes.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        kind = try container.decode(Kind.self, forKey: .kind)
+        lastReportedLocation = try container.decode(LocationTarget.self, forKey: .lastReportedLocation)
+        destination = try container.decodeIfPresent(LocationTarget.self, forKey: .destination)
+        walkingPaceMetresPerSecond = try container.decodeIfPresent(
+            Double.self,
+            forKey: .walkingPaceMetresPerSecond
+        )
+        startedAt = try container.decode(Date.self, forKey: .startedAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        savedRoute = try container.decodeIfPresent(RouteDefinition.self, forKey: .savedRoute)
+        routeProgress = try container.decodeIfPresent(RouteRunProgress.self, forKey: .routeProgress)
+        runProfile = try container.decodeIfPresent(RunProfile.self, forKey: .runProfile)
+        runMode = try container.decodeIfPresent(RouteRunMode.self, forKey: .runMode)
+        wasHolding = try container.decodeIfPresent(Bool.self, forKey: .wasHolding) ?? false
     }
 }

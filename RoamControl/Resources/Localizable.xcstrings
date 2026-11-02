@@ -1601,6 +1601,22 @@
         }
       }
     },
+    "Continue Run": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue Run"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接着跑"
+          }
+        }
+      }
+    },
     "Continuous": {
       "localizations": {
         "en": {
@@ -2401,6 +2417,22 @@
         }
       }
     },
+    "Extra laps": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Extra laps"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加趟数"
+          }
+        }
+      }
+    },
     "Failed": {
       "localizations": {
         "en": {
@@ -2605,6 +2637,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "指纹"
+          }
+        }
+      }
+    },
+    "Finish & Restore": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish & Restore"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成并恢复"
           }
         }
       }
@@ -2893,6 +2941,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "历史"
+          }
+        }
+      }
+    },
+    "Hold Here": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold Here"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持在此点"
           }
         }
       }
@@ -3981,6 +4045,150 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有找到匹配的地点。"
+          }
+        }
+      }
+    },
+    "Ran %lld laps. Adding %lld more makes %lld laps in total.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ran %lld laps. Adding %lld more makes %lld laps in total."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已跑 %lld 趟，再加 %lld 趟 → 共 %lld 趟。"
+          }
+        }
+      }
+    },
+    "Resume From Here": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume From Here"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从此点继续"
+          }
+        }
+      }
+    },
+    "Run held": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run held"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行已保持"
+          }
+        }
+      }
+    },
+    "The location session ended. Restore this iPhone's location and start the route again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The location session ended. Restore this iPhone's location and start the route again."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设备会话已断开。请恢复这台 iPhone 的真实位置，再重新开始路线。"
+          }
+        }
+      }
+    },
+    "The route finished. Hold here to keep this point, run more laps, or restore your real location.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The route finished. Hold here to keep this point, run more laps, or restore your real location."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "路线已跑完。可以保持在此点、接着跑更多趟，或恢复真实位置。"
+          }
+        }
+      }
+    },
+    "The run could not continue. Restore this iPhone's location and start the route again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The run could not continue. Restore this iPhone's location and start the route again."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法接着跑。请恢复这台 iPhone 的真实位置，再重新开始路线。"
+          }
+        }
+      }
+    },
+    "The run ends at the far end of the route.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The run ends at the far end of the route."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "终点落在路线远端。"
+          }
+        }
+      }
+    },
+    "The run ends back at the start of the route.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The run ends back at the start of the route."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "终点回到路线起点。"
+          }
+        }
+      }
+    },
+    "The run is held here. Movement is paused and this iPhone keeps reporting this point.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The run is held here. Movement is paused and this iPhone keeps reporting this point."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行停在此点：运动推进已暂停，这台 iPhone 仍继续上报该坐标。"
           }
         }
       }

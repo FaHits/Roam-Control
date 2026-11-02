@@ -268,6 +268,15 @@ struct HomeView: View {
                             Task { await routeSession.start(using: appModel) }
                         },
                         onTogglePause: routeSession.togglePause,
+                        onHold: {
+                            routeSession.hold(using: appModel)
+                        },
+                        onResumeFromHold: {
+                            routeSession.resumeFromHold(using: appModel)
+                        },
+                        onContinue: { additionalLaps in
+                            routeSession.continueAfterFinish(additionalLaps: additionalLaps, using: appModel)
+                        },
                         onStop: {
                             shouldClearLocationAfterRestoration = true
                             routeSession.stop(using: appModel)
@@ -758,7 +767,8 @@ struct HomeView: View {
                 route: route,
                 profile: profile,
                 mode: mode,
-                progress: progress
+                progress: progress,
+                wasHolding: recovery.wasHolding
             )
             mapModel.show(
                 try RouteGeometry(points: route.points, isClosed: route.isClosed)

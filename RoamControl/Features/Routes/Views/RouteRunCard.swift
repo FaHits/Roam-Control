@@ -10,10 +10,14 @@ struct RouteRunCard: View {
     let isPaired: Bool
     let onStart: () -> Void
     let onTogglePause: () -> Void
+    let onHold: () -> Void
+    let onResumeFromHold: () -> Void
+    let onContinue: (Int) -> Void
     let onStop: () -> Void
     let onDone: () -> Void
 
     @State private var isConfirmingStop = false
+    @State private var isChoosingContinuation = false
 
     var body: some View {
         Group {
@@ -39,6 +43,12 @@ struct RouteRunCard: View {
         } message: {
             Text("Roam Control will end the route run and restore your real location. Your route progress will be lost.")
         }
+        .sheet(isPresented: $isChoosingContinuation) {
+            RouteContinueSheet(session: session) { additionalLaps in
+                isChoosingContinuation = false
+                onContinue(additionalLaps)
+            }
+        }
     }
 
     private var cardContent: some View {
@@ -46,13 +56,24 @@ struct RouteRunCard: View {
             header
 
             ProgressView(value: session.lapProgress)
-                .tint(session.phase == .finished ? .green : .blue)
+                .tint(progressTint)
 
             metrics
 
             controls
 
             footer
+        }
+    }
+
+    private var progressTint: Color {
+        switch session.phase {
+        case .finished:
+            .green
+        case .holding:
+            .orange
+        case .idle, .preparing, .running, .paused, .stopping, .failed:
+            .blue
         }
     }
 
@@ -150,14 +171,25 @@ struct RouteRunCard: View {
             runningControls(isPaused: false)
         case .paused:
             runningControls(isPaused: true)
-        case .finished:
-            Button(action: onDone) {
-                Label("Done", systemImage: "checkmark")
-                    .frame(maxWidth: .infinity)
+        case .holding(let origin):
+            VStack(spacing: 10) {
+                if origin == .paused {
+                    primaryButton(title: "Resume From Here", symbol: "play.fill", action: onResumeFromHold)
+                } else {
+                    continueButton(prominent: true)
+                }
+                primaryRow {
+                    secondaryButton(title: "Finish & Restore", symbol: "checkmark", action: onDone)
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .accessibilityLabel("Done")
+        case .finished:
+            VStack(spacing: 10) {
+                primaryButton(title: "Hold Here", symbol: "hand.raised.fill", action: onHold)
+                primaryRow {
+                    continueButton(prominent: false)
+                    secondaryButton(title: "Finish & Restore", symbol: "checkmark", action: onDone)
+                }
+            }
         case .stopping:
             statusRow("Restoring this iPhone's real location…")
         }
@@ -179,14 +211,96 @@ struct RouteRunCard: View {
         if dynamicTypeSize.isAccessibilitySize {
             VStack(spacing: 10) {
                 pauseButton(isPaused: isPaused)
+                if isPaused {
+                    holdButton(showTitle: true)
+                }
                 stopButton(showTitle: true)
+            }
+        } else if isPaused {
+            VStack(spacing: 10) {
+                pauseButton(isPaused: true)
+                HStack(spacing: 10) {
+                    holdButton(showTitle: true)
+                    stopButton(showTitle: false)
+                }
             }
         } else {
             HStack(spacing: 10) {
-                pauseButton(isPaused: isPaused)
+                pauseButton(isPaused: false)
                 stopButton(showTitle: false)
             }
         }
+    }
+
+    private func primaryButton(
+        title: String,
+        symbol: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title.localized, systemImage: symbol)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .accessibilityLabel(title.localized)
+    }
+
+    /// "Continue Run" asks for a lap count unless the run loops forever, which has no count to
+    /// ask for.
+    @ViewBuilder
+    private func continueButton(prominent: Bool) -> some View {
+        if prominent {
+            continueAction.buttonStyle(.borderedProminent)
+        } else {
+            continueAction.buttonStyle(.bordered)
+        }
+    }
+
+    private var continueAction: some View {
+        Button(action: startContinuation) {
+            Label("Continue Run".localized, systemImage: "arrow.triangle.2.circlepath")
+                .frame(maxWidth: .infinity)
+        }
+        .controlSize(.large)
+        .accessibilityLabel("Continue Run".localized)
+    }
+
+    private func startContinuation() {
+        if session.continuationPlan(additionalLaps: 1) == nil {
+            onContinue(1)
+        } else {
+            isChoosingContinuation = true
+        }
+    }
+
+    private func secondaryButton(
+        title: String,
+        symbol: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title.localized, systemImage: symbol)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .accessibilityLabel(title.localized)
+    }
+
+    private func holdButton(showTitle: Bool) -> some View {
+        Button(action: onHold) {
+            if showTitle {
+                Label("Hold Here".localized, systemImage: "hand.raised.fill")
+                    .frame(maxWidth: .infinity)
+            } else {
+                Image(systemName: "hand.raised.fill")
+                    .frame(width: 28)
+            }
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .accessibilityLabel("Hold Here".localized)
     }
 
     private func pauseButton(isPaused: Bool) -> some View {
@@ -219,6 +333,20 @@ struct RouteRunCard: View {
         .accessibilityLabel("Stop")
     }
 
+    /// Lays secondary actions out in a row, or in a column at accessibility text sizes.
+    @ViewBuilder
+    private func primaryRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(spacing: 10) {
+                content()
+            }
+        } else {
+            HStack(spacing: 10) {
+                content()
+            }
+        }
+    }
+
     private func statusRow(_ text: String) -> some View {
         HStack(spacing: 10) {
             ProgressView()
@@ -243,16 +371,18 @@ struct RouteRunCard: View {
             footerText(String(localized: "Keep Roam Control running. You can use other apps while the run continues."))
         case .paused:
             footerText(String(localized: "Your simulated location is held here until you resume."))
+        case .holding:
+            footerText(String(localized: "The run is held here. Movement is paused and this iPhone keeps reporting this point."))
         case .finished:
-            footerText(String(localized: "The route finished. Tap Done to end the session and restore your real location."))
+            if let error = session.errorMessage {
+                errorText(error)
+            } else {
+                footerText(String(localized: "The route finished. Hold here to keep this point, run more laps, or restore your real location."))
+            }
         case .stopping:
             footerText(String(localized: "Keep Roam Control open until the real location has been restored."))
         case .failed(let message):
-            Text(message.localized)
-                .font(.caption)
-                .foregroundStyle(.red)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .fixedSize(horizontal: false, vertical: true)
+            errorText(message)
         }
     }
 
@@ -264,12 +394,21 @@ struct RouteRunCard: View {
             .fixedSize(horizontal: false, vertical: true)
     }
 
+    private func errorText(_ text: String) -> some View {
+        Text(text.localized)
+            .font(.caption)
+            .foregroundStyle(.red)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
     private var phaseTitle: String {
         switch session.phase {
         case .idle: "Route ready"
         case .preparing: "Preparing route"
         case .running: "Running"
         case .paused: "Run paused"
+        case .holding: "Run held"
         case .finished: "Run finished"
         case .stopping: "Ending run"
         case .failed: "Run unavailable"
@@ -280,6 +419,7 @@ struct RouteRunCard: View {
         switch session.phase {
         case .idle, .preparing, .running: "figure.run"
         case .paused: "pause.circle.fill"
+        case .holding: "hand.raised.fill"
         case .finished: "checkmark.circle.fill"
         case .stopping: "location.slash.fill"
         case .failed: "exclamationmark.triangle.fill"
@@ -288,6 +428,7 @@ struct RouteRunCard: View {
 
     private var phaseColour: Color {
         switch session.phase {
+        case .holding: .orange
         case .finished: .green
         case .failed: .red
         case .idle, .preparing, .running, .paused, .stopping: .blue
@@ -332,6 +473,70 @@ struct RouteRunCard: View {
             return String(format: "%d:%02d", minutes, seconds)
         }
         return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+    }
+}
+
+/// Asks how many more laps to append to a finished run and spells out where the run will end.
+private struct RouteContinueSheet: View {
+    let session: RouteSessionModel
+    let onConfirm: (Int) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var additionalLaps = 1
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Stepper(value: $additionalLaps, in: 1...50) {
+                        HStack {
+                            Text("Extra laps".localized)
+                            Spacer(minLength: 8)
+                            Text("\(additionalLaps)")
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                if let plan = session.continuationPlan(additionalLaps: additionalLaps) {
+                    Section {
+                        Text(summary(of: plan))
+                            .font(.subheadline)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(endpoint(of: plan))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            .navigationTitle("Continue Run".localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel".localized) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Continue".localized) { onConfirm(additionalLaps) }
+                }
+            }
+        }
+    }
+
+    private func summary(of plan: RouteContinuationPlan) -> String {
+        String(
+            format: String(localized: "Ran %lld laps. Adding %lld more makes %lld laps in total."),
+            plan.completedLaps,
+            plan.additionalLaps,
+            plan.totalLaps
+        )
+    }
+
+    private func endpoint(of plan: RouteContinuationPlan) -> String {
+        plan.endsAtStart
+            ? String(localized: "The run ends back at the start of the route.")
+            : String(localized: "The run ends at the far end of the route.")
     }
 }
 

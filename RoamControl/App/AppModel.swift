@@ -266,6 +266,9 @@ final class AppModel {
         profile: RunProfile,
         mode: RouteRunMode
     ) async {
+        #if DEBUG
+        debugRouteSessionStartCount += 1
+        #endif
         await startLocationSession(
             at: initialTarget,
             selectedTarget: LocationTarget(
@@ -503,7 +506,43 @@ final class AppModel {
         preferences.set(data, forKey: Self.activeSessionRecoveryKey)
     }
 
+    /// Writes a saved-route record for a run that is held or continued, promoting a finished
+    /// fixed-location record back into a resumable run. `wasHolding` survives a relaunch so the
+    /// restored session comes back held instead of running.
+    func armActiveRouteRecovery(
+        at target: LocationTarget,
+        route: RouteDefinition,
+        progress: RouteRunProgress,
+        profile: RunProfile,
+        mode: RouteRunMode,
+        wasHolding: Bool
+    ) {
+        var recovery = SessionRecoveryRecord.savedRoute(
+            route: route,
+            at: target,
+            progress: progress,
+            profile: profile,
+            mode: mode
+        )
+        recovery.wasHolding = wasHolding
+        recovery.updatedAt = .now
+        activeSessionRecovery = recovery
+        lastRecoverySaveDate = .now
+        guard let data = try? JSONEncoder().encode(recovery) else { return }
+        preferences.set(data, forKey: Self.activeSessionRecoveryKey)
+    }
+
+    /// Whether the route run still has a live device session to push coordinates into.
+    var isDeviceSessionActive: Bool {
+        if case .active = deviceSession.phase { return true }
+        return false
+    }
+
 #if DEBUG
+    /// Test-only seam: how many times a route location session was opened. Continuing a finished
+    /// run must not change it.
+    private(set) var debugRouteSessionStartCount = 0
+
     /// Test-only seam: seeds a recovery record exactly as a restored run would leave it,
     /// with the next save still due.
     var debugActiveSessionRecovery: SessionRecoveryRecord? {

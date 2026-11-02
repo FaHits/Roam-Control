@@ -146,6 +146,181 @@ final class RouteSessionModelTests: XCTestCase {
         XCTAssertNil(loop.tripCount)
         XCTAssertNil(loop.tripIndex)
     }
+
+    // MARK: - Holding a run
+
+    private var zeroProgress: RouteRunProgress {
+        RouteRunProgress(distanceInLap: 0, completedLaps: 0, elapsedTime: 0)
+    }
+
+    func testHoldFromRunningFreezesProgress() throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        try model.prepare(route: closedRoute, profile: steadyProfile(), mode: .laps(3), progress: zeroProgress)
+        model.debugBeginRunning()
+        let advanced = try XCTUnwrap(model.debugTick(delta: 120))
+        XCTAssertGreaterThan(advanced.distanceInLap, 0)
+
+        model.hold(using: appModel)
+
+        XCTAssertEqual(model.phase, .holding(.paused))
+        XCTAssertEqual(model.holdOrigin, .paused)
+        XCTAssertTrue(model.locksRouteInput)
+        XCTAssertEqual(try XCTUnwrap(model.snapshot).distanceInLap, advanced.distanceInLap, accuracy: 1e-9)
+        // A held run does not advance: the tick is rejected and the snapshot stays put.
+        XCTAssertNil(model.debugTick(delta: 120))
+        XCTAssertEqual(try XCTUnwrap(model.snapshot).distanceInLap, advanced.distanceInLap, accuracy: 1e-9)
+
+        // Holding keeps the injected coordinate and the session: nothing was stopped or reopened.
+        XCTAssertEqual(appModel.deviceSession.phase, .idle)
+        XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
+        let recovery = try XCTUnwrap(appModel.debugActiveSessionRecovery)
+        XCTAssertEqual(recovery.kind, .savedRoute)
+        XCTAssertTrue(recovery.wasHolding)
+        XCTAssertEqual(recovery.runMode, .laps(3))
+        XCTAssertEqual(try XCTUnwrap(recovery.routeProgress).distanceInLap, advanced.distanceInLap, accuracy: 1e-9)
+    }
+
+    func testHoldFromPausedKeepsPausedOrigin() throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        try model.prepare(route: closedRoute, profile: steadyProfile(), mode: .laps(3), progress: zeroProgress)
+        model.debugBeginRunning()
+        let advanced = try XCTUnwrap(model.debugTick(delta: 60))
+        model.togglePause()
+        XCTAssertEqual(model.phase, .paused)
+
+        model.hold(using: appModel)
+
+        XCTAssertEqual(model.phase, .holding(.paused))
+        XCTAssertEqual(model.holdOrigin, .paused)
+        XCTAssertEqual(try XCTUnwrap(model.snapshot).distanceInLap, advanced.distanceInLap, accuracy: 1e-9)
+        XCTAssertEqual(try XCTUnwrap(model.snapshot).elapsedTime, advanced.elapsedTime, accuracy: 1e-9)
+        XCTAssertEqual(model.completedLaps, 0)
+        XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
+        XCTAssertTrue(try XCTUnwrap(appModel.debugActiveSessionRecovery).wasHolding)
+    }
+
+    func testResumeFromHoldContinuesSameLap() throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        let progress = RouteRunProgress(distanceInLap: 200, completedLaps: 1, elapsedTime: 30)
+        try model.prepare(route: closedRoute, profile: steadyProfile(), mode: .laps(3), progress: progress)
+        model.debugBeginRunning()
+        let before = try XCTUnwrap(model.snapshot)
+        model.hold(using: appModel)
+        XCTAssertEqual(model.phase, .holding(.paused))
+
+        model.resumeFromHold(using: appModel)
+
+        XCTAssertEqual(model.phase, .running)
+        let resumed = try XCTUnwrap(model.snapshot)
+        // Same runner, same lap: the distance is neither reset nor restarted.
+        XCTAssertEqual(resumed.distanceInLap, 200, accuracy: 1e-9)
+        XCTAssertEqual(resumed.completedLaps, 1)
+        XCTAssertEqual(resumed.totalDistance, before.totalDistance, accuracy: 1e-9)
+        XCTAssertEqual(resumed.elapsedTime, 30, accuracy: 1e-9)
+
+        let next = try XCTUnwrap(model.debugTick(delta: 10))
+        XCTAssertEqual(next.distanceInLap, 220, accuracy: 1e-6)
+        XCTAssertEqual(next.completedLaps, 1)
+        XCTAssertEqual(model.completedLaps, 1)
+        XCTAssertFalse(try XCTUnwrap(appModel.debugActiveSessionRecovery).wasHolding)
+        XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
+    }
+
+    // MARK: - Continuing a finished run
+
+    func testContinueAfterFinishUpgradesOnceToTwoRounds() throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        model.deviceSessionIsActive = { _ in true }
+        let route = closedRoute
+        try model.prepare(route: route, profile: steadyProfile(), mode: .once, progress: zeroProgress)
+        XCTAssertEqual(model.totalLaps, 1)
+
+        model.debugBeginRunning()
+        let geometry = try RouteGeometry(points: route.points, isClosed: route.isClosed)
+        let finished = try XCTUnwrap(model.debugTick(delta: geometry.totalDistance))
+        XCTAssertEqual(finished.phase, .finished)
+        model.debugSetPhase(.finished)
+
+        let plan = try XCTUnwrap(model.continuationPlan(additionalLaps: 1))
+        XCTAssertEqual(plan.completedLaps, 1)
+        XCTAssertEqual(plan.additionalLaps, 1)
+        XCTAssertEqual(plan.totalLaps, 2)
+        XCTAssertEqual(plan.mode, .laps(2))
+        XCTAssertTrue(plan.endsAtStart)
+
+        model.continueAfterFinish(additionalLaps: 1, using: appModel)
+
+        XCTAssertEqual(model.phase, .running)
+        XCTAssertEqual(model.totalLaps, 2)
+        XCTAssertEqual(model.completedLaps, 1)
+        XCTAssertNil(model.errorMessage)
+        XCTAssertNil(model.tripCount)
+
+        // The same rule turns a single open traversal into an out-and-back back to the start.
+        let openModel = RouteSessionModel()
+        openModel.deviceSessionIsActive = { _ in true }
+        try openModel.prepare(route: openRoute, profile: steadyProfile(), mode: .once, progress: zeroProgress)
+        openModel.debugBeginRunning()
+        let openGeometry = try RouteGeometry(points: openRoute.points, isClosed: openRoute.isClosed)
+        _ = openModel.debugTick(delta: openGeometry.totalDistance)
+        openModel.debugSetPhase(.finished)
+
+        let openPlan = try XCTUnwrap(openModel.continuationPlan(additionalLaps: 1))
+        XCTAssertEqual(openPlan.mode, .outAndBack(trips: 2))
+        XCTAssertEqual(openPlan.totalLaps, 2)
+        XCTAssertTrue(openPlan.endsAtStart)
+    }
+
+    func testContinueAfterFinishKeepsDeviceSessionAlive() throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        // A completed lap is enough to park the run in .finished without a live tunnel.
+        try model.prepare(
+            route: closedRoute,
+            profile: steadyProfile(),
+            mode: .laps(1),
+            progress: RouteRunProgress(distanceInLap: 0, completedLaps: 1, elapsedTime: 60)
+        )
+        model.debugBeginRunning()
+        _ = model.debugTick(delta: 1)
+        model.debugSetPhase(.finished)
+        XCTAssertEqual(model.phase, .finished)
+
+        model.deviceSessionIsActive = { _ in true }
+        model.continueAfterFinish(additionalLaps: 2, using: appModel)
+
+        XCTAssertEqual(model.phase, .running)
+        XCTAssertNil(model.errorMessage)
+        // No second session: the continuation reused the live one.
+        XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
+        XCTAssertEqual(model.completedLaps, 1)
+        XCTAssertEqual(model.totalLaps, 3)
+        XCTAssertFalse(try XCTUnwrap(appModel.debugActiveSessionRecovery).wasHolding)
+
+        // With the device session gone the run fails loudly and stays finished.
+        let droppedModel = RouteSessionModel()
+        try droppedModel.prepare(
+            route: closedRoute,
+            profile: steadyProfile(),
+            mode: .laps(1),
+            progress: RouteRunProgress(distanceInLap: 0, completedLaps: 1, elapsedTime: 60)
+        )
+        droppedModel.debugBeginRunning()
+        _ = droppedModel.debugTick(delta: 1)
+        droppedModel.debugSetPhase(.finished)
+        droppedModel.deviceSessionIsActive = { _ in false }
+
+        droppedModel.continueAfterFinish(additionalLaps: 1, using: appModel)
+
+        XCTAssertEqual(droppedModel.phase, .finished)
+        XCTAssertNotNil(droppedModel.errorMessage)
+        XCTAssertTrue(droppedModel.locksRouteInput)
+        XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
+    }
 }
 
 private struct StubPairingService: PairingService {

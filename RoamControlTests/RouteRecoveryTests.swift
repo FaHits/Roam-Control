@@ -408,6 +408,81 @@ final class RouteRecoveryTests: XCTestCase {
         runner.start()
         XCTAssertEqual(runner.advance(by: 1).phase, .finished)
     }
+
+    // MARK: - Held runs
+
+    func testOldRecoveryRecordWithoutHoldingFlagDecodes() throws {
+        // Records written before the hold phase existed have no `wasHolding` key at all.
+        for (kind, addsDestination) in [("fixedLocation", false), ("walkingRoute", true)] {
+            let decoded = try JSONDecoder().decode(
+                SessionRecoveryRecord.self,
+                from: legacyRecord(kind: kind, addsDestination: addsDestination)
+            )
+            XCTAssertFalse(decoded.wasHolding, "\(kind) must decode without the holding flag")
+        }
+
+        let saved = savedRecord(mode: .laps(2))
+        var payload = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(saved)) as? [String: Any]
+        )
+        XCTAssertNotNil(payload.removeValue(forKey: "wasHolding"))
+        let legacy = try JSONDecoder().decode(
+            SessionRecoveryRecord.self,
+            from: try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+        )
+
+        XCTAssertFalse(legacy.wasHolding)
+        XCTAssertEqual(legacy.routeProgress, progress)
+        XCTAssertEqual(legacy.runMode, .laps(2))
+        XCTAssertEqual(legacy.savedRoute, route())
+    }
+
+    func testHoldingRecordRestoresToHoldingPhase() throws {
+        let source = route()
+        let (appModel, preferences) = makeAppModel(recovery: savedRecord(mode: .laps(3)))
+
+        appModel.armActiveRouteRecovery(
+            at: fixedTarget,
+            route: source,
+            progress: progress,
+            profile: .running,
+            mode: .laps(3),
+            wasHolding: true
+        )
+
+        let stored = try storedRecovery(in: preferences)
+        XCTAssertEqual(stored.kind, .savedRoute)
+        XCTAssertTrue(stored.wasHolding)
+        XCTAssertEqual(stored.routeProgress, progress)
+        XCTAssertEqual(stored.savedRoute, source)
+
+        let restored = RouteSessionModel()
+        try restored.prepare(
+            route: try XCTUnwrap(stored.savedRoute),
+            profile: try XCTUnwrap(stored.runProfile),
+            mode: try XCTUnwrap(stored.runMode),
+            progress: try XCTUnwrap(stored.routeProgress),
+            wasHolding: stored.wasHolding
+        )
+
+        XCTAssertEqual(restored.phase, .holding(.paused))
+        XCTAssertEqual(restored.holdOrigin, .paused)
+        XCTAssertEqual(restored.completedLaps, 2)
+        XCTAssertEqual(restored.totalLaps, 3)
+        XCTAssertTrue(restored.locksRouteInput)
+
+        // A record armed at the finish comes back held at the finish, not held mid-route.
+        let finishedHeld = RouteSessionModel()
+        try finishedHeld.prepare(
+            route: source,
+            profile: .running,
+            mode: .laps(2),
+            progress: RouteRunProgress(distanceInLap: 0, completedLaps: 2, elapsedTime: 900),
+            wasHolding: true
+        )
+        XCTAssertEqual(finishedHeld.phase, .holding(.finished))
+        XCTAssertEqual(finishedHeld.holdOrigin, .finished)
+    }
 }
 
 private struct RouteRecoveryStubPairingService: PairingService {
