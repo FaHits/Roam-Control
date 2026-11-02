@@ -141,6 +141,5 @@ First public beta, corresponding to app version 0.9.0 Build 29.
 - Prevented failed location updates from being counted as successful.
 - Moved the release analytics destination and Apple development-team identifier out of tracked project settings.
 
-[Unreleased]: https://github.com/seanhowarthdev/Roam-Control/compare/v0.9.1...HEAD
-[0.9.1]: https://github.com/seanhowarthdev/Roam-Control/compare/v0.9.0-beta.1...v0.9.1
-[0.9.0-beta.1]: https://github.com/seanhowarthdev/Roam-Control/releases/tag/v0.9.0-beta.1
+[0.9.1]: https://github.com/hxhlb/Roam-Control/compare/v0.9.0-beta.1...v0.9.1
+[0.9.0-beta.1]: https://github.com/hxhlb/Roam-Control/releases/tag/v0.9.0-beta.1
