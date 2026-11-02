@@ -9,7 +9,8 @@
 > - 测试：168 → 178。新增 `HumanizedMotionModelTests` 7 例（`testRampStartsAtThirtyPercentAndReachesTarget`、`testRampIsMonotonicNonDecreasing`、`testFatigueDropsAboutEighteenPercentOverTenMinutes`、`testFatigueNeverFallsBelowMinSpeedFraction`、`testCooldownOnlyAppliesInsideTheFinalMetres`、`testContinuousRunNeverCooldowns`、`testSpeedStaysPositiveAndDeterministic`）、`RunProfileTests` 2 例（`testNewMotionFieldsDefaultWhenDecodingAnOlderProfile`、`testMotionFieldRangesAreValidated`）、`RouteRunnerTests` 1 例（`testCoolDownSlowsTheFinalMetresOfALap`，验证调用点确实把剩余距离传进模型）。既有速度断言按新公式重写（`assertBounds` 现在乘三层包络），三个测试文件的 `steadyProfile` 显式关掉三层包络以保持稳态语义。
 > - 实测因子（纯函数，本机可算）：起跑 t=0 为 0.30、t=10 s 为 0.65、t≥20 s 为 1.00；体力默认 0.018/min，10 分钟 0.82（−18%），1 小时 0.60（撞 `minSpeedFraction`）；收尾默认 120 m，剩余 ≥120 m 为 1.00、剩余 60 m 为 0.675、剩余 0 m 为 0.35。
 > - 本地门禁（本机 Windows，无 `xcodebuild`）：`check_localizations.py` `634/634`、`2/2`、`All 636 keys have non-empty zh-Hans values.`（exit 0）；坐标 grep 仍 8；两条架构边界 rg 无输出；`walkBreak|休息|步行间歇` 0 命中；版本仍 0.10.0 / 62；`git diff --check` 干净。
-> - 未验证：构建与测试结论来自 CI；真机观感（起跑是否像人、掉速是否可察觉、收尾减速幅度）留待实机验收。
+> - CI（head `779803f`，run `41438008883`）：`test` / `unsigned-ipa` / `unsigned-ipa-debug` 三个 job 全部 success；`TEST SUCCEEDED`，Debug 与 Release 均 `BUILD SUCCEEDED`；CI 日志逐例计数 178 用例通过、0 失败，10 个新增用例名全部出现在日志里；产物 `RoamControl-unsigned-ipa` 3,140,835 字节（artifact id `13136449594`）、`RoamControl-unsigned-debug-ipa` 4,752,762 字节（artifact id `13138196324`）。
+> - 未验证：真机观感（起跑是否像人、掉速是否可察觉、收尾减速幅度）留待实机验收。
 
 > 2026-11-01 0.10.0 发布：真机 28 项（R1–R7、S1–S2、L1–L5、F1–F4、T1–T3、M1–M3、H1–H4）全部 PASS，14H 修复后 L1 / L6 / L3 在同一次构建复测 PASS，执行人 = 项目所有者；代码状态提交 `b47cb55` 的 CI run `41289851759` 三 job 全绿（158 用例 0 失败），标签 `v0.10.0` 与 `v0.10.0-fa.1` 均指向该提交，GitHub Release `v0.10.0` 附 unsigned Release IPA。Task 14 状态据此改为 `completed`。
 
