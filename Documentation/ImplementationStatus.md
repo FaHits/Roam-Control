@@ -26,6 +26,9 @@
 > - 未验证：真机项（保持时坐标是否被持续上报、后台保活是否真的不被 `stop` 打断、掉线失败提示的实际呈现、弹层文案在小屏与无障碍字号下的可读性）登记在交接文档第 7 节，本记录不写成 pass
 
 > 2026-11-02 Task 21F 修复：开放路线「接着跑」的进度换算。开放路线以 `.once` 跑完时 `distanceInLap == geometry.totalDistance`，原实现把这组 progress 原样交给新的 `.outAndBack(trips: n)` runner；回程从终点往回量，于是新 runner 一构造就落在起点、第一个 tick 就满趟结束。新增纯逻辑 `RouteSessionModel.carriedProgress(_:from:to:)`：只有计程口径不变（`.once` → `.laps`、`.laps` → `.laps`、`.outAndBack` → `.outAndBack`、`.continuous`）才沿用 `distanceInLap`，`.once` 开放 → `.outAndBack` 时把 `distanceInLap` 归 0、`completedLaps` 与 `elapsedTime` 照传；`.once` 闭环 → `.laps` 原本就是 0，不动。新增 3 例测试（`testContinueAfterFinishOnOpenRouteStaysWhereTheRunEnded`、`testContinueAfterFinishOnOpenRouteKeepsRunningAfterOneTick`、`testCarriedProgressKeepsConventionAcrossModes`），全量 165 → 168。
+>
+> - 提交 `fc41e3f`（`fix(routes): re-base a continued open route onto the far end`，3 文件 +97 / −1）；CI run [41430897814](https://github.com/FaHits/Roam-Control/actions/runs/41430897814)（head `fc41e3f`）`conclusion=success`：`test` 10:42:08Z→10:53:02Z（168 用例 0 失败、`** TEST SUCCEEDED **`、Debug 与 Release 均 `** BUILD SUCCEEDED **`）、`unsigned-ipa` success 1m15s、`unsigned-ipa-debug` success 51s
+> - 产物：`RoamControl-unsigned-ipa` id `13134752774` / 3,133,817 字节；`RoamControl-unsigned-debug-ipa` id `13133259940` / 4,740,494 字节
 
 - 功能：手绘闭环路线与拟人跑步模拟
 - 当前分支：`feat/manual-running-routes`
@@ -175,7 +178,7 @@
 | Task 17：开放路线折返（单程趟数） | `implemented` | `.outAndBack(trips:)` 由 `completedLaps` 奇偶决定方向（偶数趟回起点、奇数趟停终点），恢复时按奇偶还原并把 `completedLaps` 夹到 `trips`；全量 135 → 147（+12）0 失败，head `76d41f1`，CI run `41236893110` 三 job 全绿，Release artifact `13055889161`（3,107,748 字节）、Debug artifact `13055378342`（4,635,484 字节）；第 7 节 1 条（#16），随 Task 14 B 段验证 |
 | Task 18：路线编辑器卫星/混合底图 | `implemented` | `MapDisplayStyle.mapStyle` 成为唯一映射点（`AppPreferences.swift:47`），Home 与编辑器共用；编辑器面板内可就地切换，无障碍字号下降级为 `.menu`；147 → 153（+6）0 失败，head `94cc7a9`，CI run `41263004257` 三 job 全绿，Release artifact `13066740244`（3,109,098 字节）、Debug artifact `13065689661`（4,637,760 字节）；第 7 节 2 条（#17、#19），随 Task 14 B 段验证 |
 | Task 21：会话状态保持与接着跑 | `implemented` | 五态会话机：`holding(RouteSessionHoldOrigin)` 冻结推进但不 `stop`，`resumeFromHold` 用同一 runner 续跑不归零，`continueAfterFinish` 追加趟数（`.once` 闭环 → `.laps(2)`、开放 → `.outAndBack(trips: 2)`、`.continuous` 直续），不二次调用 `startRouteLocationSession`，掉线时明确报错并停 `finished`；恢复记录 `wasHolding` 向后兼容；新增 7 例（159 → 165）；本地门禁：`All 628 keys` exit 0、坐标 grep 8、两条架构边界 0 命中、版本 0.10.0 / 62；165 用例 0 失败，head `4490e2e`，CI run `41425423279` 三 job 全绿，Release artifact `13132328897`（3,133,985 字节）、Debug artifact `13132790853`（4,740,207 字节）；真机项登记第 7 节 |
-| Task 21F：开放路线接跑进度换算 | `implemented_unverified` | `carriedProgress(_:from:to:)` 按目标模式换算 carried progress（`.once` 开放 → `.outAndBack` 归零距离、保留趟数与计时），修掉续跑瞬移回起点并立刻结束的缺陷；新增 3 例，165 → 168；本地门禁 `All 628 keys` exit 0、坐标 grep 8、架构 rg 0 命中、版本 0.10.0 / 62；CI 待跑 |
+| Task 21F：开放路线接跑进度换算 | `implemented` | `carriedProgress(_:from:to:)` 按目标模式换算 carried progress（`.once` 开放 → `.outAndBack` 归零距离、保留趟数与计时），修掉续跑瞬移回起点并立刻结束的缺陷；新增 3 例，165 → 168；本地门禁 `All 628 keys` exit 0、坐标 grep 8、架构 rg 0 命中、版本 0.10.0 / 62；168 用例 0 失败，head `fc41e3f`，CI run `41430897814` 三 job 全绿，Release artifact `13134752774`（3,133,817 字节）、Debug artifact `13133259940`（4,740,494 字节） |
 
 ## 交接记录
 
@@ -1075,13 +1078,15 @@
 ### 2026-11-02 Task 21F：开放路线接跑的进度换算
 
 - 任务：Task 21F - 修正开放路线「接着跑」的进度换算
-- 状态：`implemented_unverified`（本机无 macOS，构建与测试结论来自 CI）
+- 状态：`implemented`（head `fc41e3f` 的 CI run `41430897814` 三 job 全绿、168 用例 0 失败；真机项见未验证项）
 - 分支与基线：`feat/manual-running-routes`，起点 HEAD `7960527`
 - 缺陷：`continueAfterFinish` 把开放路线跑完时的 `progress`（`distanceInLap == lapLength`）原样交给 `.outAndBack(trips: n)` 的新 runner；回程坐标按 `lapLength - distanceInLap` 取，于是新 runner 构造出来就在起点，`totalDistance` 记成 `2L`，第一个 tick 即 `completedLaps == n` 结束
 - 修法：新增 `RouteSessionModel.carriedProgress(_:from:to:)` 纯函数，`continueAfterFinish` 只在跨计程口径时换算，不再靠注释解释散落逻辑
 - 修改文件：`RoamControl/Features/Routes/State/RouteSessionModel.swift`、`RoamControlTests/RouteSessionModelTests.swift`
 - 门禁：`check_localizations.py` `626/626` + `2/2`、`All 628 keys`（exit 0）；坐标 grep 8；两条架构边界 0 命中；`git diff --check` 干净；版本 0.10.0 / 62 未动
 - 新增测试：3 例，全量 168
-- CI：待跑
+- 提交：`fc41e3f`（`fix(routes): re-base a continued open route onto the far end`）
+- CI：run [41430897814](https://github.com/FaHits/Roam-Control/actions/runs/41430897814)（head `fc41e3f`）success；`test` 10:42:08Z→10:53:02Z（168 用例 0 失败、`** TEST SUCCEEDED **`、Debug 与 Release 均 `** BUILD SUCCEEDED **`）、`unsigned-ipa` success、`unsigned-ipa-debug` success
+- 产物：`RoamControl-unsigned-ipa` id `13134752774` / 3,133,817 字节；`RoamControl-unsigned-debug-ipa` id `13133259940` / 4,740,494 字节
 - 未验证项：开放路线接跑的真机表现（回程是否从终点平滑往回走、弹层终点说明与实际一致）登记第 7 节
 - 更新时间：2026-11-02
