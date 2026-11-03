@@ -4,6 +4,13 @@
 
 ## 当前交接
 
+> 2026-11-03 Task 27 保持态点位化、卡片自适应与开放 continuous：`HomeView.activeRouteGeometry` 在 `.holding` 返回 `nil`（折线消失、点位标记仍在）；`RouteRunCard` 保持态不再画进度条，标题改 `Held at this point`（zh-Hans「已定位于此点」），指标只剩 Covered / Elapsed / Trips 三项，按钮为 `Resume From Here`（主）与 `Finish & Restore`（次）；暂停态一字未改（进度条 + 蓝色 Pause/Resume）。卡片去掉 `dynamicTypeSize` 分支，改 `ViewThatFits(in: .vertical)`：内容放得下就按内容高度、放不下才进 `ScrollView`，按钮统一 `minHeight 46`、间距 10、底部 4 pt。`.continuous` 语义扩成「闭环绕圈、开放折返」，`RouteRunner` 的「来回跑」判断改为按几何+模式推导，开放 continuous 走同一条 `advanceLoop`，方向按 `completedLaps` 奇偶交替，`targetLaps` 仍为 `nil`；`RouteRunSetupView` 开放路线给 Once/Continuous 分段控件，Continuous 下列「Runs back and forth until you stop.」，Trips Stepper 只在 Once 下出现。
+>
+> - 测试：188 → 195（+7）。
+> - 本地门禁：`PYTHONUTF8=1 python scripts/check_localizations.py` → `641/641`、`2/2`、`All 643 keys have non-empty zh-Hans values.`（exit 0，新增 3 key）；坐标 grep 8；`Features/Routes/Core` 与 `Features/Routes/Models` 两条架构 rg 均 0；版本仍 `0.11.0` / `63`；`"scribble"` 1 命中（`RouteSymbol.swift:7` 常量本身）。
+> - CI（head `cbeb347`，run `41594446967`）：三 job 全 success，195 用例 0 失败；产物 `RoamControl-unsigned-ipa` id `13211439510` / 3,148,793 字节、`RoamControl-unsigned-debug-ipa` id `13211647399` / 4,765,785 字节。
+> - 未验证：保持态真机观感、三按钮卡片的实际高度、开放 continuous 连跑 20 分钟的行为。
+
 > 2026-11-02 Task 26 版本收尾：0.11.0 / 63。`RoamControl.xcodeproj/project.pbxproj` 四处改 `CURRENT_PROJECT_VERSION = 63`、`MARKETING_VERSION = 0.11.0`；`RouteSymbol` 收编最后一个字面量（新增 `static let open = "scribble"`，`RoamControl/Features/Routes/Views/RouteLibraryView.swift:276` 改用 `RouteSymbol.open`，`RouteSymbolTests` 由 `testLibrarySymbolExists` 扩成 `testRouteSymbolsExist` 循环校验两个常量，用例总数不变）；`CHANGELOG.md` 新增 `## [0.11.0] - 待发布（真机验收进行中）` 段，并把原 `[Unreleased]` 里那条 Removed 收进同一段的 `### Removed`（不留空段）；`Documentation/RegressionChecklist.md` 新增 `0.11.0 device regression` 10 条勾选项；`Documentation/UserGuide.md` 在「Choose a location」「Walking routes」两节内补海外地点搜索、`Run Profile`、保持位置、接着跑四段。未改 README / `VERSIONING.md` / 坐标换算 / `HumanizedMotionModel` / `RunProfile` 实现，未打 tag、未建 release。
 >
 > - 测试：188 → 188（本次未新增用例；仅把既有符号测试扩成两个常量的循环断言）。
@@ -195,6 +202,7 @@
 | Task 18：路线编辑器卫星/混合底图 | `implemented` | `MapDisplayStyle.mapStyle` 成为唯一映射点（`AppPreferences.swift:47`），Home 与编辑器共用；编辑器面板内可就地切换，无障碍字号下降级为 `.menu`；147 → 153（+6）0 失败，head `94cc7a9`，CI run `41263004257` 三 job 全绿，Release artifact `13066740244`（3,109,098 字节）、Debug artifact `13065689661`（4,637,760 字节）；第 7 节 2 条（#17、#19），随 Task 14 B 段验证 |
 | Task 21：会话状态保持与接着跑 | `implemented` | 五态会话机：`holding(RouteSessionHoldOrigin)` 冻结推进但不 `stop`，`resumeFromHold` 用同一 runner 续跑不归零，`continueAfterFinish` 追加趟数（`.once` 闭环 → `.laps(2)`、开放 → `.outAndBack(trips: 2)`、`.continuous` 直续），不二次调用 `startRouteLocationSession`，掉线时明确报错并停 `finished`；恢复记录 `wasHolding` 向后兼容；新增 7 例（159 → 165）；本地门禁：`All 628 keys` exit 0、坐标 grep 8、两条架构边界 0 命中、版本 0.10.0 / 62；165 用例 0 失败，head `4490e2e`，CI run `41425423279` 三 job 全绿，Release artifact `13132328897`（3,133,985 字节）、Debug artifact `13132790853`（4,740,207 字节）；真机项登记第 7 节 |
 | Task 21F：开放路线接跑进度换算 | `implemented` | `carriedProgress(_:from:to:)` 按目标模式换算 carried progress（`.once` 开放 → `.outAndBack` 归零距离、保留趟数与计时），修掉续跑瞬移回起点并立刻结束的缺陷；新增 3 例，165 → 168；本地门禁 `All 628 keys` exit 0、坐标 grep 8、架构 rg 0 命中、版本 0.10.0 / 62；168 用例 0 失败，head `fc41e3f`，CI run `41430897814` 三 job 全绿，Release artifact `13134752774`（3,133,817 字节）、Debug artifact `13133259940`（4,740,494 字节） |
+| Task 27：保持态点位化、卡片自适应、开放 continuous | `implemented` | 保持态 = 点位态：`HomeView.swift:614` 在 `.holding` 返回 `nil`，折线消失、点位标记仍在；`RouteRunCard` 保持态去掉进度条，标题 `Held at this point`，指标只留 Covered / Elapsed / Trips，按钮 `Resume From Here` + `Finish & Restore`；暂停态未改（进度条 + 蓝色）。卡片去掉 `dynamicTypeSize` 分支改 `ViewThatFits`，按钮 `minHeight 46`、间距 10、底部 4 pt。`.continuous` 开放路线合法（末端折返、永不结束，方向按 `completedLaps` 奇偶），设置页开放路线给 Once/Continuous、Trips Stepper 只在 Once 下出现；`isOpenContinuousRun` 让卡片显示已完成趟数而非「3 / 1」。188 → 195（+7）0 失败，head `cbeb347`，CI run `41594446967` 三 job 全绿，Release artifact `13211439510`（3,148,793 字节）、Debug artifact `13211647399`（4,765,785 字节）；门禁 `All 643 keys` exit 0、坐标 grep 8、两条架构 rg 0、版本 0.11.0 / 63；真机项未执行 |
 
 ## 交接记录
 
@@ -1205,3 +1213,30 @@
 - 已知风险：11.0 的 CHANGELOG 段头写「待发布（真机验收进行中）」，发布时需要规划会话把它改成实际发布日期；`README.md` 的 `Current release` 行同理
 - 下一步：规划会话实机验收 → 改 README 与 CHANGELOG 段头 → 打 tag / 建 release
 - 更新时间：2026-11-02
+
+### 2026-11-03 Task 27：保持态点位化、卡片自适应、开放 continuous
+
+- 任务：Task 27 - 保持态改成点位态、卡片排版、开放路线连续折返（用户直接指令即任务规格）
+- 状态：`implemented`（head `cbeb347` 的 CI run `41594446967` 三 job 全绿、195 用例 0 失败）
+- 分支与基线：`feat/manual-running-routes`，起点 HEAD `0633627`（188 用例、640 key、0.11.0 / 63）
+- 修改文件：`RoamControl/Features/Home/HomeView.swift`（+2）、`RoamControl/Features/Routes/Core/RouteRunner.swift`（+39/−16）、`RoamControl/Features/Routes/Models/RouteRunMode.swift`（+3/−1）、`RoamControl/Features/Routes/State/RouteSessionModel.swift`（+7）、`RoamControl/Features/Routes/Views/RouteRunCard.swift`（+64/−15）、`RoamControl/Features/Routes/Views/RouteRunSetupView.swift`（+29/−7）、`RoamControl/Resources/Localizable.xcstrings`（+48，3 个 key）、`RoamControlTests/RouteRunnerTests.swift`（+127/−1）、`RoamControlTests/RouteSessionModelTests.swift`（+73）
+- 保持态与暂停态的差异：`activeRouteGeometry` 只在 `.holding` 返回 `nil`（`.paused` 仍画整条路线）；`cardContent` 的 `ProgressView` 只在 `!isHolding` 时渲染；`metrics` 在 `isHolding` 时改走 `holdingMetrics`（Covered / Elapsed / Trips），暂停态仍走原来的两行六项；`phaseTitle` 只改 `.holding` 一行（`Run held` → `Held at this point`）。`runningControls`、`pauseButton`、`stopButton`、`progressTint` 的 `.paused` 分支、`TogglePause` / `togglePause()` 均未改动，暂停态因此不可能被这次改动波及。
+- 卡片排版：`body` 由 `Group { if dynamicTypeSize.isAccessibilitySize { ScrollView… } else { cardContent } }` 改为 `ViewThatFits(in: .vertical) { cardContent; ScrollView { cardContent } }`——没有写死高度，内容放得下时卡片就是内容高度，放不下才切到滚动层；七个按钮的 Label 统一 `.frame(maxWidth: .infinity, minHeight: 46)`（纯图标按钮补 `.frame(minHeight: 46)`），纵向间距沿用 10，`cardContent` 末尾加 `.padding(.bottom, 4)`。跑完态三个出口未改。
+- 开放 continuous：`RouteRunner.countsLaps(_:onClosedRoute:)` 取代 `isOutAndBack`——闭环恒为 true，开放几何下 `.outAndBack` 与 `.continuous` 为 true，`.once` / `.laps` 为 false；`isReturnTrip(_:onClosedRoute:completedLaps:)` 在「计趟且开放」时按奇偶返回方向，闭环恒为前进；`advance(by:)` 的分派改为 `if countsLaps`；`init` 里 `.continuous` 不再要求闭环（`.laps` 仍抛 `requiresClosedRoute`）；`targetLaps(for: .continuous)` 仍为 `nil`。`advanceLoop` 的跨接缝夹取、`lapTolerance` 吸附与末帧坐标未重写。
+- 新增测试 7 例：`RouteRunnerTests` 5 例（`testOpenRouteContinuousNeverFinishes` 连跑 3 个来回仍在 running、`completedLaps == 3`；`testOpenRouteContinuousAlternatesDirection` 第 2 趟坐标按 `lapLength - offset` 往回、第 3 趟回到 `offset` 向前；`testOpenRouteContinuousCarriesProgress` 跨接缝后 `distanceInLap == 3`、`totalDistance == lapLength + 3`；`testContinuousStillWorksOnClosedRoute` 闭环 2.5 圈回归；`testLapsStillRequiresClosedRoute` 开放几何 + `.laps(2)` 仍抛错）、`RouteSessionModelTests` 2 例（`testHoldingDoesNotAdvanceTheRun` 保持 60 次 1 s tick 后距离与时间不变；`testOpenContinuousRunSurvivesRecovery` 进度 + 模式编解码往返后 `totalDistance == 2 × lapLength + 120`、再 tick 1 s 到 122）。原 `testOpenRouteRejectsContinuousMode` 反转为 `testOpenRouteAcceptsContinuousMode`（名字随语义改，测试数仍 +7）。
+- 门禁（逐条实测）
+
+| # | 门禁 | 结果 |
+| --- | --- | --- |
+| 1 | 测试数 | pass：`rg -c "func test" RoamControlTests/*.swift` 合计 195（188 + 7），CI 日志 195 行 `Test case … passed`、0 行 `failed` |
+| 2 | CI 三 job | pass：`test` 07:09:32Z→07:15:01Z、`unsigned-ipa` 07:15:05Z→07:16:44Z、`unsigned-ipa-debug` 07:15:05Z→07:16:22Z，全 success |
+| 3 | 两个产物 | pass：`RoamControl-unsigned-ipa` id `13211439510` / 3,148,793 字节；`RoamControl-unsigned-debug-ipa` id `13211647399` / 4,765,785 字节 |
+| 4 | `PYTHONUTF8=1 python scripts/check_localizations.py` | pass：`641/641`、`InfoPlist 2/2`、`All 643 keys have non-empty zh-Hans values.`，exit 0；新增 3 key（`Covered`、`Held at this point`、`Runs back and forth until you stop.`） |
+| 5 | 坐标 grep（`gcj02ToWGS84` / `offsetDegrees` / `coordinateOffset`） | pass：8（与基线一致） |
+| 6 | 架构 rg：`import (SwiftUI\|MapKit)` in `Features/Routes/Core` / `Features/Routes/Models` | pass：均 0 |
+| 7 | `rg -n "MARKETING_VERSION\|CURRENT_PROJECT_VERSION" RoamControl.xcodeproj/project.pbxproj` | pass：`:248` / `:273` = `63`，`:253` / `:278` = `0.11.0` |
+| 8 | `rg -n '"scribble"' RoamControl` | pass：1（`RouteSymbol.swift:7` 常量本身，未动） |
+
+- 规格偏差两处：①`RoamControl/Models/AppPreferences.swift:2-3` 有 `import MapKit` / `import SwiftUI`，是 Task 18（`94cc7a9`）引入的既有状态，本次未改；「Models 两条 rg 归零」按 `Documentation/Plans/` 里的口径取 `Features/Routes/Models` 才是 0，`RoamControl/Models` 仍是 2。②规格要求保持态主按钮「Resume From Here」，但 `.holding(.finished)`（跑完后点 Hold Here）的恢复守卫只认 `.paused`，直接换成 Resume 会得到一个点了没反应的按钮；因此保持态按 `origin` 分派：`.paused` → `Resume From Here`，`.finished` → `Continue Run`，两者都仍是两个按钮。
+- 未验证项：保持态真机观感（折线消失是否够清楚）、三按钮状态下卡片实际高度、开放 continuous 连跑 20 分钟的方向与接缝行为，均无真机、无截图能力
+- 更新时间：2026-11-03
