@@ -32,7 +32,7 @@ enum MapSearchQuery {
     /// first so a complete name is never traded for a weaker one.
     static func attempts(_ raw: String, overseas: Bool) -> [String] {
         guard overseas else { return [raw] }
-        guard let trailing = segments(raw).last, !trailing.isEmpty, trailing != raw else {
+        guard let trailing = segments(raw).last(where: { !$0.isEmpty }), trailing != raw else {
             return [raw]
         }
         return [raw, trailing]
