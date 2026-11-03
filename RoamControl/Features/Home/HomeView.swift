@@ -613,6 +613,8 @@ struct HomeView: View {
 
     private var activeRouteGeometry: RouteGeometry? {
         guard let route = routeSession.route else { return nil }
+        // A held run is a point, not a line: drawing the route would claim movement that stopped.
+        if case .holding = routeSession.phase { return nil }
         return try? RouteGeometry(points: route.points, isClosed: route.isClosed)
     }
 

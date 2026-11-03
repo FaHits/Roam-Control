@@ -569,6 +569,120 @@ final class RouteRunnerTests: XCTestCase {
         }
     }
 
+    // MARK: - Continuous on an open route
+
+    private func openContinuousRunner(speed: Double = 2.0) throws -> RouteRunner {
+        try RouteRunner(
+            geometry: try openGeometry(),
+            profile: steadyProfile(speed: speed),
+            mode: .continuous
+        )
+    }
+
+    func testOpenRouteContinuousNeverFinishes() throws {
+        let geometry = try openGeometry()
+        let lapLength = geometry.totalDistance
+        let speed = 2.0
+        var runner = try openContinuousRunner(speed: speed)
+        runner.start()
+
+        // Three complete trips: out, back, out again.
+        for _ in 0..<3 {
+            _ = runner.advance(by: lapLength / speed)
+        }
+
+        let snapshot = runner.snapshot
+        XCTAssertEqual(snapshot.phase, .running)
+        XCTAssertEqual(snapshot.completedLaps, 3)
+        XCTAssertEqual(snapshot.totalDistance, 3 * lapLength, accuracy: 1e-6)
+    }
+
+    func testOpenRouteContinuousAlternatesDirection() throws {
+        let geometry = try openGeometry()
+        let lapLength = geometry.totalDistance
+        let speed = 2.0
+        let quarter = lapLength / 4
+        var runner = try openContinuousRunner(speed: speed)
+        runner.start()
+
+        // Trip 1 runs forward and lands on the last point exactly.
+        _ = runner.advance(by: lapLength / speed)
+        XCTAssertEqual(runner.snapshot.completedLaps, 1)
+        XCTAssertEqual(runner.snapshot.groundCoordinate, geometry.points.last)
+
+        // Trip 2 walks the route backwards: a quarter of the way is measured from the far end.
+        _ = runner.advance(by: quarter / speed)
+        XCTAssertEqual(runner.snapshot.completedLaps, 1)
+        XCTAssertEqual(
+            runner.snapshot.groundCoordinate,
+            geometry.coordinate(atDistance: lapLength - quarter)
+        )
+        XCTAssertNotEqual(
+            runner.snapshot.groundCoordinate,
+            geometry.coordinate(atDistance: quarter)
+        )
+
+        // Trip 3 turns around again and runs forward from the first point.
+        _ = runner.advance(by: (lapLength - quarter) / speed)
+        _ = runner.advance(by: quarter / speed)
+        XCTAssertEqual(runner.snapshot.completedLaps, 2)
+        XCTAssertEqual(
+            runner.snapshot.groundCoordinate,
+            geometry.coordinate(atDistance: quarter)
+        )
+    }
+
+    func testOpenRouteContinuousCarriesProgress() throws {
+        let geometry = try openGeometry()
+        let lapLength = geometry.totalDistance
+        let speed = 2.0
+        var runner = try openContinuousRunner(speed: speed)
+        runner.start()
+
+        // Stop one metre short of the seam: nothing has been completed yet.
+        _ = runner.advance(by: (lapLength - 1) / speed)
+        XCTAssertEqual(runner.snapshot.completedLaps, 0)
+        XCTAssertEqual(runner.snapshot.distanceInLap, lapLength - 1, accuracy: 1e-6)
+        XCTAssertEqual(runner.snapshot.totalDistance, lapLength - 1, accuracy: 1e-6)
+
+        // Two more seconds at 2 m/s cross the seam; the three metres past it are kept, the trip
+        // count grows, and the coordinate is measured from the far end because the run turns back.
+        let crossed = runner.advance(by: 2)
+        XCTAssertEqual(crossed.completedLaps, 1)
+        XCTAssertEqual(crossed.distanceInLap, 3, accuracy: 1e-6)
+        XCTAssertEqual(crossed.totalDistance, lapLength + 3, accuracy: 1e-6)
+        XCTAssertEqual(crossed.groundCoordinate, geometry.coordinate(atDistance: lapLength - 3))
+    }
+
+    func testContinuousStillWorksOnClosedRoute() throws {
+        let geometry = try closedGeometry()
+        let lapLength = geometry.totalDistance
+        let speed = 2.0
+        var runner = try RouteRunner(
+            geometry: geometry,
+            profile: steadyProfile(speed: speed),
+            mode: .continuous
+        )
+        runner.start()
+
+        let snapshot = runner.advance(by: (2.5 * lapLength) / speed)
+
+        XCTAssertEqual(snapshot.phase, .running)
+        XCTAssertEqual(snapshot.completedLaps, 2)
+        XCTAssertEqual(snapshot.distanceInLap, lapLength / 2, accuracy: 1e-6)
+        XCTAssertEqual(snapshot.totalDistance, 2.5 * lapLength, accuracy: 1e-6)
+        XCTAssertEqual(snapshot.groundCoordinate, geometry.coordinate(atDistance: lapLength / 2))
+    }
+
+    func testLapsStillRequiresClosedRoute() throws {
+        let geometry = try openGeometry()
+        XCTAssertThrowsError(
+            try RouteRunner(geometry: geometry, profile: steadyProfile(), mode: .laps(2))
+        ) { error in
+            XCTAssertEqual(error as? RouteRunModeError, .requiresClosedRoute)
+        }
+    }
+
     // MARK: - Mode validation
 
     func testLapsZeroIsRejected() throws {
@@ -603,13 +717,15 @@ final class RouteRunnerTests: XCTestCase {
         XCTAssertEqual(try RouteRunMode.continuous.validated(), .continuous)
     }
 
-    func testOpenRouteRejectsContinuousMode() throws {
+    func testOpenRouteAcceptsContinuousMode() throws {
         let geometry = try openGeometry()
-        XCTAssertThrowsError(
-            try RouteRunner(geometry: geometry, profile: steadyProfile(), mode: .continuous)
-        ) { error in
-            XCTAssertEqual(error as? RouteRunModeError, .requiresClosedRoute)
-        }
+        let runner = try RouteRunner(
+            geometry: geometry,
+            profile: steadyProfile(),
+            mode: .continuous
+        )
+        XCTAssertEqual(runner.phase, .idle)
+        XCTAssertEqual(runner.snapshot.groundCoordinate, geometry.points.first)
     }
 
     func testOpenRouteRejectsLapsMode() throws {

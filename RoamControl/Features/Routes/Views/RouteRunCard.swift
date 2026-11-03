@@ -20,13 +20,11 @@ struct RouteRunCard: View {
     @State private var isChoosingContinuation = false
 
     var body: some View {
-        Group {
-            if dynamicTypeSize.isAccessibilitySize {
-                ScrollView(.vertical, showsIndicators: false) {
-                    cardContent
-                }
-                .frame(maxHeight: 460)
-            } else {
+        // The card sizes to its content and only scrolls once the content no longer fits the space
+        // the map leaves it; the text size no longer decides whether it can scroll.
+        ViewThatFits(in: .vertical) {
+            cardContent
+            ScrollView(.vertical, showsIndicators: false) {
                 cardContent
             }
         }
@@ -55,8 +53,11 @@ struct RouteRunCard: View {
         VStack(alignment: .leading, spacing: 14) {
             header
 
-            ProgressView(value: session.lapProgress)
-                .tint(progressTint)
+            // A held point has no progress to show: the bar is what made a hold read as a pause.
+            if !isHolding {
+                ProgressView(value: session.lapProgress)
+                    .tint(progressTint)
+            }
 
             metrics
 
@@ -64,6 +65,12 @@ struct RouteRunCard: View {
 
             footer
         }
+        .padding(.bottom, 4)
+    }
+
+    private var isHolding: Bool {
+        if case .holding = session.phase { return true }
+        return false
     }
 
     private var progressTint: Color {
@@ -102,7 +109,9 @@ struct RouteRunCard: View {
 
     @ViewBuilder
     private var metrics: some View {
-        if dynamicTypeSize.isAccessibilitySize {
+        if isHolding {
+            holdingMetrics
+        } else if dynamicTypeSize.isAccessibilitySize {
             VStack(spacing: 8) {
                 lapsMetric
                 lapMetric
@@ -135,7 +144,37 @@ struct RouteRunCard: View {
                 symbol: "arrow.left.arrow.right"
             )
         }
+        if session.isOpenContinuousRun {
+            // No total to divide by: report the trips already completed.
+            return RouteRunMetric(
+                title: "Trips",
+                value: "\(session.completedLaps)",
+                symbol: "arrow.left.arrow.right"
+            )
+        }
         return RouteRunMetric(title: "Laps", value: "\(session.completedLaps)", symbol: "repeat")
+    }
+
+    /// A held point reports only what is true of a stopped run: how far it got, how long it ran and
+    /// how much it completed.
+    private var holdingMetrics: some View {
+        VStack(spacing: 8) {
+            if dynamicTypeSize.isAccessibilitySize {
+                coveredMetric
+                elapsedMetric
+                lapsMetric
+            } else {
+                HStack(spacing: 10) {
+                    coveredMetric
+                    elapsedMetric
+                    lapsMetric
+                }
+            }
+        }
+    }
+
+    private var coveredMetric: RouteRunMetric {
+        RouteRunMetric(title: "Covered", value: distanceText, symbol: "map")
     }
 
     private var lapMetric: RouteRunMetric {
@@ -172,6 +211,8 @@ struct RouteRunCard: View {
         case .paused:
             runningControls(isPaused: true)
         case .holding(let origin):
+            // A held point offers two things. A run frozen mid-route resumes from here; one held at
+            // its finish has already reached the end, so only adding trips can move it on again.
             VStack(spacing: 10) {
                 if origin == .paused {
                     primaryButton(title: "Resume From Here", symbol: "play.fill", action: onResumeFromHold)
@@ -198,7 +239,7 @@ struct RouteRunCard: View {
     private func startButton(title: String, symbol: String) -> some View {
         Button(action: onStart) {
             Label(title.localized, systemImage: symbol)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, minHeight: 46)
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
@@ -239,7 +280,7 @@ struct RouteRunCard: View {
     ) -> some View {
         Button(action: action) {
             Label(title.localized, systemImage: symbol)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, minHeight: 46)
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
@@ -260,7 +301,7 @@ struct RouteRunCard: View {
     private var continueAction: some View {
         Button(action: startContinuation) {
             Label("Continue Run".localized, systemImage: "arrow.triangle.2.circlepath")
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, minHeight: 46)
         }
         .controlSize(.large)
         .accessibilityLabel("Continue Run".localized)
@@ -281,7 +322,7 @@ struct RouteRunCard: View {
     ) -> some View {
         Button(action: action) {
             Label(title.localized, systemImage: symbol)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, minHeight: 46)
         }
         .buttonStyle(.bordered)
         .controlSize(.large)
@@ -292,10 +333,11 @@ struct RouteRunCard: View {
         Button(action: onHold) {
             if showTitle {
                 Label("Hold Here".localized, systemImage: "hand.raised.fill")
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, minHeight: 46)
             } else {
                 Image(systemName: "hand.raised.fill")
                     .frame(width: 28)
+                    .frame(minHeight: 46)
             }
         }
         .buttonStyle(.bordered)
@@ -309,7 +351,7 @@ struct RouteRunCard: View {
                 isPaused ? "Resume" : "Pause",
                 systemImage: isPaused ? "play.fill" : "pause.fill"
             )
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, minHeight: 46)
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
@@ -322,10 +364,11 @@ struct RouteRunCard: View {
         } label: {
             if showTitle {
                 Label("Stop & Restore", systemImage: "stop.fill")
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, minHeight: 46)
             } else {
                 Image(systemName: "stop.fill")
                     .frame(width: 28)
+                    .frame(minHeight: 46)
             }
         }
         .buttonStyle(.bordered)
@@ -408,7 +451,7 @@ struct RouteRunCard: View {
         case .preparing: "Preparing route"
         case .running: "Running"
         case .paused: "Run paused"
-        case .holding: "Run held"
+        case .holding: "Held at this point"
         case .finished: "Run finished"
         case .stopping: "Ending run"
         case .failed: "Run unavailable"

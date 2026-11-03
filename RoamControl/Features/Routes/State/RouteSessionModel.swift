@@ -97,6 +97,13 @@ final class RouteSessionModel {
         return min(completedLaps + 1, tripCount)
     }
 
+    /// `.continuous` on an open route has no trip total to divide by: it turns around at the last
+    /// point and only the completed trips can be reported.
+    var isOpenContinuousRun: Bool {
+        guard let mode, let geometry else { return false }
+        return mode == .continuous && !geometry.isClosed
+    }
+
     /// Full laps (or trips) the run reaches in total, or `nil` for `.continuous`.
     var totalLaps: Int? {
         guard let mode else { return nil }

@@ -217,18 +217,34 @@ struct RouteRunSetupView: View {
                     Stepper("Laps: \(lapCount)", value: $lapCount, in: 1...100)
                 }
             } else {
-                Stepper("Trips: \(tripCount)", value: $tripCount, in: 1...100)
+                // An open route turns around at its last point, so "continuous" is back and forth:
+                // there is no lap count and no trip count to fix in advance.
+                Picker("Mode", selection: $modeSelection) {
+                    Text(LocalizedStringKey(ModeSelection.once.rawValue)).tag(ModeSelection.once)
+                    Text(LocalizedStringKey(ModeSelection.continuous.rawValue))
+                        .tag(ModeSelection.continuous)
+                }
+                .pickerStyle(.segmented)
 
-                Text(
-                    LocalizedStringKey(
-                        tripCount.isMultiple(of: 2)
-                            ? "Ends at the start point."
-                            : "Ends at the finish point."
+                if modeSelection == .continuous {
+                    Text("Runs back and forth until you stop.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Stepper("Trips: \(tripCount)", value: $tripCount, in: 1...100)
+
+                    Text(
+                        LocalizedStringKey(
+                            tripCount.isMultiple(of: 2)
+                                ? "Ends at the start point."
+                                : "Ends at the finish point."
+                        )
                     )
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

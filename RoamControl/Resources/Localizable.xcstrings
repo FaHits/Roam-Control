@@ -1777,6 +1777,22 @@
         }
       }
     },
+    "Covered": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Covered"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "覆盖距离"
+          }
+        }
+      }
+    },
     "Create the pairing securely on this iPhone, or import an existing file.": {
       "localizations": {
         "en": {
@@ -2909,6 +2925,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "前往 %@ · %@"
+          }
+        }
+      }
+    },
+    "Held at this point": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Held at this point"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已定位于此点"
           }
         }
       }
@@ -7085,6 +7117,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在运行"
+          }
+        }
+      }
+    },
+    "Runs back and forth until you stop.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Runs back and forth until you stop."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一直折返，直到你停止。"
           }
         }
       }

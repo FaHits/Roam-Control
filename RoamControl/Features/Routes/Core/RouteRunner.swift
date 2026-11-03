@@ -80,15 +80,31 @@ struct RouteRunner: Sendable {
 
     private var targetLaps: Int? { Self.targetLaps(for: mode) }
 
-    private var isOutAndBack: Bool {
-        if case .outAndBack = mode { return true }
-        return false
+    /// Whether the run is measured in whole laps instead of one traversal. Closed routes always
+    /// are; on an open route the two turning modes are too, because they keep going after the last
+    /// point rather than stopping there.
+    private static func countsLaps(_ mode: RouteRunMode, onClosedRoute isClosed: Bool) -> Bool {
+        if isClosed { return true }
+        switch mode {
+        case .outAndBack, .continuous:
+            return true
+        case .once, .laps:
+            return false
+        }
     }
 
-    /// Odd `.outAndBack` trips run from the last point back to the first one. Every other mode
-    /// runs forward, so closed-route and `.once` coordinates keep their existing meaning.
-    private static func isReturnTrip(_ mode: RouteRunMode, completedLaps: Int) -> Bool {
-        guard case .outAndBack = mode else { return false }
+    private var countsLaps: Bool {
+        Self.countsLaps(mode, onClosedRoute: geometry.isClosed)
+    }
+
+    /// Odd trips of an open turning run go from the last point back to the first one. Closed
+    /// routes and `.once` runs always go forward, so their coordinates keep their existing meaning.
+    private static func isReturnTrip(
+        _ mode: RouteRunMode,
+        onClosedRoute isClosed: Bool,
+        completedLaps: Int
+    ) -> Bool {
+        guard countsLaps(mode, onClosedRoute: isClosed), !isClosed else { return false }
         return completedLaps % 2 == 1
     }
 
@@ -106,10 +122,13 @@ struct RouteRunner: Sendable {
             guard !geometry.isClosed else {
                 throw RouteRunModeError.requiresOpenRoute
             }
-        case .laps, .continuous:
+        case .laps:
             guard geometry.isClosed else {
                 throw RouteRunModeError.requiresClosedRoute
             }
+        case .continuous:
+            // A closed route loops; an open one turns around at its last point.
+            break
         }
 
         self.geometry = geometry
@@ -122,16 +141,18 @@ struct RouteRunner: Sendable {
         let distanceInLap = min(max(progress.distanceInLap, 0), geometry.totalDistance)
         // `.outAndBack` never runs past its last trip, so an overshooting recovery clamps instead
         // of failing.
-        var isOutAndBackRun = false
         var completedLaps = progress.completedLaps
         if case .outAndBack(let trips) = mode {
-            isOutAndBackRun = true
             completedLaps = min(completedLaps, trips)
         }
-        let ground = Self.isReturnTrip(mode, completedLaps: completedLaps)
+        let ground = Self.isReturnTrip(
+            mode,
+            onClosedRoute: geometry.isClosed,
+            completedLaps: completedLaps
+        )
             ? geometry.coordinate(atDistance: geometry.totalDistance - distanceInLap)
             : geometry.coordinate(atDistance: distanceInLap)
-        let coveredDistance = geometry.isClosed || isOutAndBackRun
+        let coveredDistance = Self.countsLaps(mode, onClosedRoute: geometry.isClosed)
             ? Double(completedLaps) * geometry.totalDistance + distanceInLap
             : distanceInLap
 
@@ -207,7 +228,7 @@ struct RouteRunner: Sendable {
         )
         let step = speed * delta
 
-        if geometry.isClosed || isOutAndBack {
+        if countsLaps {
             advanceLoop(by: step)
         } else {
             advanceOpenRoute(by: step)
@@ -244,7 +265,7 @@ struct RouteRunner: Sendable {
         snapshot.groundCoordinate = geometry.coordinate(atDistance: distanceInLap)
     }
 
-    /// Closed routes and `.outAndBack` trips: the whole travelled distance is split into legs and a
+    /// Closed routes and turning trips: the whole travelled distance is split into legs and a
     /// remainder in one step. The coordinate is the only part that depends on the leg direction.
     private mutating func advanceLoop(by step: Double) {
         var covered = Double(snapshot.completedLaps) * lapLength + snapshot.distanceInLap + step
@@ -268,7 +289,11 @@ struct RouteRunner: Sendable {
         snapshot.totalDistance = Double(completedLaps) * lapLength + distanceInLap
         // The seam lives in `RouteGeometry`: a zero remainder is the first point, never a jump.
         // A return trip measures its offset from the last point instead.
-        snapshot.groundCoordinate = Self.isReturnTrip(mode, completedLaps: completedLaps)
+        snapshot.groundCoordinate = Self.isReturnTrip(
+            mode,
+            onClosedRoute: geometry.isClosed,
+            completedLaps: completedLaps
+        )
             ? geometry.coordinate(atDistance: lapLength - distanceInLap)
             : geometry.coordinate(atDistance: distanceInLap)
     }

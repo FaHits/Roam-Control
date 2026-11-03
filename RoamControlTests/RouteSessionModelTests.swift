@@ -385,6 +385,79 @@ final class RouteSessionModelTests: XCTestCase {
         XCTAssertEqual(rebased.completedLaps, 1)
         XCTAssertEqual(rebased.elapsedTime, 600)
     }
+    func testHoldingDoesNotAdvanceTheRun() throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        try model.prepare(
+            route: closedRoute,
+            profile: steadyProfile(),
+            mode: .continuous,
+            progress: zeroProgress
+        )
+        model.debugBeginRunning()
+        _ = try XCTUnwrap(model.debugTick(delta: 30))
+        model.hold(using: appModel)
+        let held = try XCTUnwrap(model.snapshot)
+
+        // A minute of wall clock while held moves neither the distance nor the elapsed time.
+        for _ in 0..<60 {
+            XCTAssertNil(model.debugTick(delta: 1))
+        }
+
+        let after = try XCTUnwrap(model.snapshot)
+        XCTAssertEqual(after.totalDistance, held.totalDistance, accuracy: 1e-9)
+        XCTAssertEqual(after.elapsedTime, held.elapsedTime, accuracy: 1e-9)
+        XCTAssertGreaterThan(held.totalDistance, 0)
+        XCTAssertEqual(model.phase, .holding(.paused))
+    }
+
+    func testOpenContinuousRunSurvivesRecovery() throws {
+        let route = openRoute
+        let geometry = try RouteGeometry(points: route.points, isClosed: false)
+        let lapLength = geometry.totalDistance
+        let progress = RouteRunProgress(distanceInLap: 120, completedLaps: 2, elapsedTime: 400)
+        let target = LocationTarget(
+            name: "Running \(route.name)",
+            subtitle: "3 trips · 2.0 m/s · 170 spm",
+            latitude: start.latitude,
+            longitude: start.longitude
+        )
+        let record = SessionRecoveryRecord.savedRoute(
+            route: route,
+            at: target,
+            progress: progress,
+            profile: steadyProfile(),
+            mode: .continuous
+        )
+        let decoded = try JSONDecoder().decode(
+            SessionRecoveryRecord.self,
+            from: JSONEncoder().encode(record)
+        )
+        XCTAssertEqual(decoded.runMode, .continuous)
+        XCTAssertEqual(try XCTUnwrap(decoded.routeProgress), progress)
+        XCTAssertEqual(decoded.wasHolding, false)
+
+        let model = RouteSessionModel()
+        try model.prepare(
+            route: try XCTUnwrap(decoded.savedRoute),
+            profile: try XCTUnwrap(decoded.runProfile),
+            mode: try XCTUnwrap(decoded.runMode),
+            progress: try XCTUnwrap(decoded.routeProgress)
+        )
+
+        XCTAssertEqual(model.phase, .idle)
+        XCTAssertEqual(model.totalDistance, 2 * lapLength + 120, accuracy: 1e-6)
+        let restored = try XCTUnwrap(model.snapshot)
+        XCTAssertEqual(restored.distanceInLap, 120, accuracy: 1e-9)
+        // Two completed trips mean the third one runs forward from the start again.
+        XCTAssertEqual(restored.groundCoordinate, geometry.coordinate(atDistance: 120))
+
+        model.debugBeginRunning()
+        let resumed = try XCTUnwrap(model.debugTick(delta: 1))
+        XCTAssertEqual(resumed.distanceInLap, 122, accuracy: 1e-6)
+        XCTAssertEqual(resumed.totalDistance, 2 * lapLength + 122, accuracy: 1e-6)
+        XCTAssertEqual(model.phase, .running)
+    }
 }
 
 private struct StubPairingService: PairingService {

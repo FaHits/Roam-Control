@@ -5,7 +5,7 @@ enum RouteRunModeError: Error, Equatable, Sendable {
     case invalidLapCount
     /// `.outAndBack` needs at least one trip.
     case invalidTripCount
-    /// `.laps` and `.continuous` only make sense on a closed route.
+    /// `.laps` needs a closed route. `.continuous` runs on either shape.
     case requiresClosedRoute
     /// `.outAndBack` only makes sense on an open route.
     case requiresOpenRoute
@@ -16,6 +16,8 @@ enum RouteRunModeError: Error, Equatable, Sendable {
 enum RouteRunMode: Codable, Equatable, Sendable {
     case once
     case laps(Int)
+    /// Runs until the user stops it: a closed route loops, an open one turns around at its last
+    /// point.
     case continuous
     /// One trip is a single traversal; the next one runs back. Even trips end where the route
     /// starts, odd trips end at its last point.
