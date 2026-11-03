@@ -4,6 +4,13 @@
 
 ## 当前交接
 
+> 2026-11-03 Task 28 海外搜索去区域偏置 + 搜索框输入法吞字：`MapViewModel.firstMapItem(for:)` 不再给 `MKLocalSearch.Request` 设 `region` / `regionPriority`，`overseasPlaceSearchRegion` 与 `applyOverseasSearchRegion()` 一起删除，`overseasPlaceSearchEnabled` 去掉只为它服务的 `didSet`；中性世界 span（`span: MKCoordinateSpan(latitudeDelta: 180, longitudeDelta: 360)`）改在 `init` 里给 `MKLocalSearchCompleter.region` 设一次。开关只剩两个语义：查询归一化取最后一段、副标题拼国家/地区名。搜索框从 SwiftUI `TextField` 换成 UIKit 包装 `MapSearchField`（`editingChanged` 回写，读文本走 `text(in: beginningOfDocument..<endOfDocument)`，`markedTextRange != nil` 时跳过回写），`@FocusState` 随之移除，编辑态改由 `MapSearchFieldHandle` + `isSearchEditing` 维护，`Done` 调 `handle.resign()`；`returnKeyType = .search`、回车先 resign 再提交、`autocorrectionType = .no`、`autocapitalizationType = .words` 全部保留。
+>
+> - 测试：195 → 199（+4，全在 `MapSearchQueryTests`）。
+> - 本地门禁：`PYTHONUTF8=1 python scripts/check_localizations.py` → `641/641`、`2/2`、`All 643 keys have non-empty zh-Hans values.`（exit 0，未新增 key）；坐标 grep 8；`Features/Routes/Core` 与 `Features/Routes/Models` 两条架构 rg 均 0；`rg -n "TextField\(" RoamControl/Features/Map` 0；`rg -n "isFocused" RoamControl` 0；`rg -n "regionPriority|cameraPosition\.region" RoamControl/Features/Map/MapViewModel.swift` 0 行；版本仍 `0.11.0` / `63`；`"scribble"` 1 命中（常量本身）。
+> - CI（head `1031963`，run `41598042670`）：三 job 全 success，199 用例 0 失败；产物 `RoamControl-unsigned-ipa` id `13214335035` / 3,151,276 字节、`RoamControl-unsigned-debug-ipa` id `13213248532` / 4,781,081 字节。
+> - 未验证：真机微信输入法候选词是否仍被吞、海外查询命中率是否真的改善（只有模拟器与 CI 证据，没有真机）。
+
 > 2026-11-03 Task 27 保持态点位化、卡片自适应与开放 continuous：`HomeView.activeRouteGeometry` 在 `.holding` 返回 `nil`（折线消失、点位标记仍在）；`RouteRunCard` 保持态不再画进度条，标题改 `Held at this point`（zh-Hans「已定位于此点」），指标只剩 Covered / Elapsed / Trips 三项，按钮为 `Resume From Here`（主）与 `Finish & Restore`（次）；暂停态一字未改（进度条 + 蓝色 Pause/Resume）。卡片去掉 `dynamicTypeSize` 分支，改 `ViewThatFits(in: .vertical)`：内容放得下就按内容高度、放不下才进 `ScrollView`，按钮统一 `minHeight 46`、间距 10、底部 4 pt。`.continuous` 语义扩成「闭环绕圈、开放折返」，`RouteRunner` 的「来回跑」判断改为按几何+模式推导，开放 continuous 走同一条 `advanceLoop`，方向按 `completedLaps` 奇偶交替，`targetLaps` 仍为 `nil`；`RouteRunSetupView` 开放路线给 Once/Continuous 分段控件，Continuous 下列「Runs back and forth until you stop.」，Trips Stepper 只在 Once 下出现。
 >
 > - 测试：188 → 195（+7）。
@@ -1239,4 +1246,41 @@
 
 - 规格偏差两处：①`RoamControl/Models/AppPreferences.swift:2-3` 有 `import MapKit` / `import SwiftUI`，是 Task 18（`94cc7a9`）引入的既有状态，本次未改；「Models 两条 rg 归零」按 `Documentation/Plans/` 里的口径取 `Features/Routes/Models` 才是 0，`RoamControl/Models` 仍是 2。②规格要求保持态主按钮「Resume From Here」，但 `.holding(.finished)`（跑完后点 Hold Here）的恢复守卫只认 `.paused`，直接换成 Resume 会得到一个点了没反应的按钮；因此保持态按 `origin` 分派：`.paused` → `Resume From Here`，`.finished` → `Continue Run`，两者都仍是两个按钮。
 - 未验证项：保持态真机观感（折线消失是否够清楚）、三按钮状态下卡片实际高度、开放 continuous 连跑 20 分钟的方向与接缝行为，均无真机、无截图能力
+- 更新时间：2026-11-03
+
+### 2026-11-03 Task 28：海外搜索去区域偏置、搜索框改 UIKit 包装
+
+- 任务：Task 28 - 海外搜索去掉区域偏置 + 搜索框输入法吞字（用户直接指令即任务规格）
+- 状态：`implemented`（head `1031963` 的 CI run `41598042670` 三 job 全绿、199 用例 0 失败；本记录所在提交只改文档）
+- 分支与基线：`feat/manual-running-routes`，起点 HEAD `69e147f`（195 用例、643 key、0.11.0 / 63）
+- 真机现象（build 41470166796）：开关打开后输入 `Tokyo haneda airport`，结果只剩湛江的「东京台球（南桥店）」；微信输入法刚选中的候选词被吞
+- 根因一（区域偏置）：`MapViewModel` 在开关打开时把 `MKLocalSearch.Request.region` 与补全器 `region` 都设成当前地图可见区域，屏幕停在湛江时查询被硬拉回本地同名地点。这是上一版设计的错误，不是实现的错误
+- 根因二（吞字）：`MapSearchBar` 用 SwiftUI `TextField(text: $query)`，中文合成期文本只存在于 marked text，binding 每次回写都会重置合成状态，刚选中的候选随之丢失
+- 修改文件：`RoamControl/Features/Map/MapViewModel.swift`（+11/−27）、`RoamControl/Features/Map/MapSearchField.swift`（新增，+110）、`RoamControl/Features/Map/MapSearchBar.swift`（+13/−13）、`RoamControl/Features/Map/MapSearchQuery.swift`（+9）、`RoamControl/Features/Home/HomeView.swift`（+8/−6）、`RoamControlTests/MapSearchQueryTests.swift`（+30）、本文件
+- 偏置的改法：`firstMapItem(for:)` 只剩 `request.naturalLanguageQuery = query` + `MKLocalSearch(request:).start().mapItems.first`（`MapViewModel.swift:298-302`）；`overseasSearchRegion` 与 `applyOverseasSearchRegion()` 整体删除；`overseasPlaceSearchEnabled` 去掉 `didSet`，中性世界 span 在 `init` 里设一次（`MapViewModel.swift:44-50`）
+- 吞字的改法：新增 `MapSearchField`（`UITextField` 的 `UIViewRepresentable` 包装）。回写时机是 `.editingChanged`；读文本用 `handle.currentText`（`field.textRange(from: beginningOfDocument, to: endOfDocument)` + `field.text(in:)`，含 marked text）；`editingChanged` 里用 `MapSearchQuery.committed(handle.currentText, marked: field.markedTextRange != nil)` 判断，返回 `nil` 就直接 return，因此合成期不会把半成品写回 binding，也不会重置合成状态；`updateUIView` 只在 `markedTextRange == nil` 时才同步外部文本
+- 焦点改成非 SwiftUI 路径：`@FocusState` 全部移除（`rg -n "isFocused" RoamControl` = 0），编辑态由 `textFieldDidBeginEditing` / `textFieldDidEndEditing` 回调写进 `MapSearchBar` 的 `@Binding var isEditing`（`HomeView` 侧 `@State private var isSearchEditing`），`Done` 按钮调 `handle.resign()`，点地图、选建议同样走 `resign()`
+- 键盘行为：`returnKeyType = .search`、`autocorrectionType = .no`、`autocapitalizationType = .words`、`textFieldShouldReturn` 里先 `resignFirstResponder()` 再 `onSubmit()`
+- 开关剩余语义：`normalized` 取最后一段（`MapViewModel.swift:259`）、副标题拼国家/地区（`:438`）——这两处未动
+- 门禁（逐条实测）
+
+| # | 门禁 | 结果 |
+| --- | --- | --- |
+| 1 | 测试数 | pass：`rg -c "func test" RoamControlTests/*.swift` 合计 199（195 + 4），CI 里 `test` job 0 失败 |
+| 2 | CI 三 job | pass：`test` 07:42:03Z→07:54:37Z（12m34s）、`unsigned-ipa` 07:54:39Z→07:55:21Z（42s）、`unsigned-ipa-debug` 07:54:40Z→07:55:47Z（1m7s），全 success |
+| 3 | 两个产物 | pass：`RoamControl-unsigned-ipa` id `13214335035` / 3,151,276 字节；`RoamControl-unsigned-debug-ipa` id `13213248532` / 4,781,081 字节 |
+| 4 | `PYTHONUTF8=1 python scripts/check_localizations.py` | pass：`641/641`、`InfoPlist 2/2`、`All 643 keys have non-empty zh-Hans values.`，exit 0（未新增 key） |
+| 5 | `rg -n "regionPriority\|cameraPosition\.region" RoamControl/Features/Map/MapViewModel.swift` | pass：0 行（exit 1）。比门禁「只允许在中性 span 一处出现」更严——这两个标识符已全部删除；中性 span 的实文在 `:47-49`（`searchCompleter.region = MKCoordinateRegion(` / `center: CLLocationCoordinate2D(latitude: 0, longitude: 0)` / `span: MKCoordinateSpan(latitudeDelta: 180, longitudeDelta: 360)`） |
+| 6 | `rg -n "TextField\(" RoamControl/Features/Map` | pass：0（包装内部用 `let field: UITextField = .init()`，故该目录不含 `TextField(` 字面） |
+| 7 | `rg -n "isFocused" RoamControl` | pass：0 |
+| 8 | 坐标 grep（`gcj02ToWGS84` / `offsetDegrees` / `coordinateOffset`） | pass：8（与基线一致） |
+| 9 | 架构 rg：`Features/Routes/Core` / `Features/Routes/Models` | pass：均 0 |
+| 10 | `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` | pass：仍 `0.11.0` / `63`，本次未改 |
+| 11 | `rg -n '"scribble"' RoamControl` | pass：1（`RouteSymbol.swift:7` 常量本身） |
+
+- 新增测试 4 例（`RoamControlTests/MapSearchQueryTests.swift`）：`testCommittedHidesTextWhileComposing`（`marked: true` → `nil`）、`testCommittedPassesTextOnceCompositionEnds`、`testCommittedPassesClearedField`（空串照样返回 `""`，不是 `nil`）、`testOverseasSearchKeepsQueryIntactWhenComposing`（合成期跳过回写后 query 仍是 `Tokyo`，合成结束后 `committed("Tokyo, haneda airport", marked: false)` 经 `normalized` 才得 `haneda airport`）
+- 提交：`1031963`（`fix(search): drop viewport region bias and keep IME marked text`，6 文件 +181 / −46）；已 push 到 fork `feat/manual-running-routes`，`git ls-remote fork` 与本地 HEAD 同为 `10319631fcfd701463d3df771d1694595e666b0f`
+- CI：run [41598042670](https://github.com/FaHits/Roam-Control/actions/runs/41598042670)（head `1031963`）`conclusion=success`
+- 规格偏差一处：规格要求门禁 5 的 `rg` 输出「只允许出现在中性 span 那处并逐行贴出」，而 `regionPriority` 与 `cameraPosition.region` 已随偏置块一起删除，该命令输出为空；中性 span 改用 `rg -n "latitudeDelta: 180"` 定位，只命中 `:49` 一行，`:44-49` 的注释与赋值已在上文「偏置的改法」中引用
+- 未验证项：真机上微信输入法候选词是否不再被吞（本次只有模拟器与静态证据，无真机）、真机上 `Tokyo haneda airport` 是否真的命中羽田机场（海外命中率受 Apple 图库与网络影响，未实测）、键盘搜索键与 Done 的交互观感、`MapSearchField` 在动态字体下的行高
 - 更新时间：2026-11-03
