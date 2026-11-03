@@ -20,7 +20,8 @@ struct HomeView: View {
     @State private var visibleMapCamera: MapCamera?
     @State private var isPreparingRecoveredWalk = false
     @State private var recoveredWalkError: String?
-    @FocusState private var isSearchFocused: Bool
+    @State private var searchField = MapSearchFieldHandle()
+    @State private var isSearchEditing = false
 
     init(
         showDeviceSetupInitially: Bool = false,
@@ -83,8 +84,8 @@ struct HomeView: View {
                     visibleMapCamera = context.camera
                 }
                 .onTapGesture { point in
-                    if isSearchFocused {
-                        isSearchFocused = false
+                    if isSearchEditing {
+                        searchField.resign()
                         return
                     }
 
@@ -102,7 +103,8 @@ struct HomeView: View {
                         get: { mapModel.searchQuery },
                         set: { mapModel.updateSearchQuery($0) }
                     ),
-                    isFocused: $isSearchFocused,
+                    isEditing: $isSearchEditing,
+                    field: searchField,
                     isSearching: mapModel.isSearching,
                     onSubmit: {
                         Task { await mapModel.search() }
@@ -117,7 +119,7 @@ struct HomeView: View {
                     SearchSuggestionsView(
                         suggestions: mapModel.searchSuggestions,
                         onSelect: { suggestion in
-                            isSearchFocused = false
+                            searchField.resign()
                             Task { await mapModel.selectSuggestion(suggestion) }
                         }
                     )
@@ -601,7 +603,7 @@ struct HomeView: View {
     }
 
     private var isSearchingForLocation: Bool {
-        isSearchFocused || mapModel.isShowingSuggestions
+        isSearchEditing || mapModel.isShowingSuggestions
     }
 
     private var isPaired: Bool {

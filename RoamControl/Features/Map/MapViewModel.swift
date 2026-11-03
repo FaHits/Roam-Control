@@ -12,12 +12,10 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
     var isFindingRealLocation = false
     var errorMessage: String?
     var cameraPosition: MapCameraPosition
-    var overseasPlaceSearchEnabled = false {
-        didSet {
-            guard oldValue != overseasPlaceSearchEnabled else { return }
-            applyOverseasSearchRegion()
-        }
-    }
+    /// Only changes how a query is normalized and whether the subtitle shows a
+    /// country or region name. It no longer biases the search by viewport: a map
+    /// parked on Zhanjiang must still resolve "Tokyo haneda airport".
+    var overseasPlaceSearchEnabled = false
 
     @ObservationIgnored
     private let searchCompleter = MKLocalSearchCompleter()
@@ -43,6 +41,13 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
         super.init()
         searchCompleter.delegate = self
         searchCompleter.resultTypes = [.address, .pointOfInterest, .query]
+        // MKLocalSearchCompleter.region cannot be unset, so the neutral world span is
+        // set once here. Following the visible map region is what dragged
+        // "Tokyo haneda airport" back to a same-named place parked on screen.
+        searchCompleter.region = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+            span: MKCoordinateSpan(latitudeDelta: 180, longitudeDelta: 360)
+        )
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
     }
@@ -72,9 +77,6 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
             return
         }
 
-        if overseasPlaceSearchEnabled {
-            applyOverseasSearchRegion()
-        }
         searchCompleter.queryFragment = trimmedQuery
     }
 
@@ -296,25 +298,7 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
     private func firstMapItem(for query: String) async throws -> MKMapItem? {
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = query
-        if overseasPlaceSearchEnabled, let region = cameraPosition.region {
-            request.region = region
-            request.regionPriority = .default
-        }
         return try await MKLocalSearch(request: request).start().mapItems.first
-    }
-
-    private var overseasSearchRegion: MKCoordinateRegion? {
-        guard overseasPlaceSearchEnabled else { return nil }
-        return cameraPosition.region
-    }
-
-    private func applyOverseasSearchRegion() {
-        // MKLocalSearchCompleter.region cannot be unset, so a world span is the
-        // neutral value once the preference is turned off.
-        searchCompleter.region = overseasSearchRegion ?? MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
-            span: MKCoordinateSpan(latitudeDelta: 180, longitudeDelta: 360)
-        )
     }
 
     private func selectCoordinate(

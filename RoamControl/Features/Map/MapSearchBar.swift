@@ -3,7 +3,8 @@ import SwiftUI
 struct MapSearchBar: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var query: String
-    @FocusState.Binding var isFocused: Bool
+    @Binding var isEditing: Bool
+    let field: MapSearchFieldHandle
     let isSearching: Bool
     let onSubmit: () -> Void
     let onClear: () -> Void
@@ -14,7 +15,7 @@ struct MapSearchBar: View {
                 VStack(spacing: 0) {
                     searchFieldRow
 
-                    if isFocused {
+                    if isEditing {
                         Divider()
                         dismissKeyboardButton
                             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -24,7 +25,7 @@ struct MapSearchBar: View {
                 HStack(spacing: 12) {
                     searchFieldRow
 
-                    if isFocused {
+                    if isEditing {
                         Divider()
                             .frame(height: 24)
                         dismissKeyboardButton
@@ -45,15 +46,14 @@ struct MapSearchBar: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
 
-            TextField("Search places or coordinates", text: $query)
-                .focused($isFocused)
-                .textInputAutocapitalization(.words)
-                .autocorrectionDisabled()
-                .submitLabel(.search)
-                .onSubmit {
-                    isFocused = false
-                    onSubmit()
-                }
+            MapSearchField(
+                text: query,
+                handle: field,
+                onChange: { query = $0 },
+                onEditingChanged: { isEditing = $0 },
+                onSubmit: onSubmit
+            )
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
 
             if isSearching {
                 ProgressView()
@@ -73,7 +73,7 @@ struct MapSearchBar: View {
 
     private var dismissKeyboardButton: some View {
         Button("Done") {
-            isFocused = false
+            field.resign()
         }
         .font(.subheadline.weight(.semibold))
         .buttonStyle(.plain)

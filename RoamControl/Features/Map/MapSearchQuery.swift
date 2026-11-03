@@ -22,4 +22,13 @@ enum MapSearchQuery {
 
         return segments.last ?? ""
     }
+
+    /// Text a field may write back to its binding.
+    ///
+    /// While an input method is composing, the visible characters live in marked
+    /// text only; writing them back resets the composition and drops the candidate
+    /// the user just picked. `nil` tells the caller to skip the write-back.
+    static func committed(_ text: String, marked: Bool) -> String? {
+        marked ? nil : text
+    }
 }
