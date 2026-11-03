@@ -89,18 +89,20 @@ struct RouteLibraryView: View {
         } message: {
             Text("This route will be permanently removed.")
         }
-        .sheet(item: $routePendingRename) { route in
-            RenameSheet(
-                title: "Rename Route",
-                message: "Enter a new name for this route.",
-                initialName: route.name,
-                onCancel: {
-                    routePendingRename = nil
-                },
-                onSubmit: { name in
-                    rename(route, to: name)
-                }
-            )
+        .overlay {
+            if let route = routePendingRename {
+                RenameDialog(
+                    title: "Rename Route",
+                    message: "Enter a new name for this route.",
+                    initialName: route.name,
+                    onCancel: {
+                        routePendingRename = nil
+                    },
+                    onSubmit: { name in
+                        rename(route, to: name)
+                    }
+                )
+            }
         }
     }
 

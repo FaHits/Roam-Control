@@ -39,6 +39,24 @@ final class MapSearchQueryTests: XCTestCase {
         XCTAssertEqual(MapSearchQuery.committed("", marked: false), "")
     }
 
+    func testAttemptsUsesWholeQueryOnlyWhenOverseasOff() {
+        XCTAssertEqual(MapSearchQuery.attempts("Tokyo, Shibuya Crossing", overseas: false), ["Tokyo, Shibuya Crossing"])
+        XCTAssertEqual(MapSearchQuery.attempts("Tokyo, Shibuya Crossing", overseas: true), ["Tokyo, Shibuya Crossing", "Shibuya Crossing"])
+    }
+
+    func testAttemptsFallsBackToTrailingSegment() {
+        XCTAssertEqual(MapSearchQuery.attempts("东京，涩谷", overseas: true), ["东京，涩谷", "涩谷"])
+    }
+
+    func testAttemptsDoesNotDuplicateWhenNoComma() {
+        XCTAssertEqual(MapSearchQuery.attempts("Tokyo", overseas: true), ["Tokyo"])
+    }
+
+    func testAttemptsDropsBlankTrailingSegment() {
+        XCTAssertEqual(MapSearchQuery.attempts("Tokyo,,,", overseas: true), ["Tokyo,,,", "Tokyo"])
+        XCTAssertEqual(MapSearchQuery.attempts(" , , ", overseas: true), [" , , "])
+    }
+
     func testOverseasSearchKeepsQueryIntactWhenComposing() {
         var query = "Tokyo"
 

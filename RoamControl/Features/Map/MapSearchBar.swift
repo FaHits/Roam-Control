@@ -53,7 +53,8 @@ struct MapSearchBar: View {
                 onEditingChanged: { isEditing = $0 },
                 onSubmit: onSubmit
             )
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 22)
 
             if isSearching {
                 ProgressView()

@@ -1,3 +1,4 @@
+import MapKit
 import SwiftUI
 
 /// The controls and live telemetry for a manual route run. It only reads `RouteSessionModel` and
@@ -11,26 +12,30 @@ struct RouteRunCard: View {
     let onStart: () -> Void
     let onTogglePause: () -> Void
     let onHold: () -> Void
-    let onResumeFromHold: () -> Void
     let onContinue: (Int) -> Void
     let onStop: () -> Void
     let onDone: () -> Void
+    let onPreviewWalkingRoute: () -> Void
 
     @State private var isConfirmingStop = false
     @State private var isChoosingContinuation = false
+    @State private var heldPlace: HeldPlace?
 
     var body: some View {
         // The card sizes to its content and only scrolls once the content no longer fits the space
         // the map leaves it; the text size no longer decides whether it can scroll.
         ViewThatFits(in: .vertical) {
-            cardContent
+            content
             ScrollView(.vertical, showsIndicators: false) {
-                cardContent
+                content
             }
         }
         .padding(18)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: .black.opacity(0.15), radius: 18, y: 8)
+        .task(id: heldCoordinateKey) {
+            await resolveHeldPlace()
+        }
         .confirmationDialog(
             "Stop the run and restore this iPhone's real location?",
             isPresented: $isConfirmingStop,
@@ -49,15 +54,21 @@ struct RouteRunCard: View {
         }
     }
 
-    private var cardContent: some View {
+    @ViewBuilder
+    private var content: some View {
+        if isHolding {
+            heldContent
+        } else {
+            runContent
+        }
+    }
+
+    private var runContent: some View {
         VStack(alignment: .leading, spacing: 14) {
             header
 
-            // A held point has no progress to show: the bar is what made a hold read as a pause.
-            if !isHolding {
-                ProgressView(value: session.lapProgress)
-                    .tint(progressTint)
-            }
+            ProgressView(value: session.lapProgress)
+                .tint(progressTint)
 
             metrics
 
@@ -68,9 +79,139 @@ struct RouteRunCard: View {
         .padding(.bottom, 4)
     }
 
+    /// A held point is a place, not a paused run: it names where the iPhone is, and offers the two
+    /// things that make sense from there — restoring the real location or walking on preview.
+    private var heldContent: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.title2)
+                    .foregroundStyle(.blue)
+                    .frame(width: 32)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(heldTitle)
+                        .font(.headline)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(heldSubtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            VStack(spacing: 10) {
+                Button(role: .destructive) {
+                    isConfirmingStop = true
+                } label: {
+                    Label("Stop & Restore".localized, systemImage: "stop.fill")
+                        .frame(maxWidth: .infinity, minHeight: 46)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .tint(.red)
+                .accessibilityLabel("Stop & Restore".localized)
+
+                Button(action: onPreviewWalkingRoute) {
+                    Label("Preview Walking Route".localized, systemImage: "figure.walk")
+                        .frame(maxWidth: .infinity, minHeight: 46)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .accessibilityLabel("Preview Walking Route".localized)
+            }
+
+            footerText(
+                String(
+                    format: String(localized: "This iPhone is using %@. Stop & Restore ends the simulation and restores its real location."),
+                    heldTitle
+                )
+            )
+        }
+        .padding(.bottom, 4)
+    }
+
     private var isHolding: Bool {
         if case .holding = session.phase { return true }
         return false
+    }
+
+    private var heldCoordinateKey: GeoCoordinate? {
+        guard isHolding, let coordinate = session.snapshot?.reportedCoordinate else { return nil }
+        return coordinate
+    }
+
+    private var heldCoordinate: CLLocationCoordinate2D? {
+        guard let coordinate = heldCoordinateKey else { return nil }
+        return CLLocationCoordinate2D(
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude
+        )
+    }
+
+    private var heldTitle: String {
+        HeldPointLabel.title(
+            resolvedName: heldPlace?.name,
+            fallback: String(localized: "Held here")
+        )
+    }
+
+    private var heldSubtitle: String {
+        if let address = heldPlace?.address, !address.isEmpty {
+            return address
+        }
+        guard let coordinate = heldCoordinate else { return "" }
+        return String(format: "%.4f, %.4f", coordinate.latitude, coordinate.longitude)
+    }
+
+    /// One lookup per held coordinate: the point does not move while held, so this never repeats
+    /// per tick.
+    private func resolveHeldPlace() async {
+        guard let coordinate = heldCoordinate else {
+            heldPlace = nil
+            return
+        }
+        guard
+            let request = MKReverseGeocodingRequest(
+                location: CLLocation(
+                    latitude: coordinate.latitude,
+                    longitude: coordinate.longitude
+                )
+            )
+        else {
+            heldPlace = HeldPlace(name: nil, address: nil)
+            return
+        }
+
+        do {
+            let items = try await request.mapItems
+            let item = items.first
+            heldPlace = HeldPlace(name: item?.name, address: item.flatMap { addressText(for: $0) })
+        } catch {
+            heldPlace = HeldPlace(name: nil, address: nil)
+        }
+    }
+
+    private func addressText(for item: MKMapItem) -> String? {
+        let candidates = [
+            item.address?.shortAddress,
+            item.addressRepresentations?.cityWithContext,
+            item.address?.fullAddress
+        ]
+        for candidate in candidates {
+            let value = candidate?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !value.isEmpty { return value }
+        }
+        return nil
+    }
+
+    private struct HeldPlace: Equatable {
+        let name: String?
+        let address: String?
     }
 
     private var progressTint: Color {
@@ -109,9 +250,7 @@ struct RouteRunCard: View {
 
     @ViewBuilder
     private var metrics: some View {
-        if isHolding {
-            holdingMetrics
-        } else if dynamicTypeSize.isAccessibilitySize {
+        if dynamicTypeSize.isAccessibilitySize {
             VStack(spacing: 8) {
                 lapsMetric
                 lapMetric
@@ -155,28 +294,6 @@ struct RouteRunCard: View {
         return RouteRunMetric(title: "Laps", value: "\(session.completedLaps)", symbol: "repeat")
     }
 
-    /// A held point reports only what is true of a stopped run: how far it got, how long it ran and
-    /// how much it completed.
-    private var holdingMetrics: some View {
-        VStack(spacing: 8) {
-            if dynamicTypeSize.isAccessibilitySize {
-                coveredMetric
-                elapsedMetric
-                lapsMetric
-            } else {
-                HStack(spacing: 10) {
-                    coveredMetric
-                    elapsedMetric
-                    lapsMetric
-                }
-            }
-        }
-    }
-
-    private var coveredMetric: RouteRunMetric {
-        RouteRunMetric(title: "Covered", value: distanceText, symbol: "map")
-    }
-
     private var lapMetric: RouteRunMetric {
         RouteRunMetric(title: "Lap", value: lapPercentageText, symbol: "flag.checkered")
     }
@@ -210,19 +327,8 @@ struct RouteRunCard: View {
             runningControls(isPaused: false)
         case .paused:
             runningControls(isPaused: true)
-        case .holding(let origin):
-            // A held point offers two things. A run frozen mid-route resumes from here; one held at
-            // its finish has already reached the end, so only adding trips can move it on again.
-            VStack(spacing: 10) {
-                if origin == .paused {
-                    primaryButton(title: "Resume From Here", symbol: "play.fill", action: onResumeFromHold)
-                } else {
-                    continueButton(prominent: true)
-                }
-                primaryRow {
-                    secondaryButton(title: "Finish & Restore", symbol: "checkmark", action: onDone)
-                }
-            }
+        case .holding:
+            EmptyView()
         case .finished:
             VStack(spacing: 10) {
                 primaryButton(title: "Hold Here", symbol: "hand.raised.fill", action: onHold)
@@ -415,7 +521,8 @@ struct RouteRunCard: View {
         case .paused:
             footerText(String(localized: "Your simulated location is held here until you resume."))
         case .holding:
-            footerText(String(localized: "The run is held here. Movement is paused and this iPhone keeps reporting this point."))
+            // Rendered by `heldContent`, which carries its own explanation.
+            EmptyView()
         case .finished:
             if let error = session.errorMessage {
                 errorText(error)

@@ -41,13 +41,9 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
         super.init()
         searchCompleter.delegate = self
         searchCompleter.resultTypes = [.address, .pointOfInterest, .query]
-        // MKLocalSearchCompleter.region cannot be unset, so the neutral world span is
-        // set once here. Following the visible map region is what dragged
-        // "Tokyo haneda airport" back to a same-named place parked on screen.
-        searchCompleter.region = MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
-            span: MKCoordinateSpan(latitudeDelta: 180, longitudeDelta: 360)
-        )
+        // Leaving `region` untouched is what keeps the completer unbiased: a world
+        // span is not neutral, because MapKit anchors it on its centre and that
+        // collapsed overseas suggestions to an empty list.
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
     }
@@ -256,14 +252,13 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
         searchSuggestions = []
         defer { isSearching = false }
 
-        let normalizedQuery = overseasPlaceSearchEnabled
-            ? MapSearchQuery.normalized(query, overseas: true)
-            : query
-
         do {
-            var item = try await firstMapItem(for: normalizedQuery)
-            if item == nil, overseasPlaceSearchEnabled, normalizedQuery != query {
-                item = try await firstMapItem(for: query)
+            // Each attempt is a full search; the first hit wins and the whole query
+            // always goes first.
+            var item: MKMapItem?
+            for attempt in MapSearchQuery.attempts(query, overseas: overseasPlaceSearchEnabled) {
+                item = try await firstMapItem(for: attempt)
+                if item != nil { break }
             }
             guard let item else {
                 errorMessage = overseasPlaceSearchEnabled

@@ -69,6 +69,17 @@ struct MapSearchField: UIViewRepresentable {
         uiView.text = text
     }
 
+    func sizeThatFits(
+        _ proposal: ProposedViewSize,
+        uiView: UITextField,
+        context: Context
+    ) -> CGSize? {
+        let height = uiView.sizeThatFits(
+            CGSize(width: proposal.width ?? .infinity, height: .infinity)
+        ).height
+        return CGSize(width: proposal.width ?? 0, height: max(height, 22))
+    }
+
     func makeCoordinator() -> Coordinator {
         Coordinator(handle: handle)
     }

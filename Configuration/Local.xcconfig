@@ -2,4 +2,7 @@
 // Apple development team, and nothing here configures any outbound reporting.
 DEVELOPMENT_TEAM =
 
+// Injected by CI at archive time; empty means the settings screen says "Unknown".
+ROAMCONTROL_BUILD_TIMESTAMP =
+
 #include? "Local.private.xcconfig"

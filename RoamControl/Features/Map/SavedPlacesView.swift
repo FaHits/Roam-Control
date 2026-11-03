@@ -135,19 +135,21 @@ struct SavedPlacesView: View {
                     Button("Done") { dismiss() }
                 }
             }
-            .sheet(item: $favouriteBeingRenamed) { location in
-                RenameSheet(
-                    title: "Rename Favourite",
-                    message: "Give this saved place a name that is easy to recognise.",
-                    initialName: location.name,
-                    onCancel: {
-                        favouriteBeingRenamed = nil
-                    },
-                    onSubmit: { name in
-                        onRenameFavourite(location, name)
-                        favouriteBeingRenamed = nil
-                    }
-                )
+            .overlay {
+                if let location = favouriteBeingRenamed {
+                    RenameDialog(
+                        title: "Rename Favourite",
+                        message: "Give this saved place a name that is easy to recognise.",
+                        initialName: location.name,
+                        onCancel: {
+                            favouriteBeingRenamed = nil
+                        },
+                        onSubmit: { name in
+                            onRenameFavourite(location, name)
+                            favouriteBeingRenamed = nil
+                        }
+                    )
+                }
             }
             .confirmationDialog(
                 clearConfirmationTitle,

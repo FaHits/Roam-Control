@@ -300,19 +300,13 @@ struct SettingsView: View {
     }
 
     private var buildDateText: String {
-        if
+        // Only the build stamp CI injects counts as a build time. The executable's modification
+        // date is when the app was installed or copied, not when it was built.
+        guard
             let timestamp = Bundle.main.object(
                 forInfoDictionaryKey: "RoamControlBuildTimestamp"
             ) as? String,
             let buildDate = ISO8601DateFormatter().date(from: timestamp)
-        {
-            return buildDate.formatted(date: .abbreviated, time: .shortened)
-        }
-
-        guard
-            let executableURL = Bundle.main.executableURL,
-            let values = try? executableURL.resourceValues(forKeys: [.contentModificationDateKey]),
-            let buildDate = values.contentModificationDate
         else { return String(localized: "Unknown") }
 
         return buildDate.formatted(date: .abbreviated, time: .shortened)

@@ -2945,6 +2945,22 @@
         }
       }
     },
+    "Held here": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Held here"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已定位于此"
+          }
+        }
+      }
+    },
     "Help": {
       "localizations": {
         "en": {

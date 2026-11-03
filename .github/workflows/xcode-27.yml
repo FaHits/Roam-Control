@@ -80,7 +80,8 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath "$PWD/build/RoamControl.xcarchive" \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO
+            CODE_SIGNING_REQUIRED=NO \
+            ROAMCONTROL_BUILD_TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
       - name: Package unsigned IPA
         run: |
@@ -133,7 +134,8 @@ jobs:
             -archivePath "$PWD/build/RoamControl-Debug.xcarchive" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            ENABLE_DEBUG_DYLIB=NO
+            ENABLE_DEBUG_DYLIB=NO \
+            ROAMCONTROL_BUILD_TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
       - name: Verify debug probe is compiled in
         run: |

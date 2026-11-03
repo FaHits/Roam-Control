@@ -1,15 +1,11 @@
 import Foundation
 
 enum MapSearchQuery {
-    /// Normalizes a typed query for an overseas search.
-    ///
-    /// Disabled keeps the query byte-for-byte: the caller already trims it and
-    /// the domestic search path must stay identical to 0.10.0.
-    static func normalized(_ raw: String, overseas: Bool) -> String {
-        guard overseas else { return raw }
-
-        let segments = raw
-            .split(whereSeparator: { character in
+    /// Splits on the separators a typed place chain uses. Empty segments stay in the
+    /// list so a trailing separator is visible to `attempts`.
+    private static func segments(_ raw: String) -> [String] {
+        raw
+            .split(omittingEmptySubsequences: false, whereSeparator: { character in
                 character == ","
                     || character == "，"
                     || character == "、"
@@ -18,9 +14,28 @@ enum MapSearchQuery {
                     || character.isNewline
             })
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
+    }
 
-        return segments.last ?? ""
+    /// Normalizes a typed query for an overseas search.
+    ///
+    /// Disabled keeps the query byte-for-byte: the caller already trims it and
+    /// the domestic search path must stay identical to 0.10.0.
+    static func normalized(_ raw: String, overseas: Bool) -> String {
+        guard overseas else { return raw }
+        return segments(raw).last(where: { !$0.isEmpty }) ?? ""
+    }
+
+    /// Queries to try in order. Disabled keeps the single original query.
+    ///
+    /// A completer session tied to China answers "Tokyo haneda airport" with
+    /// nothing, while its trailing segment still resolves. The whole query stays
+    /// first so a complete name is never traded for a weaker one.
+    static func attempts(_ raw: String, overseas: Bool) -> [String] {
+        guard overseas else { return [raw] }
+        guard let trailing = segments(raw).last, !trailing.isEmpty, trailing != raw else {
+            return [raw]
+        }
+        return [raw, trailing]
     }
 
     /// Text a field may write back to its binding.

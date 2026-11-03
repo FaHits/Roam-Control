@@ -65,7 +65,7 @@ struct HomeView: View {
                         }
                     }
 
-                    if let snapshot = routeSession.snapshot {
+                    if let snapshot = routeSession.snapshot, !isHoldingRoute {
                         Annotation("Running location", coordinate: snapshot.reportedCoordinate.mapCoordinate) {
                             Image(systemName: "figure.run.circle.fill")
                                 .font(.title.weight(.semibold))
@@ -273,9 +273,6 @@ struct HomeView: View {
                         onHold: {
                             routeSession.hold(using: appModel)
                         },
-                        onResumeFromHold: {
-                            routeSession.resumeFromHold(using: appModel)
-                        },
                         onContinue: { additionalLaps in
                             routeSession.continueAfterFinish(additionalLaps: additionalLaps, using: appModel)
                         },
@@ -293,7 +290,8 @@ struct HomeView: View {
                             case .idle, .openingLocalDevVPN, .discovering, .connecting, .failed:
                                 break
                             }
-                        }
+                        },
+                        onPreviewWalkingRoute: previewWalkingRouteFromHeldPoint
                     )
                     } else if let route = walkingRoutePlanner.route,
                    let destination = walkingRoutePlanner.destination {
@@ -618,6 +616,39 @@ struct HomeView: View {
         // A held run is a point, not a line: drawing the route would claim movement that stopped.
         if case .holding = routeSession.phase { return nil }
         return try? RouteGeometry(points: route.points, isClosed: route.isClosed)
+    }
+
+    private var isHoldingRoute: Bool {
+        if case .holding = routeSession.phase { return true }
+        return false
+    }
+
+    /// Walks on from the point the run is held at to the end of the route, without starting a
+    /// walking simulation while the route session still owns the device.
+    private func previewWalkingRouteFromHeldPoint() {
+        guard
+            let held = routeSession.snapshot?.reportedCoordinate,
+            let end = routeSession.route?.points.last
+        else { return }
+
+        let source = LocationTarget(
+            name: String(localized: "Held here"),
+            subtitle: "",
+            latitude: held.latitude,
+            longitude: held.longitude
+        )
+        let destination = LocationTarget(
+            name: routeSession.route?.name ?? "",
+            subtitle: "",
+            latitude: end.latitude,
+            longitude: end.longitude
+        )
+        Task {
+            guard let preview = await walkingRoutePlanner.preview(to: destination, from: source) else {
+                return
+            }
+            mapModel.show(preview)
+        }
     }
 
     private var shouldShowRealLocation: Bool {
