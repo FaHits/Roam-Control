@@ -38,6 +38,32 @@ jobs:
             -only-testing:RoamControlTests \
             CODE_SIGNING_ALLOWED=NO
 
+      - name: Run RoamControlUITests
+        run: |
+          set -o pipefail
+          rm -rf ui.xcresult ui-shots
+          xcodebuild test \
+            -project RoamControl.xcodeproj \
+            -scheme RoamControl \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' \
+            -only-testing:RoamControlUITests \
+            -resultBundlePath ui.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Export UI test screenshots
+        if: always()
+        continue-on-error: true
+        run: xcrun xcresulttool export attachments --path ui.xcresult --output-path ui-shots
+
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roam-ui-screenshots
+          path: ui-shots
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Build Debug
         run: |
           set -o pipefail

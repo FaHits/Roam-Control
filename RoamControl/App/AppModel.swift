@@ -13,6 +13,16 @@ final class AppModel {
     private static let overseasPlaceSearchKey = "overseasPlaceSearchEnabled"
     private static let activeSessionRecoveryKey = "activeSessionRecovery"
 
+    /// UI tests launch the app with `-uiTest` so it starts on a fixture instead of a real pairing.
+    /// The branch is compiled out of Release builds, which therefore never see the flag.
+    nonisolated static var isUITestRun: Bool {
+#if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-uiTest")
+#else
+        false
+#endif
+    }
+
     private let preferences: UserDefaults
 
     private(set) var hasCompletedOnboarding: Bool
@@ -66,6 +76,57 @@ final class AppModel {
         deviceSession.onPhaseChange = { [weak self] phase in
             self?.applyDeviceSessionPhase(phase)
         }
+
+        if Self.isUITestRun {
+            seedUITestState()
+        }
+    }
+
+    /// The only place a `-uiTest` launch changes state: the app starts paired and ready, and the
+    /// library holds one fixed route, so a UI test never needs a real iPhone, a network request or
+    /// a drawn route.
+    private func seedUITestState() {
+        hasCompletedOnboarding = true
+        shouldPresentDeviceSetup = false
+        pairingStatus = .paired(Self.uiTestPairingSummary)
+        connectionState = .ready
+        try? RouteStore().save([Self.uiTestRoute])
+    }
+
+    private static var uiTestPairingSummary: PairingRecordSummary {
+        PairingRecordSummary(
+            identifier: "ui-test-device",
+            fingerprint: "ui-test-fingerprint",
+            importedAt: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+    }
+
+    /// A closed square of four points, about 300 m of running: the same shape a drawn route has,
+    /// with no map data behind it.
+    private static let uiTestRouteIdentifier = UUID(uuid: (
+        0x0E, 0x7F, 0x1F, 0x3A, 0x00, 0x00, 0x40, 0x00,
+        0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30
+    ))
+
+    private static var uiTestRoute: RouteDefinition {
+        let baseLatitude = 31.2304
+        let baseLongitude = 121.4737
+        let north = 0.0006737  // 75 m of latitude
+        let east = 0.0007879   // 75 m of longitude at 31.23°
+        return RouteDefinition(
+            id: Self.uiTestRouteIdentifier,
+            name: "UI Loop",
+            points: [
+                GeoCoordinate(latitude: baseLatitude, longitude: baseLongitude),
+                GeoCoordinate(latitude: baseLatitude + north, longitude: baseLongitude),
+                GeoCoordinate(latitude: baseLatitude + north, longitude: baseLongitude + east),
+                GeoCoordinate(latitude: baseLatitude, longitude: baseLongitude + east)
+            ],
+            isClosed: true,
+            source: .drawn,
+            createdAt: Date(timeIntervalSince1970: 1_800_000_000),
+            updatedAt: Date(timeIntervalSince1970: 1_800_000_000)
+        )
     }
 
     func chooseTarget(_ target: LocationTarget) {
@@ -192,6 +253,14 @@ final class AppModel {
     }
 
     func restorePairingStatus() async {
+        if Self.isUITestRun {
+            // The fixture pairing must survive the launch-time restore, otherwise the run card
+            // turns into the pairing prompt and no run can be started.
+            pairingStatus = .paired(Self.uiTestPairingSummary)
+            connectionState = .ready
+            return
+        }
+
         pairingStatus = .checking
 
         do {

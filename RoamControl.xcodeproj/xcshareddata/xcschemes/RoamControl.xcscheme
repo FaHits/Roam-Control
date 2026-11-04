@@ -35,6 +35,20 @@
                ReferencedContainer = "container:RoamControl.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "C00000000000000000000005"
+               BuildableName = "RoamControlUITests.xctest"
+               BlueprintName = "RoamControlUITests"
+               ReferencedContainer = "container:RoamControl.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -52,6 +66,17 @@
                BlueprintIdentifier = "B00000000000000000000006"
                BuildableName = "RoamControlTests.xctest"
                BlueprintName = "RoamControlTests"
+               ReferencedContainer = "container:RoamControl.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "C00000000000000000000005"
+               BuildableName = "RoamControlUITests.xctest"
+               BlueprintName = "RoamControlUITests"
                ReferencedContainer = "container:RoamControl.xcodeproj">
             </BuildableReference>
          </TestableReference>

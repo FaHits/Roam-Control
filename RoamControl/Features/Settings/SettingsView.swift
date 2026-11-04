@@ -100,8 +100,14 @@ struct SettingsView: View {
                     }
 
                     LabeledContent("Version", value: versionText)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("settings.version")
                     LabeledContent("Build", value: buildNumberText)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("settings.build")
                     LabeledContent("Built", value: buildDateText)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("settings.built")
 
                     Button {
                         isReplayingOnboarding = true

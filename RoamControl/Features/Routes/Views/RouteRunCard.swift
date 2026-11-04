@@ -33,6 +33,8 @@ struct RouteRunCard: View {
         .padding(18)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: .black.opacity(0.15), radius: 18, y: 8)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("run.card")
         .task(id: heldCoordinateKey) {
             await resolveHeldPlace()
         }
@@ -712,5 +714,6 @@ private struct RouteRunMetric: View {
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title.localized), \(value)")
+        .accessibilityIdentifier("run.metric.\(title)")
     }
 }

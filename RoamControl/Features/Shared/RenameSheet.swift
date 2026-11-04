@@ -106,6 +106,8 @@ struct RenameDialog: View {
                 .regularMaterial,
                 in: RoundedRectangle(cornerRadius: 14, style: .continuous)
             )
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("rename.dialog")
         }
     }
 }

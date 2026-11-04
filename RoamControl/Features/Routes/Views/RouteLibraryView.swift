@@ -126,6 +126,7 @@ struct RouteLibraryView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("route.row.\(route.name)")
                         .disabled(isRouteActive)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             if !isRouteActive {

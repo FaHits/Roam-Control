@@ -46,7 +46,8 @@ struct RoamControlApp: App {
 
     private var shouldBypassOnboarding: Bool {
 #if DEBUG
-        ProcessInfo.processInfo.arguments.contains("--skip-onboarding")
+        AppModel.isUITestRun
+            || ProcessInfo.processInfo.arguments.contains("--skip-onboarding")
             || shouldShowDeviceSetupInitially
             || shouldShowSettingsInitially
 #else

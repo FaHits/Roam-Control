@@ -50,6 +50,7 @@ struct MapSearchField: UIViewRepresentable {
             for: .editingChanged
         )
         handle.field = field
+        field.accessibilityIdentifier = "search.field"
         context.coordinator.onChange = onChange
         context.coordinator.onEditingChanged = onEditingChanged
         context.coordinator.onSubmit = onSubmit
