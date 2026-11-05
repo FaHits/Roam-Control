@@ -44,7 +44,15 @@ jobs:
             ROAMCONTROL_BUILD_TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Run RoamControlUITests
+      # The simulator launch is the flaky part, not our code: run 41963265863 failed
+      # `app.launch()` with "DTServiceHubClient failed to bless service hub" on three
+      # attempts and then passed on the fourth with no code change, while the same
+      # commit passed in run 41961868111. Retry once inside this step instead of a
+      # human pressing re-run. `-test-iterations 2` pins the attempt count to two
+      # (one retry); `-retry-tests-on-failure` makes the second attempt re-run only
+      # the cases that failed, so an all-green run costs no extra time. No unit-test,
+      # invariant or IPA step gets a retry.
+      - name: Run RoamControlUITests (1 retry)
         run: |
           set -o pipefail
           rm -rf ui.xcresult ui-shots
@@ -53,6 +61,8 @@ jobs:
             -scheme RoamControl \
             -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' \
             -only-testing:RoamControlUITests \
+            -test-iterations 2 \
+            -retry-tests-on-failure \
             -resultBundlePath ui.xcresult \
             ROAMCONTROL_BUILD_TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             CODE_SIGNING_ALLOWED=NO
