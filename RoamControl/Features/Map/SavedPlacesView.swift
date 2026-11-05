@@ -75,6 +75,7 @@ struct SavedPlacesView: View {
                                 clearTarget = .favourites
                             }
                             .textCase(nil)
+                            .disabled(isLocked)
                         }
                     }
                 } footer: {
@@ -119,6 +120,7 @@ struct SavedPlacesView: View {
                                 clearTarget = .history
                             }
                                 .textCase(nil)
+                                .disabled(isLocked)
                         }
                     }
                 }
@@ -144,6 +146,7 @@ struct SavedPlacesView: View {
                             editMode = editMode.isEditing ? .inactive : .active
                         }
                             .accessibilityLabel("Reorder favourites")
+                            .disabled(isLocked)
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
