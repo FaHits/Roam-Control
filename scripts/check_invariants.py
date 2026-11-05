@@ -57,10 +57,16 @@ LOCALIZATION = ROOT / "scripts/check_localizations.py"
 LOCALIZATION_LINE = re.compile(r"All \d+ keys have non-empty zh-Hans values\.")
 
 UPSTREAM = re.compile(r"seanhowarthdev")
-# The implementation ledger and the handoff archive quote the old gate commands
-# and the old URLs on purpose, so they keep the string. Everything else must be
-# clean: README, CHANGELOG, Configuration/, .github/ and the live Documentation
-# pages.
+# Two paths are exempt, each for its own reason, and both are printed in the
+# summary so a reader never has to guess why the count is short:
+#   Documentation/ImplementationStatus.md - the task ledger quotes the old repo
+#     URL verbatim when it records what a past task changed (for example the
+#     2026-10-31 handoff note about the SettingsView bug-report link). Rewriting
+#     the quote would falsify the record.
+#   Documentation/Handoffs/ - an append-only archive of past handoff briefs that
+#     repeat the old gate commands and URLs by design.
+# Neither is a live instruction page. Everything else must be clean: README,
+# CHANGELOG, Configuration/, .github/ and the current Documentation pages.
 UPSTREAM_SKIP = ("Documentation/ImplementationStatus.md", "Documentation/Handoffs/")
 
 ANALYTICS = re.compile(r"UsageAnalytics|ProductInteraction|DeviceID|PurposeAnalytics")
@@ -137,7 +143,7 @@ def check_coordinates(corpus):
     if offsets:
         problems.append(f"stray offset names outside {ADAPTER}: {fmt(offsets)}")
     where = f"{injections[0][0]}:{injections[0][1]}" if len(injections) == 1 else "none"
-    return not problems, f"1 injection site at {where}; {len(offsets)} stray offsets", problems
+    return not problems, f"{len(injections)} injection site(s) at {where}; {len(offsets)} stray offset(s)", problems
 
 
 def check_architecture(corpus):
@@ -147,7 +153,7 @@ def check_architecture(corpus):
     for pattern in ARCH_FORBIDDEN:
         hits.extend(line_hits(corpus, paths, pattern))
     problems = [f"forbidden symbol at {path}:{number}" for path, number in hits]
-    return not problems, f"0 violations across {len(paths)} file(s) in Core/ and Models/", problems
+    return not problems, f"{len(hits)} violation(s) across {len(paths)} file(s) in Core/ and Models/", problems
 
 
 def run_localization_script():
@@ -226,7 +232,9 @@ def check_versions(corpus):
         problems.append(f"README.md claims {readme_version}, ahead of pbxproj {current}")
 
     summary = f"pbxproj {current} ({current_build}), CHANGELOG {top[0]}, README {readme_version} ({readme_build})"
-    if top[1]:
+    # Only claim "the README keeps the shipped build" while that is what we
+    # actually verified; a failing verdict must not carry a reassuring clause.
+    if top[1] and not problems:
         summary += f"; {top[0]} staged for release, README keeps the shipped build"
     return not problems, summary, problems
 
@@ -239,8 +247,9 @@ def check_leftovers(corpus):
     problems = [f"upstream name at {path}:{number}" for path, number in upstream_hits]
     problems += [f"telemetry key at {path}:{number}" for path, number in analytics_hits]
     summary = (
-        f"0 upstream hits in {len(docs)} doc/config file(s) "
-        f"(skipped {', '.join(UPSTREAM_SKIP)}); 0 telemetry keys in app and tests"
+        f"{len(upstream_hits)} upstream hit(s) in {len(docs)} doc/config file(s) "
+        f"(skipped {', '.join(UPSTREAM_SKIP)}); "
+        f"{len(analytics_hits)} telemetry key(s) in app and tests"
     )
     return not problems, summary, problems
 
@@ -249,7 +258,7 @@ def check_build_timestamp(corpus):
     """The build time comes from CI, never from a checked-in setting."""
     hits = line_hits(corpus, [PBXPROJ], BUILD_TIMESTAMP)
     problems = [f"hard-coded build timestamp at {PBXPROJ}:{number}" for _, number in hits]
-    return not problems, "0 ROAMCONTROL_BUILD_TIMESTAMP entries in project.pbxproj", problems
+    return not problems, f"{len(hits)} ROAMCONTROL_BUILD_TIMESTAMP entries in {PBXPROJ}", problems
 
 
 def check_schema(corpus):
@@ -265,7 +274,9 @@ def check_schema(corpus):
         problems.append(f"schema version differs: RouteStore {code[0]}, {STATUS_DOC} {documented[0]}")
     code_value = code[0] if code else "?"
     doc_value = documented[0] if documented else "?"
-    return not problems, f"RouteStore {code_value} == {STATUS_DOC} {doc_value}", problems
+    # The summary has to read like the verdict: `==` only when both sides agree.
+    rel = "==" if not problems else "!="
+    return not problems, f"RouteStore {code_value} {rel} {STATUS_DOC} {doc_value}", problems
 
 
 CHECKS = (
@@ -289,6 +300,9 @@ def run_checks(corpus, checks=CHECKS):
     for index, (name, function) in enumerate(checks, start=1):
         passed, summary, problems = function(corpus)
         print(f"{'PASS' if passed else 'FAIL'} {index} {name}: {summary}")
+        if not passed and not problems:
+            print("     - check returned FAIL without naming a problem")
+            ok = False
         for problem in problems:
             print(f"     - {problem}")
         ok = ok and passed
@@ -296,7 +310,9 @@ def run_checks(corpus, checks=CHECKS):
 
 
 # Each canary plants one violation in a copy of the corpus and the matching
-# check has to notice it.
+# check has to notice it. The fourth element is the summary the check must then
+# print: catching the violation is only half the job, the line a human reads
+# must also report the number it actually found.
 CANARIES = (
     (
         "coordinate injection",
@@ -304,6 +320,7 @@ CANARIES = (
         lambda files: files.__setitem__(
             "RoamControl/Services/Location/Stray.swift", "let coordinateOffset = 0.01\n"
         ),
+        r"^1 injection site\(s\) at \S+; 1 stray offset\(s\)$",
     ),
     (
         "architecture boundary",
@@ -311,11 +328,13 @@ CANARIES = (
         lambda files: files.__setitem__(
             "RoamControl/Features/Routes/Core/Canary.swift", "import MapKit\n"
         ),
+        r"^1 violation\(s\) across \d+ file\(s\) in Core/ and Models/$",
     ),
     (
         "localization",
         "make the catalog gate fail",
         None,
+        r"^localization gate did not report a key count$",
     ),
     (
         "version consistency",
@@ -324,11 +343,13 @@ CANARIES = (
             "README.md",
             README_RELEASE.sub("Current release:</strong> 9.9.9 (1)", files["README.md"]),
         ),
+        r"README 9\.9\.9 \(1\)$",
     ),
     (
         "upstream and telemetry leftovers",
         "put the upstream handle back into the README",
         lambda files: files.__setitem__("README.md", files["README.md"] + "\nsee seanhowarthdev\n"),
+        r"^1 upstream hit\(s\) in \d+ doc/config file\(s\).*; 0 telemetry key\(s\)",
     ),
     (
         "build timestamp not hard-coded",
@@ -337,6 +358,7 @@ CANARIES = (
             PBXPROJ,
             files[PBXPROJ] + "\n\t\t\t\tROAMCONTROL_BUILD_TIMESTAMP = 2026-01-01T00:00:00Z;\n",
         ),
+        r"^1 ROAMCONTROL_BUILD_TIMESTAMP entries in .*project\.pbxproj$",
     ),
     (
         "route schema version",
@@ -345,29 +367,41 @@ CANARIES = (
             SCHEMA_SOURCE,
             SCHEMA_ASSIGNMENT.sub("currentSchemaVersion = 99", files[SCHEMA_SOURCE]),
         ),
+        r"^RouteStore 99 != .* 1$",
     ),
 )
 
 
 def self_test():
-    """Every check has to fail on its own canary; a blind check fails the run."""
+    """Every check has to fail on its own canary and say the truth about it."""
     base = load_corpus()
     functions = dict(CHECKS)
     missed = []
-    for index, (name, description, plant) in enumerate(CANARIES, start=1):
+    misreported = []
+    for index, (name, description, plant, expected) in enumerate(CANARIES, start=1):
         if plant is None:
-            passed, _, _ = check_localizations(base, run=lambda: (1, "1 problem(s):\n"))
+            passed, summary, problems = check_localizations(base, run=lambda: (1, "1 problem(s):\n"))
         else:
             files = dict(base.files)
             plant(files)
-            passed, _, _ = functions[name](Corpus(files))
+            passed, summary, problems = functions[name](Corpus(files))
         print(f"{'CAUGHT' if not passed else 'MISSED'} canary {index} {name}: {description}")
         if passed:
             missed.append(name)
+            continue
+        if not problems:
+            print(f"MISMATCH canary {index}: expected a problem line, got none (summary {summary!r})")
+            misreported.append(name)
+        elif not re.search(expected, summary):
+            print(f"MISMATCH canary {index}: expected {expected!r} got {summary!r}")
+            misreported.append(name)
     if missed:
         print(f"\nself-test failed: {len(missed)} canary/canaries not caught: {', '.join(missed)}")
+    if misreported:
+        print(f"self-test failed: {len(misreported)} canary/canaries reported the wrong summary: {', '.join(misreported)}")
+    if missed or misreported:
         return False
-    print(f"\nself-test passed: {len(CANARIES)}/{len(CANARIES)} canaries caught.")
+    print(f"\nself-test passed: {len(CANARIES)}/{len(CANARIES)} canaries caught, summaries verified.")
     return True
 
 
