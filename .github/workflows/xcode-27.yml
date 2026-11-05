@@ -33,6 +33,10 @@ jobs:
           python3 scripts/check_invariants.py --self-test
           python3 scripts/check_invariants.py
 
+      # Serial on purpose: the scheme marks this target `parallelizable="YES"`, and a
+      # parallel run swallows each clone's stdout into the result bundle, so the
+      # `PROBE ` lines from SearchProbeTests never reached this log (run 41994924084
+      # printed only the trailing summary). Serial streams test output to the console.
       - name: Run RoamControlTests
         run: |
           set -o pipefail
@@ -41,6 +45,7 @@ jobs:
             -scheme RoamControl \
             -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' \
             -only-testing:RoamControlTests \
+            -parallel-testing-enabled NO \
             ROAMCONTROL_BUILD_TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             CODE_SIGNING_ALLOWED=NO
 
