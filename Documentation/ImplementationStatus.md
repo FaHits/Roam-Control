@@ -4,6 +4,15 @@
 
 ## 当前交接
 
+> 2026-11-05 Task 31 把散落的验收 grep 收成一个脚本（`type: noop`）：新增 `scripts/check_invariants.py`（只用标准库 `re`/`subprocess`/`sys`/`pathlib`），一次跑完七类不变量并按 `PASS`/`FAIL` + 命中数逐行打印，任一项 FAIL 退出码 1；`--self-test` 在内存里给每类种一条 canary（不碰工作树），七条全部被对应检查抓出才算通过，漏检退出 1 并打印漏了哪条。`.github/workflows/xcode-27.yml` 的 `test` job 在 `Check localization catalogs` 之后新增 `Check invariants`，先跑 `--self-test` 再跑正式检查；原本地化步骤原样保留。
+>
+> - 七项判定：① 坐标唯一注入 = `DeviceCoordinateAdapter(conversion: .gcj02ToWGS84)` 在 `RoamControl` 恰好 1 处（实测 `DeviceCoordinateAdapter.swift:37`）且 `offsetDegrees|coordinateOffset` 在该文件外 0 处；② 架构边界 = `Features/Routes/Core`、`Features/Routes/Models` 8 个 swift 文件里 `import SwiftUI|import MapKit|AppModel|MKRoute|MKMapPoint|MKPolyline` 0 命中；③ 本地化 = 调 `scripts/check_localizations.py`，要求退出 0 且输出 `All N keys have non-empty zh-Hans values.`；④ 版本 = pbxproj 的 `MARKETING_VERSION`、`CURRENT_PROJECT_VERSION` 各 2 行同值，CHANGELOG 最上方版本段 == `MARKETING_VERSION`，README `Current release:` 的版本必须存在于 CHANGELOG 且等于最新「已发布」版本段（按版本号取最大，不按文件顺序——CHANGELOG 里 `0.9.2 preview series` 排在 `0.10.0` 之前），README 版本与 pbxproj 相同时构建号也必须相同；⑤ 上游与统计残留 = `seanhowarthdev` 在 README/CHANGELOG/`Documentation/`/`Configuration/`/`.github/` 0 命中（`Documentation/ImplementationStatus.md` 与 `Documentation/Handoffs/` 例外，它们按原样引用旧仓库名），`UsageAnalytics|ProductInteraction|DeviceID|PurposeAnalytics` 在 `RoamControl`、`RoamControlTests` 0 命中；⑥ 构建时间 = `project.pbxproj` 内 `ROAMCONTROL_BUILD_TIMESTAMP` 0 处（守住 Task 30G）；⑦ 路线 schema = `RouteStore.swift` 与本文档的 `currentSchemaVersion` 各恰好 1 个值且相等，不等时打印两个值。
+> - 本地（Windows，`python` 3.14.6）：`python scripts/check_invariants.py` 七行全 `PASS` 退出 0；`python scripts/check_invariants.py --self-test` 打印 `CAUGHT canary 1..7`、`self-test passed: 7/7 canaries caught.` 退出 0；从 `/tmp` 用绝对路径调用同样通过（`ROOT` 由 `__file__` 推导）。
+> - 提交：`ec26fd9`（`chore(ci): collect the scattered invariant greps into one script`，2 文件 +392），已推 fork，`git ls-remote fork refs/heads/feat/manual-running-routes` = `ec26fd9cddb6588338346d953ffb75d1869889d1` = 本地 HEAD。
+> - CI：run `41961868111`（head `ec26fd9`）三 job 全 success：`test` 03:29:01Z→03:40:19Z（`Check invariants` 步 03:29:11Z success，日志里 7 行 `PASS` + `self-test passed: 7/7 canaries caught.` + `All invariants hold.`）、`unsigned-ipa-debug` 46s、`unsigned-ipa` 50s。同 run 内 `Run RoamControlTests` `** TEST SUCCEEDED **`，205 条 `Test case … passed`；`Run RoamControlUITests` `** TEST SUCCEEDED **`，`Executed 5 tests, with 0 failures (0 unexpected) in 243.540 (243.552) seconds`；`Check localization catalogs` 仍 `All 644 keys have non-empty zh-Hans values.`。
+> - 规格偏差一处：检查 5 在 CI 里数到 114 个文档/配置文件、本机数到 116 个，差的是 `Documentation/Plans/` 与 `Documentation/Handoffs/`（这两个目录自 2026-11-01 起只在本地保留、不入库）；另 `Documentation/Handoffs/` 里 5 行旧仓库 URL 属于历史记录，检查按前缀跳过并把这个例外打印在 summary 里，不静默吞掉。
+> - 未验证：真机无涉及；本机无 Xcode 27，iOS 侧结论只来自 CI；检查 4 对「README 版本低于 pbxproj」只在 CHANGELOG 有对应非待发布章节时才放行，等 0.11.0 发布、README 改成 `0.11.0 (63)` 后会自动走严格相等的分支。
+
 > 2026-11-05 Task 30G 构建时间不再写死：`RoamControl.xcodeproj/project.pbxproj` 里两条 target 配置各有一行 `ROAMCONTROL_BUILD_TIMESTAMP = "2026-09-14T20:11:19Z";`（原 :319 / :344），因为 target 构建设置优先级高于 `Configuration/Local.xcconfig:6` 的空默认，所以空默认从来没生效，`xcodebuild test` 又没传值，测试构建一直吃这个写死值——CI 41941283535 的 settings 截图里 Built = `Sep 14, 2026 at 8:11 PM` 就是它。两行删除后，构建时间的来源只剩两处：xcconfig 空默认与 CI 命令行注入；`.github/workflows/xcode-27.yml` 的 `Run RoamControlTests` 与 `Run RoamControlUITests` 都补上 `ROAMCONTROL_BUILD_TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"`（与两个 `xcodebuild archive` 一致，全文件共 4 处）。`testSettingsVersionRows` 收紧为：不含 `Unknown`、`2026-09-14`、`Sep 14`、`9月14`，且能解析出 ≥ 2026 的年份。
 >
 > - 测试：205 单测不变（CI 日志 `Test case '<Class>.<method>()' passed` 205 条）；UI 用例 5 条全 pass，断言口径收紧。
@@ -1317,3 +1326,29 @@
 - 规格偏差一处：规格要求门禁 5 的 `rg` 输出「只允许出现在中性 span 那处并逐行贴出」，而 `regionPriority` 与 `cameraPosition.region` 已随偏置块一起删除，该命令输出为空；中性 span 改用 `rg -n "latitudeDelta: 180"` 定位，只命中 `:49` 一行，`:44-49` 的注释与赋值已在上文「偏置的改法」中引用
 - 未验证项：真机上微信输入法候选词是否不再被吞（本次只有模拟器与静态证据，无真机）、真机上 `Tokyo haneda airport` 是否真的命中羽田机场（海外命中率受 Apple 图库与网络影响，未实测）、键盘搜索键与 Done 的交互观感、`MapSearchField` 在动态字体下的行高
 - 更新时间：2026-11-03
+
+### 2026-11-05 Task 31：把散落的 grep 门禁收成一个脚本
+
+- 任务：Task 31 - 合并七类不变量检查、加自检、接进 CI（`type: noop`）
+- 状态：`implemented`（head `ec26fd9` 的 CI run `41961868111` 三 job 全绿；本记录所在提交只改文档）
+- 分支与基线：`feat/manual-running-routes`，起点 HEAD `388acfd`（205 单测、644 key、0.11.0 / 63）
+- 问题：验收靠人肉敲 6 类 `rg`，谁忘了敲就没人知道；CI 只跑 `scripts/check_localizations.py`
+- 修改文件：`scripts/check_invariants.py`（新增，387 行，import 只有 `re` / `subprocess` / `sys` / `pathlib`）、`.github/workflows/xcode-27.yml`（+5，`test` job 在本地化步骤后插入 `Check invariants`）、本文件
+- 结构：`Corpus` 把「路径 -> 文本」包成可替换的映射，`load_corpus()` 从 `ROOT` 读真实文件，`CANARIES` 往同一份内存副本里种违规样本，于是 `--self-test` 与正式检查走完全相同的判定代码（自检不会因为走了另一条路径而失真）
+- 七类判定的具体正则：坐标 `DeviceCoordinateAdapter\(conversion:\s*\.gcj02ToWGS84\)` / `offsetDegrees|coordinateOffset`；架构 `import SwiftUI|import MapKit|AppModel|MKRoute|MKMapPoint|MKPolyline`；版本 `MARKETING_VERSION = ([0-9.]+);` / `CURRENT_PROJECT_VERSION = ([0-9]+);` / 二级标题版本行 / `Current release:` 行；残留 `seanhowarthdev` / `UsageAnalytics|ProductInteraction|DeviceID|PurposeAnalytics`；构建时间 `ROAMCONTROL_BUILD_TIMESTAMP`；schema `currentSchemaVersion\s*=\s*([0-9]+)`
+- 为什么要自检：脚本失效时最容易的表现是「永远打印 PASS」。`--self-test` 给每类种一条 canary，七条都必须被抓到；漏掉某类检查时会打印 `MISSED` 并退出 1
+- 门禁（逐条实测，2026-11-05）
+
+| # | 门禁 | 结果 |
+| --- | --- | --- |
+| 1 | `python scripts/check_invariants.py` | pass：7 行 `PASS`，`All invariants hold.`，exit 0 |
+| 2 | `python scripts/check_invariants.py --self-test` | pass：`CAUGHT canary 1..7`、`self-test passed: 7/7 canaries caught.`，exit 0 |
+| 3 | CI `Check invariants` 步骤 | pass：run `41961868111` 该步 success，日志含 7 行 `PASS` 与 `self-test passed: 7/7 canaries caught.` |
+| 4 | 单测 | pass：`Test case … passed` 205 条，与基线一致 |
+| 5 | UI 用例 | pass：`Executed 5 tests, with 0 failures (0 unexpected) in 243.540 (243.552) seconds` |
+| 6 | 本地化 | pass：`All 644 keys have non-empty zh-Hans values.` exit 0 |
+| 7 | 版本 | pass：仍 `0.11.0` / `63` |
+
+- CI：run [41961868111](https://github.com/FaHits/Roam-Control/actions/runs/41961868111)（head `ec26fd9`）`conclusion=success`，`test` 11m18s、`unsigned-ipa-debug` 46s、`unsigned-ipa` 50s
+- 未验证项：真机无涉及项；本机无 Xcode 27，iOS 侧结论只来自 CI
+- 更新时间：2026-11-05
