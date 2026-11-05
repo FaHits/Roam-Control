@@ -1,5 +1,6 @@
 import MapKit
 import XCTest
+@testable import RoamControl
 
 /// Task 32: ask Apple's map service what it actually returns, one question per
 /// probe, one grep-able `PROBE ` line per answer.
@@ -105,7 +106,102 @@ final class SearchProbeTests: XCTestCase {
         )
     }
 
+    // MARK: - Chinese queries (H)
+
+    /// The device failure this task exists for: on the phone `东京塔` came back as
+    /// domestic shops. Same completer settings as `D` — no region, all three result
+    /// types — so the only thing that differs from a working run is the query (and,
+    /// in the second CI run, the locale). Two lines, one per query.
+    func testHChineseQuery() {
+        for query in ["东京塔", "羽田机场"] {
+            reportCompletion(
+                "H-chinese-query",
+                fragment: query,
+                types: [.address, .pointOfInterest, .query],
+                region: nil,
+                limit: 3,
+                extra: "query=\(query) "
+            )
+        }
+    }
+
+    // MARK: - MapViewModel (I, J)
+
+    /// `A`-`H` talk to MapKit directly. The device fails inside the app's own search
+    /// path, so these two drive `MapViewModel` the way the search field does and
+    /// print what the list would have shown. `I` is the overseas query with the
+    /// setting on; `J` is the same path with it off and a domestic query, so a `J`
+    /// that works and an `I` that does not is a chain problem, not a dead service.
+    func testIViewModelOverseas() async {
+        await reportViewModel(
+            "I-viewmodel-overseas",
+            query: "Tokyo haneda airport",
+            overseas: true
+        )
+    }
+
+    func testJViewModelDomesticControl() async {
+        await reportViewModel(
+            "J-viewmodel-domestic-control",
+            query: "上海外滩",
+            overseas: false
+        )
+    }
+
     // MARK: - Helpers
+
+    /// One query through the app's own entry points — `updateSearchQuery`,
+    /// `searchSuggestions`, `search`, `selectedLocation`, `errorMessage` — and one
+    /// `PROBE ` line. Both waits are capped at three seconds. `search` itself has no
+    /// timeout, so it runs in a task the deadline can abandon; a timeout prints its
+    /// own line and still passes, because this is evidence, not a gate.
+    ///
+    /// `MapViewModel` keeps no `searchResults` array: a search either lands in
+    /// `selectedLocation` (one place) or in `errorMessage`, so `results` is 0 or 1.
+    @MainActor
+    private func reportViewModel(_ name: String, query: String, overseas: Bool) async {
+        let model = MapViewModel()
+        model.overseasPlaceSearchEnabled = overseas
+        model.updateSearchQuery(query)
+
+        // Suggestions arrive on the completer's own delegate callback; wait for the
+        // first batch, but never longer than the deadline.
+        let suggestionDeadline = Date().addingTimeInterval(3)
+        while model.searchSuggestions.isEmpty, Date() < suggestionDeadline {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+        let suggestions = model.searchSuggestions
+
+        let search = Task { await model.search() }
+        let resultDeadline = Date().addingTimeInterval(3)
+        var settled = false
+        while Date() < resultDeadline {
+            if model.selectedLocation != nil || model.errorMessage != nil {
+                settled = true
+                break
+            }
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+
+        guard settled else {
+            search.cancel()
+            print("PROBE \(name): timeout suggestions=\(suggestions.count) search=no answer in 3s")
+            return
+        }
+        await search.value
+
+        let suggestionText = suggestions
+            .prefix(3)
+            .map { "\(sanitized($0.title)) ‖ \(sanitized($0.subtitle))" }
+            .joined(separator: " | ")
+        let target = model.selectedLocation
+        let targetText = target.map { "\(sanitized($0.name)) ‖ \(sanitized($0.subtitle))" } ?? ""
+        print(
+            "PROBE \(name): suggestions=\(suggestions.count) first=[\(suggestionText)] "
+                + "results=\(target == nil ? 0 : 1) first=[\(targetText)] "
+                + "error=\(sanitized(model.errorMessage))"
+        )
+    }
 
     private func search(_ query: String, region: MKCoordinateRegion?) async throws -> [MKMapItem] {
         let request = MKLocalSearch.Request()
