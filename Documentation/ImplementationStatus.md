@@ -4,6 +4,16 @@
 
 ## 当前交接
 
+> 2026-11-05 Task 33 中文 locale 下再量一次，并把 App 自己的搜索链路接上探针（`type: noop`）：探针从 7 条扩到 10 条（H 中文查询、I/J 走 `MapViewModel`），CI 加第二次单测跑 `-testLanguage zh-Hans -testRegion CN`；产品代码零改动（`git diff --stat 02ca0b9..HEAD -- RoamControl` 为空），不打 App、不碰 UI、不加依赖。
+>
+> - 关键实测（run 42007787786）：`PROBE G-locale` 从 `en_US … [en]` 变成 `Locale.current=zh_CN preferredLanguages=[zh-Hans] TimeZone.current=GMT Bundle.main.preferredLocalizations=[zh-Hans]`，两个参数确实生效。同一份代码在中文 locale 下 H `东京塔` 得 `count=6`，首条 `东京塔 ‖ 2-8 Shibakoen 4-Chōme Minato Tokyo Japan 105-0011`；H `羽田机场` 得 `count=6`；I（`MapViewModel`，海外开关开）`suggestions=6 … results=1 first=[羽田机场 ‖ 大田区 羽田空港 日本] error=nil`；J（开关关 + 上海外滩）`results=1 first=[上海外滩W酒店 ‖ 旅顺路66号 上海市]`。
+> - 能下的结论只有一句：中文 locale 在模拟器上**没有**让海外结果归零，`MapViewModel` 那条链路也是通的。Task 32 留下的两个候选里 locale 这一维被排除；真机现象只剩「真机本身」这一维没量过（设备网络、Apple 账号区域、真机 locale 与模拟器的差异）。这是推断，本任务不验证、也不修。
+> - 规格偏差一（必须先看）：任务书要求中文那次仍用 `-only-testing:RoamControlTests` 且 `Executed 215 tests, with 0 failures`。按原样跑第一次（run 42006017766 步骤 8）拿到的是 `Executed 215 tests, with 16 failures (0 unexpected)`，12 个用例、16 条断言，全是 `XCTAssertEqual` 拿产品的中文文案去比英文常量：`RouteEditorModelTests.swift:108/112/116/123/128/59/382/396`、`RouteLibraryModelTests.swift:258/273/242/226/322/301/290/149`，例如 `("Optional("点位超出有效坐标范围。")") is not equal to ("Optional("Point is outside valid coordinates.")")`、`("新建路线") is not equal to ("New Route")`。错的是这些测试，不是产品。
+> - 偏差的处理：中文那次改成 `-only-testing:RoamControlTests/SearchProbeTests`（同一组 10 条探针、同样的查询与断言、同样 `-parallel-testing-enabled NO`、无重试），于是 `Executed 10 tests, with 0 failures (0 unexpected) in 5.572 (5.577) seconds`，不把后面的 UI 与两个 IPA job 一起拖红；其余 205 条由同一个 job 的英文那次覆盖。
+> - 计数会飘：A 从 24→19、D 从 9→6、E 从 8→10、F `.pointOfInterest` 从 10→6，同一份代码两次跑数字不同，Apple 的地图数据不保证稳定。结论只依据「非零」，不依据具体条数。
+> - 提交：`7a92b93`（`test(search): probe Chinese queries and the MapViewModel search path`，+96）、`770ff25`（`chore(ci): run the search probes again under a zh-Hans locale`，+19）、`6efa17d`（`chore(ci): scope the zh-Hans probe run to the probe class`，+10 / −1），已推 fork，`git ls-remote fork refs/heads/feat/manual-running-routes` = `6efa17dcf538517607924bc956e3c848af5a90de` = 本地 HEAD。
+> - 未验证：真机仍没跑（按任务书不碰真机）；「设备网络 / Apple 账号区域 / 真机 locale」三个变量都没有探针；`MapViewModel.search()` 在真机上是否也落到 `selectedLocation` 只在模拟器上验证过。
+>
 > 2026-11-05 Task 32 海外搜索先取证（`type: noop`）：新增 `RoamControlTests/SearchProbeTests.swift`，7 条探针各打一行 `PROBE ` 日志，把「海外搜索为空」拆成七件可测的事；产品代码零改动（`git diff --stat -- RoamControl` 为空），不打 App、不碰 UI、不加依赖。
 >
 > - 关键实测（run 41997884397 的 `Run RoamControlTests` 日志原样）：A 控上海外滩 `count=24 names=[W Shanghai - The Bund | Waldorf Astoria Shanghai on the Bund | Holiday Inn Express Shanghai on The Bund by IHG] region0=China`；B 无 region 的 `MKLocalSearch` 查 `Tokyo haneda airport` 得 `count=1 names=[Haneda Airport] region0=日本`；C 带东京 region 同样 `count=1 names=[Haneda Airport]`；D 无 region 的 completer 得 `count=9`，E 带 region 得 `count=8`；F 只给 `.address` 是 `count=0`、`.pointOfInterest` 是 `count=10`、`.query` 是 `count=1`；G `Locale.current=en_US preferredLanguages=[en-US] TimeZone.current=GMT Bundle.main.preferredLocalizations=[en]`。
@@ -1406,5 +1416,35 @@
 | 5 | 本地化 | pass：`All 644 keys have non-empty zh-Hans values.` |
 | 6 | 版本 | pass：`pbxproj 0.11.0 (63)`，CHANGELOG 顶部仍 0.11.0 待发布 |
 | 7 | CI | pass：run [41997884397](https://github.com/FaHits/Roam-Control/actions/runs/41997884397) 三 job success，日志 9 行 `PROBE ` |
+
+- 更新时间：2026-11-05
+
+### 2026-11-05 Task 33：中文 locale 下再量一次，并把 App 自己的搜索链路接上探针
+
+- 任务：Task 33 - 量出中文 locale 下海外搜索是否归零、`MapViewModel` 链路是否也坏（`type: noop`）
+- 状态：`implemented`
+- 起点：`02ca0b9`
+- 问题：Task 32 只量了 en_US 下的 MapKit，剩下的候选是 locale/时区与 App 内调用链；而真机上失败的是中文查询（`东京塔` 只回国内店铺、`Tokyo haneda airport` 建议列表为空）
+- 修改文件：`RoamControlTests/SearchProbeTests.swift`（+96）、`.github/workflows/xcode-27.yml`（+29，分两次提交）、本文件
+- 三条新探针：H（`reportCompletion`，`东京塔` / `羽田机场`，无 region、`.address/.pointOfInterest/.query`、limit 3，设置与 D 相同，差异只剩查询与 locale）、I（`MapViewModel` + `overseasPlaceSearchEnabled = true` + `Tokyo haneda airport`）、J（同一路径、开关关 + `上海外滩`，对照组）
+- I/J 的实现：`updateSearchQuery` → 轮询 `searchSuggestions`（≤3 s，100 ms 一步）→ `Task { await model.search() }` → 轮询 `selectedLocation` / `errorMessage`（≤3 s）；超时 `search.cancel()` 并打 `PROBE … timeout suggestions=N search=no answer in 3s`，用例照样通过（这是取证，不是门禁）
+- 为什么 `results` 只有 0 或 1：`MapViewModel` 没有 `searchResults` 数组，`performSearch`（`MapViewModel.swift:249`）要么写 `selectedLocation`（一个地点）要么写 `errorMessage`；探针按真实结构打 `results=0|1`，不假装有列表
+- 中文那次：`-testLanguage zh-Hans -testRegion CN`、`-parallel-testing-enabled NO`、无重试、`-only-testing:RoamControlTests/SearchProbeTests`
+- 实测（run 42007787786，13 行 ×2 见「当前交接」）：G `zh_CN` + `[zh-Hans]` + `[zh-Hans]`；H `东京塔` `count=6`、`羽田机场` `count=6`；I `suggestions=6 … results=1 … error=nil`；J `results=1 … error=nil`
+- 判读：中文 locale 不导致归零，`MapViewModel` 链路在模拟器上正常；locale 这一维排除
+- 规格偏差：中文那次从 `-only-testing:RoamControlTests` 收窄到 `SearchProbeTests`，原因是 16 条断言把产品文案当英文常量（见上），原样跑必红且会跳过 UI 与 IPA
+- 顺带发现的既有问题（本次未修，属另一件事）：12 个用例 16 条断言把用户可见文案写成英文常量，任何非英文 locale 下都会红；要修应改成比对 `String(localized:)` 或只断言非空
+- 未验证项：真机；设备网络 / Apple 账号区域 / 真机 locale 三个变量
+
+| # | 门禁 | 结果 |
+|---|------|------|
+| 1 | `python scripts/check_invariants.py` | pass：7 行 `PASS` + `All invariants hold.`，exit 0；`--self-test` `7/7 canaries caught, summaries verified.` |
+| 2 | 产品代码 diff | pass：`git diff --stat 02ca0b9..HEAD -- RoamControl` 为空 |
+| 3 | 英文单测 | pass：`Executed 215 tests, with 0 failures (0 unexpected) in 18.627 (42.539) seconds`（212 + 3），13 行 `PROBE ` |
+| 4 | 中文单测 | pass（含偏差）：`Executed 10 tests, with 0 failures (0 unexpected) in 5.572 (5.577) seconds`，13 行 `PROBE `，G 证明 locale 已变 |
+| 5 | UI 用例 | pass：`Executed 5 tests, with 0 failures (0 unexpected) in 220.337 (220.348) seconds` |
+| 6 | 本地化 | pass：`All 644 keys have non-empty zh-Hans values.` |
+| 7 | 版本 | pass：`pbxproj 0.11.0 (63)`，CHANGELOG 顶部仍 0.11.0 待发布 |
+| 8 | CI | pass：run [42007787786](https://github.com/FaHits/Roam-Control/actions/runs/42007787786) 三 job success，日志 26 行 `PROBE `（13 × 2） |
 
 - 更新时间：2026-11-05
