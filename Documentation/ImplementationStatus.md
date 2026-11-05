@@ -6,8 +6,11 @@
 
 > 2026-11-05 Task 30G 构建时间不再写死：`RoamControl.xcodeproj/project.pbxproj` 里两条 target 配置各有一行 `ROAMCONTROL_BUILD_TIMESTAMP = "2026-09-14T20:11:19Z";`（原 :319 / :344），因为 target 构建设置优先级高于 `Configuration/Local.xcconfig:6` 的空默认，所以空默认从来没生效，`xcodebuild test` 又没传值，测试构建一直吃这个写死值——CI 41941283535 的 settings 截图里 Built = `Sep 14, 2026 at 8:11 PM` 就是它。两行删除后，构建时间的来源只剩两处：xcconfig 空默认与 CI 命令行注入；`.github/workflows/xcode-27.yml` 的 `Run RoamControlTests` 与 `Run RoamControlUITests` 都补上 `ROAMCONTROL_BUILD_TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"`（与两个 `xcodebuild archive` 一致，全文件共 4 处）。`testSettingsVersionRows` 收紧为：不含 `Unknown`、`2026-09-14`、`Sep 14`、`9月14`，且能解析出 ≥ 2026 的年份。
 >
-> - 测试：205 单测不变；UI 用例 5 条，断言口径收紧。
-> - 未验证：本机无 Xcode，编译与用例结论只能来自 CI。
+> - 测试：205 单测不变（CI 日志 `Test case '<Class>.<method>()' passed` 205 条）；UI 用例 5 条全 pass，断言口径收紧。
+> - 提交：`d0abaa9`（`fix(build): stop baking the build time into the target settings`，4 文件），已推 fork。
+> - CI：run `41945076188`（head `d0abaa9`）三 job 全 success：`test` 21m14s、`unsigned-ipa` 1m6s、`unsigned-ipa-debug` 46s；UI 步 5 条：rename 81.897 s、route library 47.495 s、run card 64.415 s、search 27.925 s、settings 73.050 s，`Executed 5 tests, with 0 failures (0 unexpected) in 294.782 (294.790) seconds`。
+> - 产物：`roam-ui-screenshots` id `13379056760` / 5,648,497 字节，5 张 png + `manifest.json`（5 条）；settings 截图里 Built 实测 `Nov 5, 2026 at 1:03 AM`（上一次是 `Sep 14, 2026 at 8:11 PM`），日志 `List UI screenshot names` 打印 5 条名字。
+> - 未验证：真机设置页「Built」是否为当天时间（并入真机台账 #1 随批验收）；本机无 Xcode 27，编译结论只来自 CI。
 
 > 2026-11-05 Task 30F 让 UI 传感器说真话（`type: noop`）：CI 41937194988 里 `testSettingsVersionRows` 失败于 `RoamControlUITests.swift:183: error: … XCTAssertTrue failed - version row missing`，原因是 About 分组在懒加载 List 底部、10 s 内根本没进可访问性树。改为先 `app.swipeUp()` 最多 3 次直到 `settings.version` 出现再断言（不加 timeout）。`testRunCardRunning` 名不副实（截图落到 `.failed` 卡片、`app.buttons["Start"]` 撞到的是别的按钮），按任务书**选 B**：改名 `testRunCardUnavailable`，断 `Run unavailable` 标题、含 `could not start` 的失败文案、四个指标存在且 Distance 为 `0 m`、`run.primary` 高 ≥ 44，截图改 `run-card-unavailable.png`；主按钮查询统一改用新标识 `run.primary`（`RouteRunCard.swift:356`）。CI 增加 `List UI screenshot names` step，用 `jq` 把 `ui-shots/manifest.json` 的 `suggestedHumanReadableName -> exportedFileName` 打进日志。
 >
