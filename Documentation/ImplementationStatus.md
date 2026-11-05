@@ -1473,24 +1473,26 @@
 ### 2026-11-05 Task 35：跑步中把改路线的入口关掉并说明原因
 
 - 任务：Task 35 - 跑步进行中，保存地点列表、搜索框、新建路线三个入口不可点且写明原因（`type: feature`）
-- 状态：`implemented_unverified`（本机无 macOS/Xcode，构建与测试只能由 CI 复核）
+- 状态：`implemented`（构建、226 条单测、5 条 UI 用例与两个 IPA 产物由 CI 复核；真机上的置灰与文案呈现仍未验证）
 - 起点：`03d380f`
 - 用户可见变化：跑步进行中打开「保存的地点」，行不可点、左滑没有删除/重命名，列表底部写明「结束或保持跑步后，才能修改收藏的地点。」；搜索框占位改成「结束或保持跑步后，才能搜索地点」；路线页「New Route」变灰
 - 修改文件：`RoamControl/Features/Home/RunLockCopy.swift`（新增 22 行）、`RoamControl/Features/Map/SavedPlacesView.swift`（+29/−14）、`RoamControl/Features/Home/HomeView.swift`（+5/−3）、`RoamControl/Features/Map/MapSearchBar.swift`（+2）、`RoamControl/Features/Map/MapSearchField.swift`（+3/−1）、`RoamControl/Features/Routes/Views/RouteLibraryView.swift`（+1）、`RoamControl/Resources/Localizable.xcstrings`（+32，2 个新 key）、`RoamControlTests/RunLockCopyTests.swift`（新增 29 行）、本文件
 - 文案收敛：`RunLockCopy` 是唯一持有这两句的地方；`defaultSearchPlaceholder` 复用 `MapSearchBar` 原有的 `Search places or coordinates` key，没有另造句子
-- UIKit 取值方式：`MapSearchField` 用 `String(localized: placeholder.key)` 把 `LocalizedStringResource` 落到 `UITextField.placeholder`，并在 `updateUIView` 重设一次，否则跑步开始后占位文案不刷新
+- UIKit 取值方式：`MapSearchField` 用 `NSLocalizedString(placeholder.key, comment: "")` 把 `LocalizedStringResource` 落到 `UITextField.placeholder`，并在 `updateUIView` 重设一次，否则跑步开始后占位文案不刷新。第一版写的是 `String(localized: placeholder.key)`，`String(localized:)` 只接受 `String.LocalizationValue`，`966473c` 改成按 key 查目录
+- 失败的第一次 CI：`7accb7f` 的 run [42050225067](https://github.com/FaHits/Roam-Control/actions/runs/42050225067) test job 红（`MapSearchField.swift:39`、`:64` 两处 `error: cannot convert value of type 'String' to expected argument type 'String.LocalizationValue'`），两个 IPA job 因此 skipped；修复提交 `966473c` 后三 job 全绿
 - 删掉的静默 return：`HomeView` 的 `onSelect` 只留 `mapModel.show(target)`；「点了没反应」的成因被行禁用取代。地图点按那处静默 return（`HomeView.swift:88-95`）按要求未动，另立台账
 - 新增测试：`testListFooterHiddenWhenUnlocked` / `testListFooterShownWhenLocked` / `testSearchPlaceholderDefaultsWhenUnlocked` / `testSearchPlaceholderChangesWhenLocked`
-- 未验证项：模拟器/真机上的实际置灰与文案呈现；`String(localized: LocalizedStringResource.key)` 的实际本地化输出；UI 5 条在锁定态下没有种子覆盖（按任务书不为锁定态新造 `-uiTest` 种子）
+- 未验证项：真机上的实际置灰、中文文案与底部说明的观感（本机无 iOS 真机，需最后实机回归一次）；UI 5 条在锁定态下没有种子覆盖（按任务书不为锁定态新造 `-uiTest` 种子）
+- 顺带发现的既有问题（本次未修，属另一件事）：锁定态下「保存的地点」里的 `Clear`（收藏、历史两处）与工具栏 `Edit`/`Done` 仍可点。任务书只点名了行、左滑、`New Route` 与搜索占位，所以按范围没动；但既然底部写着「修改收藏的地点前先结束跑步」，这两个入口应在后续任务里一并关掉，否则同一句提示与行为不一致
 
 | # | 门禁 | 结果 |
 |---|------|------|
 | 1 | `python scripts/check_invariants.py` | pass：7 行 `PASS` + `All invariants hold.`，exit 0；`--self-test` `7/7 canaries caught, summaries verified.` |
 | 2 | `python scripts/check_localizations.py` | pass：`All 649 keys have non-empty zh-Hans values.`（647 + 2 InfoPlist），exit 0 |
-| 3 | 单测数量 | 静态计数 226 个 `func test`（222 + 4），UI 5 个；实际执行结果待 CI |
+| 3 | 单测数量 | pass：CI `Executed 226 tests, with 0 failures (0 unexpected) in 47.468 (95.749) seconds`，`** TEST SUCCEEDED **`；zh-Hans 复跑 `Executed 10 tests, with 0 failures`；静态计数 226 个 `func test`（222 + 4） |
 | 4 | `rg -n "gcj02ToWGS84" RoamControl \| wc -l` | 8（与起点一致） |
 | 5 | 版本 | 未改：`pbxproj 0.11.0 (63)`，CHANGELOG/README 未动 |
-| 6 | CI | 待跑（本次提交触发 `feat/manual-running-routes`） |
+| 6 | CI | pass：run [42050639097](https://github.com/FaHits/Roam-Control/actions/runs/42050639097) 三 job success（test / unsigned-ipa / unsigned-ipa-debug）；UI `Executed 5 tests, with 0 failures (0 unexpected) in 188.540 (188.555) seconds`；产物 `RoamControl-unsigned-ipa` id 13428345725、3,173,430 字节，`RoamControl-unsigned-debug-ipa` id 13428315781、4,855,942 字节 |
 
-- 下一任务：等 CI 三 job 与 IPA 产物出来后回填本表格；之后处理台账里地图点按的静默 return
+- 下一任务：处理台账里地图点按的静默 return（`HomeView.swift:88-95`）；另开一条把锁定态下 `Clear`/`Edit` 一并关掉。真机验收并入 Task 14 一次性批量回归
 - 更新时间：2026-11-05
