@@ -1469,3 +1469,28 @@
 | 8 | CI | pass：run [42007787786](https://github.com/FaHits/Roam-Control/actions/runs/42007787786) 三 job success，日志 26 行 `PROBE `（13 × 2） |
 
 - 更新时间：2026-11-05
+
+### 2026-11-05 Task 35：跑步中把改路线的入口关掉并说明原因
+
+- 任务：Task 35 - 跑步进行中，保存地点列表、搜索框、新建路线三个入口不可点且写明原因（`type: feature`）
+- 状态：`implemented_unverified`（本机无 macOS/Xcode，构建与测试只能由 CI 复核）
+- 起点：`03d380f`
+- 用户可见变化：跑步进行中打开「保存的地点」，行不可点、左滑没有删除/重命名，列表底部写明「结束或保持跑步后，才能修改收藏的地点。」；搜索框占位改成「结束或保持跑步后，才能搜索地点」；路线页「New Route」变灰
+- 修改文件：`RoamControl/Features/Home/RunLockCopy.swift`（新增 22 行）、`RoamControl/Features/Map/SavedPlacesView.swift`（+29/−14）、`RoamControl/Features/Home/HomeView.swift`（+5/−3）、`RoamControl/Features/Map/MapSearchBar.swift`（+2）、`RoamControl/Features/Map/MapSearchField.swift`（+3/−1）、`RoamControl/Features/Routes/Views/RouteLibraryView.swift`（+1）、`RoamControl/Resources/Localizable.xcstrings`（+32，2 个新 key）、`RoamControlTests/RunLockCopyTests.swift`（新增 29 行）、本文件
+- 文案收敛：`RunLockCopy` 是唯一持有这两句的地方；`defaultSearchPlaceholder` 复用 `MapSearchBar` 原有的 `Search places or coordinates` key，没有另造句子
+- UIKit 取值方式：`MapSearchField` 用 `String(localized: placeholder.key)` 把 `LocalizedStringResource` 落到 `UITextField.placeholder`，并在 `updateUIView` 重设一次，否则跑步开始后占位文案不刷新
+- 删掉的静默 return：`HomeView` 的 `onSelect` 只留 `mapModel.show(target)`；「点了没反应」的成因被行禁用取代。地图点按那处静默 return（`HomeView.swift:88-95`）按要求未动，另立台账
+- 新增测试：`testListFooterHiddenWhenUnlocked` / `testListFooterShownWhenLocked` / `testSearchPlaceholderDefaultsWhenUnlocked` / `testSearchPlaceholderChangesWhenLocked`
+- 未验证项：模拟器/真机上的实际置灰与文案呈现；`String(localized: LocalizedStringResource.key)` 的实际本地化输出；UI 5 条在锁定态下没有种子覆盖（按任务书不为锁定态新造 `-uiTest` 种子）
+
+| # | 门禁 | 结果 |
+|---|------|------|
+| 1 | `python scripts/check_invariants.py` | pass：7 行 `PASS` + `All invariants hold.`，exit 0；`--self-test` `7/7 canaries caught, summaries verified.` |
+| 2 | `python scripts/check_localizations.py` | pass：`All 649 keys have non-empty zh-Hans values.`（647 + 2 InfoPlist），exit 0 |
+| 3 | 单测数量 | 静态计数 226 个 `func test`（222 + 4），UI 5 个；实际执行结果待 CI |
+| 4 | `rg -n "gcj02ToWGS84" RoamControl \| wc -l` | 8（与起点一致） |
+| 5 | 版本 | 未改：`pbxproj 0.11.0 (63)`，CHANGELOG/README 未动 |
+| 6 | CI | 待跑（本次提交触发 `feat/manual-running-routes`） |
+
+- 下一任务：等 CI 三 job 与 IPA 产物出来后回填本表格；之后处理台账里地图点按的静默 return
+- 更新时间：2026-11-05

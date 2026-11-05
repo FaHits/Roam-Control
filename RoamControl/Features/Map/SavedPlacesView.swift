@@ -26,6 +26,7 @@ struct SavedPlacesView: View {
     let onDeleteHistory: (LocationTarget) -> Void
     let onClearFavourites: () -> Void
     let onClearHistory: () -> Void
+    var isLocked: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -45,19 +46,22 @@ struct SavedPlacesView: View {
                                 onSelect: { select(location) },
                                 onToggleFavourite: { onToggleFavourite(location) }
                             )
+                            .disabled(isLocked)
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    onDeleteFavourite(location)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
+                                if !isLocked {
+                                    Button(role: .destructive) {
+                                        onDeleteFavourite(location)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
 
-                                Button {
-                                    beginRenaming(location)
-                                } label: {
-                                    Label("Rename", systemImage: "pencil")
+                                    Button {
+                                        beginRenaming(location)
+                                    } label: {
+                                        Label("Rename", systemImage: "pencil")
+                                    }
+                                    .tint(.blue)
                                 }
-                                .tint(.blue)
                             }
                         }
                         .onMove(perform: onMoveFavourites)
@@ -94,11 +98,14 @@ struct SavedPlacesView: View {
                                 onSelect: { select(location) },
                                 onToggleFavourite: { onToggleFavourite(location) }
                             )
+                            .disabled(isLocked)
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    onDeleteHistory(location)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+                                if !isLocked {
+                                    Button(role: .destructive) {
+                                        onDeleteHistory(location)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
                             }
                         }
@@ -113,6 +120,14 @@ struct SavedPlacesView: View {
                             }
                                 .textCase(nil)
                         }
+                    }
+                }
+
+                if let footer = RunLockCopy.listFooter(isLocked: isLocked) {
+                    Section {
+                        Text(footer)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }

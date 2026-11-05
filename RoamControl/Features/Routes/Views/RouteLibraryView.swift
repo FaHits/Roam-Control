@@ -56,6 +56,7 @@ struct RouteLibraryView: View {
                     Button("New Route", systemImage: "plus") {
                         isPresentingEditor = true
                     }
+                    .disabled(isRouteActive)
                 }
             }
         }

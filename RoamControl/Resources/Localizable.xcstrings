@@ -2689,6 +2689,38 @@
         }
       }
     },
+    "Finish or hold the run before changing saved places.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish or hold the run before changing saved places."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "结束或保持跑步后，才能修改收藏的地点。"
+          }
+        }
+      }
+    },
+    "Finish or hold the run to search places": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish or hold the run to search places"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "结束或保持跑步后，才能搜索地点"
+          }
+        }
+      }
+    },
     "Finishing pairing": {
       "localizations": {
         "en": {

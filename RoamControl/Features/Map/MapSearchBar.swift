@@ -5,6 +5,7 @@ struct MapSearchBar: View {
     @Binding var query: String
     @Binding var isEditing: Bool
     let field: MapSearchFieldHandle
+    let placeholder: LocalizedStringResource
     let isSearching: Bool
     let onSubmit: () -> Void
     let onClear: () -> Void
@@ -49,6 +50,7 @@ struct MapSearchBar: View {
             MapSearchField(
                 text: query,
                 handle: field,
+                placeholder: placeholder,
                 onChange: { query = $0 },
                 onEditingChanged: { isEditing = $0 },
                 onSubmit: onSubmit

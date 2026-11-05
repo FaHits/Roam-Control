@@ -105,6 +105,9 @@ struct HomeView: View {
                     ),
                     isEditing: $isSearchEditing,
                     field: searchField,
+                    placeholder: RunLockCopy.searchPlaceholder(
+                        isLocked: routeSession.locksRouteInput
+                    ),
                     isSearching: mapModel.isSearching,
                     onSubmit: {
                         Task { await mapModel.search() }
@@ -543,8 +546,6 @@ struct HomeView: View {
                 shouldShowFavouriteReorderHint: !appModel.hasSeenFavouriteReorderHint,
                 isFavourite: appModel.isFavourite,
                 onSelect: { target in
-                    guard !walkingSimulation.locksDestination else { return }
-                    guard !routeSession.locksRouteInput else { return }
                     mapModel.show(target)
                 },
                 onToggleFavourite: appModel.toggleFavourite,
@@ -554,7 +555,8 @@ struct HomeView: View {
                 onRenameFavourite: appModel.renameFavourite,
                 onDeleteHistory: appModel.removeFromHistory,
                 onClearFavourites: appModel.clearFavouriteLocations,
-                onClearHistory: appModel.clearLocationHistory
+                onClearHistory: appModel.clearLocationHistory,
+                isLocked: routeSession.locksRouteInput
             )
         }
         .sheet(isPresented: $isShowingRouteLibrary) {
