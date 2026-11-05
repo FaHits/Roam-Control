@@ -10,7 +10,7 @@ All notable public changes to Roam Control are recorded here.
 - Continue Run: a finished or held run can carry on along the same route, and the trip and lap counters continue from what was already done — a `.once` closed route continues as `.laps(2)`, an open route as `.outAndBack(trips: 2)`. Holding across an app restart is planned for the next release.
 - Humanised motion v2: ramp-up from 30% to full speed over the first 20 seconds, fatigue drift of 1.8% per minute (floored at 60% of the target), and a cool-down that ends at 35% speed over the last 120 m, on top of the existing smoothed speed variation. Run Setup keeps Speed, Human Likeness, Fatigue and Ramp-Up in the Run Profile card and moves Cadence, Cadence Variation, GPS Jitter, Cool-Down and the noise seed into the Advanced disclosure.
 - The route library is a grouped list now: each section carries its count, and every row shows an icon, the route name, the distance or route type, and the update time, matching the saved-places screen.
-- Settings → Search: an overseas place search switch. With it on, searches are biased to the current map region, English and local-language queries are accepted, and each result names its country or region.
+- Settings → Search: an overseas place search switch. With it on, the search term goes to OpenStreetMap's Nominatim geocoder, so an overseas query resolves outside the CN map data set instead of being answered with a domestic place; turning the switch off stops the requests.
 
 ### Changed
 

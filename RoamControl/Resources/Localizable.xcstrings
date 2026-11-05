@@ -10272,6 +10272,54 @@
           }
         }
       }
+    },
+    "Overseas search is unavailable right now. Check the connection and try again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overseas search is unavailable right now. Check the connection and try again."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "海外地点搜索暂不可用，请检查网络后重试。"
+          }
+        }
+      }
+    },
+    "Search terms are sent to OpenStreetMap to find overseas places. Turning this off stops the requests.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search terms are sent to OpenStreetMap to find overseas places. Turning this off stops the requests."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索词会发送到 OpenStreetMap 以查询海外地点；关闭后即不再发送。"
+          }
+        }
+      }
+    },
+    "No overseas place found for this search.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No overseas place found for this search."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有找到匹配的海外地点。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -17,8 +17,17 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
     /// parked on Zhanjiang must still resolve "Tokyo haneda airport".
     var overseasPlaceSearchEnabled = false
 
+    /// The only source of overseas suggestions while the toggle is on.
+    /// Replaceable so a test never leaves the device.
+    @ObservationIgnored
+    var overseasSearch = OverseasPlaceSearch.live
+
     @ObservationIgnored
     private let searchCompleter = MKLocalSearchCompleter()
+    @ObservationIgnored
+    private var overseasSearchTask: Task<Void, Never>?
+    @ObservationIgnored
+    private var lastOverseasRequestAt: Date?
     @ObservationIgnored
     private let locationManager = CLLocationManager()
     @ObservationIgnored
@@ -46,6 +55,11 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
         // collapsed overseas suggestions to an empty list.
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
+
+        if AppModel.isUITestRun {
+            // The fixture run has no network; a typed query must not reach the geocoder.
+            overseasSearch = OverseasPlaceSearch { _, _ in [] }
+        }
     }
 
     var isShowingSuggestions: Bool {
@@ -60,12 +74,29 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         switch coordinateInput(from: trimmedQuery) {
         case .coordinate, .invalid:
+            cancelOverseasSearch()
             searchSuggestions = []
             searchCompleter.queryFragment = ""
             return
         case .notCoordinates:
             break
         }
+
+        if overseasPlaceSearchEnabled {
+            // The completer cannot answer an overseas query from the CN data set,
+            // and mixing its suggestions with the geocoder's would ship two sources
+            // into one list, so it stays empty while the toggle is on.
+            searchCompleter.queryFragment = ""
+            guard trimmedQuery.count >= 3 else {
+                cancelOverseasSearch()
+                searchSuggestions = []
+                return
+            }
+            requestOverseasSuggestions(for: trimmedQuery)
+            return
+        }
+
+        cancelOverseasSearch()
 
         guard trimmedQuery.count >= 2 else {
             searchSuggestions = []
@@ -74,6 +105,76 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
         }
 
         searchCompleter.queryFragment = trimmedQuery
+    }
+
+    /// Debounces one query, then replaces whatever request was in flight.
+    private func requestOverseasSuggestions(for query: String) {
+        overseasSearchTask?.cancel()
+        overseasSearchTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(for: .milliseconds(500))
+            } catch {
+                return
+            }
+            await self?.fetchOverseasSuggestions(for: query)
+        }
+    }
+
+    private func fetchOverseasSuggestions(for query: String) async {
+        if let lastOverseasRequestAt {
+            let elapsed = Date().timeIntervalSince(lastOverseasRequestAt)
+            if elapsed < 1 {
+                do {
+                    try await Task.sleep(for: .seconds(1 - elapsed))
+                } catch {
+                    return
+                }
+            }
+        }
+        guard !Task.isCancelled else { return }
+
+        lastOverseasRequestAt = Date()
+
+        let places: [OverseasPlace]
+        do {
+            places = try await overseasSearch.perform(query, Self.overseasLanguage)
+        } catch is CancellationError {
+            return
+        } catch {
+            guard !Task.isCancelled,
+                  searchQuery.trimmingCharacters(in: .whitespacesAndNewlines) == query
+            else { return }
+            searchSuggestions = []
+            return
+        }
+
+        // The field may have moved on while the request was in flight.
+        guard !Task.isCancelled,
+              searchQuery.trimmingCharacters(in: .whitespacesAndNewlines) == query
+        else { return }
+
+        searchSuggestions = places.map {
+            MapSearchSuggestion(
+                title: $0.name,
+                subtitle: $0.detail,
+                coordinate: CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
+            )
+        }
+    }
+
+    private func cancelOverseasSearch() {
+        overseasSearchTask?.cancel()
+        overseasSearchTask = nil
+    }
+
+    /// The language the app is displaying, as the geocoder spells it.
+    private static var overseasLanguage: String {
+        switch AppLanguage.displayed() {
+        case .simplifiedChinese:
+            return "zh-Hans"
+        case .english, .system:
+            return "en"
+        }
     }
 
     func selectDroppedPin(at coordinate: CLLocationCoordinate2D) async {
@@ -110,12 +211,32 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
             break
         }
 
+        if overseasPlaceSearchEnabled {
+            await performOverseasSearch(for: trimmedQuery)
+            return
+        }
+
         await performSearch(for: trimmedQuery)
     }
 
     func selectSuggestion(_ suggestion: MapSearchSuggestion) async {
         searchQuery = suggestion.title
         searchSuggestions = []
+        cancelOverseasSearch()
+
+        if let coordinate = suggestion.coordinate {
+            // The suggestion already carries its point. Searching again would
+            // resolve the name against Apple's data set and land somewhere else.
+            show(
+                LocationTarget(
+                    name: suggestion.title,
+                    subtitle: suggestion.subtitle,
+                    latitude: coordinate.latitude,
+                    longitude: coordinate.longitude
+                )
+            )
+            return
+        }
 
         let query = overseasPlaceSearchEnabled
             ? suggestion.title
@@ -123,6 +244,40 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
                 .filter { !$0.isEmpty }
                 .joined(separator: ", ")
         await performSearch(for: query)
+    }
+
+    /// The OpenStreetMap geocoder answers first; MapKit stays as the fallback so a blocked or
+    /// empty response still ends in a readable message instead of a dead end.
+    private func performOverseasSearch(for query: String) async {
+        isSearching = true
+        errorMessage = nil
+        searchSuggestions = []
+        defer { isSearching = false }
+
+        var failed = false
+        do {
+            if let place = try await overseasSearch.perform(query, Self.overseasLanguage).first {
+                show(
+                    LocationTarget(
+                        name: place.name,
+                        subtitle: place.detail,
+                        latitude: place.latitude,
+                        longitude: place.longitude
+                    )
+                )
+                return
+            }
+        } catch is CancellationError {
+            return
+        } catch {
+            failed = true
+        }
+
+        await performSearch(for: query)
+        guard selectedLocation == nil else { return }
+        errorMessage = failed
+            ? String(localized: "Overseas search is unavailable right now. Check the connection and try again.")
+            : String(localized: "No overseas place found for this search.")
     }
 
     func show(_ target: LocationTarget) {
@@ -398,7 +553,10 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
         }
 
         Task { @MainActor [weak self] in
-            self?.searchSuggestions = suggestions
+            // The completer cannot answer an overseas query; a late callback from
+            // the cleared fragment must not overwrite the geocoder's list.
+            guard let self, !self.overseasPlaceSearchEnabled else { return }
+            self.searchSuggestions = suggestions
         }
     }
 
@@ -407,7 +565,8 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
         didFailWithError error: any Error
     ) {
         Task { @MainActor [weak self] in
-            self?.searchSuggestions = []
+            guard let self, !self.overseasPlaceSearchEnabled else { return }
+            self.searchSuggestions = []
         }
     }
 
@@ -610,6 +769,8 @@ extension MapViewModel: CLLocationManagerDelegate {
 struct MapSearchSuggestion: Identifiable, Sendable {
     let title: String
     let subtitle: String
+    /// Set only for an OpenStreetMap result; a completer suggestion has no point yet.
+    var coordinate: CLLocationCoordinate2D? = nil
 
     var id: String {
         "\(title)|\(subtitle)"

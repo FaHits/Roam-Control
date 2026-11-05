@@ -62,7 +62,10 @@ struct SettingsView: View {
                 } header: {
                     Text("Search")
                 } footer: {
-                    Text("Searches overseas places in English or the local language and centers results on the matching country.")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Searches overseas places in English or the local language and centers results on the matching country.")
+                        Text("Search terms are sent to OpenStreetMap to find overseas places. Turning this off stops the requests.")
+                    }
                 }
 
                 Section("Device") {
