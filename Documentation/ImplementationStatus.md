@@ -1494,5 +1494,27 @@
 | 5 | 版本 | 未改：`pbxproj 0.11.0 (63)`，CHANGELOG/README 未动 |
 | 6 | CI | pass：run [42050639097](https://github.com/FaHits/Roam-Control/actions/runs/42050639097) 三 job success（test / unsigned-ipa / unsigned-ipa-debug）；UI `Executed 5 tests, with 0 failures (0 unexpected) in 188.540 (188.555) seconds`；产物 `RoamControl-unsigned-ipa` id 13428345725、3,173,430 字节，`RoamControl-unsigned-debug-ipa` id 13428315781、4,855,942 字节 |
 
-- 下一任务：处理台账里地图点按的静默 return（`HomeView.swift:88-95`）；另开一条把锁定态下 `Clear`/`Edit` 一并关掉。真机验收并入 Task 14 一次性批量回归
-- 更新时间：2026-11-05
+
+### 2026-11-05 Task 35F：锁定态也关掉 Clear 与 Edit
+
+- 任务：Task 35F - 跑步进行中，`Saved Places` 上所有改动已保存地点的控件都不可点，与 `RunLockCopy.lockedListFooter` 一致（`type: fix`）
+- 状态：`implemented`（CI 三 job 绿；真机呈现并入台账 #4 的同一批验收）
+- 起点：`e165e86`
+- 用户可见变化：跑步进行中，「Favourites」「History」标题右侧的 `Clear` 与左上角重排 `Edit` 一起变灰；底部说明仍显示；关闭 sheet 的 `Done` 任何状态都能点
+- 修改文件：`RoamControl/Features/Map/SavedPlacesView.swift`（+3）、本文件
+- 三处改动：收藏 `Clear`（:74 后）、历史 `Clear`（:118 后）、工具栏 `Edit`/`Done`（重排按钮，:143 后）各加 `.disabled(isLocked)`；`ToolbarItem(placement: .confirmationAction)` 的 `Done` 未动
+- 不新增测试：`isLocked` 的取值已由 `RunLockCopyTests` 覆盖，这三处只是把同一个布尔接到 `.disabled`，SwiftUI 视图层没有可测接缝
+- 未验证项：真机上 `Clear`/`Edit` 的置灰观感与「关掉跑步后恢复」需实机确认，并入台账 #4 同一批，不新增装机轮次
+
+| # | 门禁 | 结果 |
+|---|------|------|
+| 1 | `python scripts/check_invariants.py` | pass：7 行 `PASS` + `All invariants hold.`；`--self-test` `7/7 canaries caught, summaries verified.` |
+| 2 | `python scripts/check_localizations.py` | pass：`All 649 keys have non-empty zh-Hans values.`（未新增 key） |
+| 3 | 单测数量 | pass：CI `Executed 226 tests, with 0 failures (0 unexpected) in 12.972 (26.570) seconds`；zh-Hans 复跑 `TEST SUCCEEDED`；静态计数仍 226 |
+| 4 | UI 用例 | pass：`Executed 5 tests, with 0 failures (0 unexpected) in 160.898 (160.915) seconds` |
+| 5 | `rg -n "gcj02ToWGS84" RoamControl \| wc -l` | 8（未变） |
+| 6 | 版本 | 未改：`pbxproj 0.11.0 (63)` |
+| 7 | CI | pass：run [42059674304](https://github.com/FaHits/Roam-Control/actions/runs/42059674304) 三 job success；产物 `RoamControl-unsigned-ipa` id 13430543496、3,172,310 字节，`RoamControl-unsigned-debug-ipa` id 13432382314、4,857,324 字节 |
+
+- 下一任务：处理台账里地图点按的静默 return（`HomeView.swift:88-95`）与按钮形状（#5）
+- 更新时间：2026-11-06
