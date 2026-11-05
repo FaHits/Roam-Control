@@ -65,19 +65,33 @@ final class RoamControlUITests: XCTestCase {
 
     // MARK: - Run card
 
-    func testRunCardRunning() {
+    /// A simulator has no device session to start, so the card lands in its unavailable state.
+    /// The name now says that; the assertions check this state still lays out every metric and a
+    /// button big enough to press, instead of pretending a run is happening.
+    func testRunCardUnavailable() {
         openRunCard()
 
         let card = app.descendants(matching: .any)["run.card"]
         XCTAssertTrue(card.waitForExistence(timeout: 10), "run card missing")
 
-        for title in ["Speed", "Cadence", "Distance", "Elapsed"] {
-            let metric = app.descendants(matching: .any)["run.metric.\(title)"]
-            XCTAssertTrue(metric.waitForExistence(timeout: 10), "\(title) metric missing from the card")
-            XCTAssertFalse(metric.label.isEmpty, "\(title) metric has no label")
-        }
+        let header = app.staticTexts["Run unavailable"]
+        XCTAssertTrue(header.waitForExistence(timeout: 10), "the card is not showing the unavailable title")
+        XCTAssertTrue(
+            app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] 'could not start'")).firstMatch.exists,
+            "the card is not saying why the run did not start"
+        )
 
-        let primary = app.buttons["Start"]
+        for name in ["Speed", "Cadence", "Distance", "Elapsed"] {
+            let metric = app.descendants(matching: .any)["run.metric.\(name)"]
+            XCTAssertTrue(metric.waitForExistence(timeout: 10), "\(name) metric missing from the card")
+            XCTAssertFalse(metric.label.isEmpty, "\(name) metric has no label")
+        }
+        XCTAssertTrue(
+            app.descendants(matching: .any)["run.metric.Distance"].label.contains("0 m"),
+            "the unavailable card claims a distance was covered"
+        )
+
+        let primary = app.buttons["run.primary"]
         XCTAssertTrue(primary.waitForExistence(timeout: 10), "primary control missing")
         XCTAssertGreaterThanOrEqual(
             primary.frame.height,
@@ -85,7 +99,7 @@ final class RoamControlUITests: XCTestCase {
             "primary control is \(primary.frame.height) pt tall"
         )
 
-        attachScreenshot(named: "run-card-running.png")
+        attachScreenshot(named: "run-card-unavailable.png")
     }
 
     // MARK: - Route library
@@ -136,6 +150,14 @@ final class RoamControlUITests: XCTestCase {
 
     func testSettingsVersionRows() {
         app.buttons["Settings"].tap()
+
+        // The About block is the last section of a lazily built list, so its rows only join the
+        // accessibility tree once the list has been scrolled towards them.
+        let versionElement = app.descendants(matching: .any)["settings.version"]
+        for _ in 0..<3 where !versionElement.exists {
+            app.swipeUp()
+        }
+        XCTAssertTrue(versionElement.waitForExistence(timeout: 10), "version row missing after scrolling")
 
         let version = text(of: "settings.version", "version row")
         XCTAssertTrue(version.contains("0.11.0"), "version row is \"\(version)\"")

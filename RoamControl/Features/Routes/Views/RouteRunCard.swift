@@ -353,6 +353,7 @@ struct RouteRunCard: View {
         .controlSize(.large)
         .disabled(!isPaired)
         .accessibilityLabel("Start")
+        .accessibilityIdentifier("run.primary")
     }
 
     @ViewBuilder

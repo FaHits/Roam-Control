@@ -55,6 +55,12 @@ jobs:
         continue-on-error: true
         run: xcrun xcresulttool export attachments --path ui.xcresult --output-path ui-shots
 
+      - name: List UI screenshot names
+        if: always()
+        run: |
+          ls -R ui-shots
+          jq -r '.[] | .attachments[]? | "\(.suggestedHumanReadableName) -> \(.exportedFileName)"' ui-shots/manifest.json
+
       - name: Upload UI screenshots
         if: always()
         uses: actions/upload-artifact@v4

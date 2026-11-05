@@ -4,6 +4,11 @@
 
 ## 当前交接
 
+> 2026-11-05 Task 30F 让 UI 传感器说真话（`type: noop`）：CI 41937194988 里 `testSettingsVersionRows` 失败于 `RoamControlUITests.swift:183: error: … XCTAssertTrue failed - version row missing`，原因是 About 分组在懒加载 List 底部、10 s 内根本没进可访问性树。改为先 `app.swipeUp()` 最多 3 次直到 `settings.version` 出现再断言（不加 timeout）。`testRunCardRunning` 名不副实（截图落到 `.failed` 卡片、`app.buttons["Start"]` 撞到的是别的按钮），按任务书**选 B**：改名 `testRunCardUnavailable`，断 `Run unavailable` 标题、含 `could not start` 的失败文案、四个指标存在且 Distance 为 `0 m`、`run.primary` 高 ≥ 44，截图改 `run-card-unavailable.png`；主按钮查询统一改用新标识 `run.primary`（`RouteRunCard.swift:356`）。CI 增加 `List UI screenshot names` step，用 `jq` 把 `ui-shots/manifest.json` 的 `suggestedHumanReadableName -> exportedFileName` 打进日志。
+>
+> - 测试：205 单测不变；UI 用例 5 条，`testRunCardRunning` → `testRunCardUnavailable`。
+> - 未验证：本机无 Xcode，编译与用例结论只能来自 CI；`run.primary` 的 label 仍是卡片自己设的 `Start`，`Try Again` 字样只体现在截图里（accessibilityLabel 覆盖了按钮内部文字）。
+
 > 2026-11-04 Task 30 UI 传感器骨架（`type: noop`）：新增第二个测试 target `RoamControlUITests`（`com.apple.product-type.bundle.ui-testing`、`TEST_TARGET_NAME = RoamControl`、`PRODUCT_BUNDLE_IDENTIFIER = com.sean.roamcontrol.uitests`），并加进 shared scheme `RoamControl` 的 `TestAction`（`TestableReference` + `BuildActionEntry`），`xcodebuild test -scheme RoamControl` 会连单测一起跑。生产代码只加一处 `-uiTest` 种子，集中在装配层：`RoamControl/App/AppModel.swift` 新增 `nonisolated static var isUITestRun`（`#if DEBUG`，Release 恒 `false`）、`private func seedUITestState()`（视为已完成引导 + `.paired` + `.ready`，并用 `RouteStore().save` 写入固定闭环路线 `UI Loop`：31.2304/121.4737 起 4 点方框、约 300 m）、`restorePairingStatus()` 开头早退保住这份配对；`RoamControl/App/RoamControlApp.swift` 的 `shouldBypassOnboarding` 加上 `AppModel.isUITestRun`。不带该参数时三条分支与原来逐字节一致，不启动设备会话、不发任何网络请求。
 >
 > - 测试：205 不变（未增删单测）；新增 5 条 UI 用例 `testSearchSheetLayout` / `testRunCardRunning` / `testRouteLibraryRows` / `testRenameDialogLayout` / `testSettingsVersionRows`，全部只断可访问性标识与元素尺寸，各留一张 `.keepAlways` 截图（`search-sheet.png` / `run-card-running.png` / `route-library.png` / `rename-dialog.png` / `settings.png`）。
