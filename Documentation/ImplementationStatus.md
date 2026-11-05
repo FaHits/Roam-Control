@@ -4,6 +4,14 @@
 
 ## 当前交接
 
+> 2026-11-05 Task 32 海外搜索先取证（`type: noop`）：新增 `RoamControlTests/SearchProbeTests.swift`，7 条探针各打一行 `PROBE ` 日志，把「海外搜索为空」拆成七件可测的事；产品代码零改动（`git diff --stat -- RoamControl` 为空），不打 App、不碰 UI、不加依赖。
+>
+> - 关键实测（run 41997884397 的 `Run RoamControlTests` 日志原样）：A 控上海外滩 `count=24 names=[W Shanghai - The Bund | Waldorf Astoria Shanghai on the Bund | Holiday Inn Express Shanghai on The Bund by IHG] region0=China`；B 无 region 的 `MKLocalSearch` 查 `Tokyo haneda airport` 得 `count=1 names=[Haneda Airport] region0=日本`；C 带东京 region 同样 `count=1 names=[Haneda Airport]`；D 无 region 的 completer 得 `count=9`，E 带 region 得 `count=8`；F 只给 `.address` 是 `count=0`、`.pointOfInterest` 是 `count=10`、`.query` 是 `count=1`；G `Locale.current=en_US preferredLanguages=[en-US] TimeZone.current=GMT Bundle.main.preferredLocalizations=[en]`。
+> - 能下的结论只有一句：在这台模拟器（en_US / GMT）上，「不带 region 的搜索」和「不带 region 的 completer」都能返回东京结果，所以 Task 28、29 那两次「去掉 region」在 CI 上不可能复现真机的空结果——真机差异不在 region 这一维。剩下的候选是 locale/时区（G 量到的那一维）与 App 自己的调用链（探针不经过 `MapViewModel`）。这是推断，本任务不验证、也不修。
+> - 日志可达性：`RoamControl` scheme 的单元测试 target 是 `parallelizable="YES"`（`RoamControl.xcscheme:63`），xcodebuild 开克隆并行跑，XCTest 把每个克隆的 stdout 收进 result bundle，下载的 job 日志里 `grep -c "PROBE "` = 0。`Run RoamControlTests` 步骤补 `-parallel-testing-enabled NO` 后串行输出才落到日志（步骤名与 UI 重试块未动）。
+> - 提交：`267157d`（`test(search): probe what Apple's map service returns`，1 文件 +240）、`aadd675`（`chore(ci): run the unit tests serially so probe output reaches the log`，1 文件 +5），已推 fork，`git ls-remote fork refs/heads/feat/manual-running-routes` = `aadd675029d3579859652387560c2208aa00ff38` = 本地 HEAD。
+> - 未验证：真机没跑（按任务书不碰真机）；中文查询海外地点（真机上失败的 `东京塔`）没有探针覆盖；探针走的 API 与 App 内 `MapViewModel` 的调用链不是同一条。
+
 > 2026-11-05 Task 31F 让不变量的失败输出说真话（`type: noop`）：`scripts/check_invariants.py` 里凡是把数字写死在摘要里的地方改成真实计数——`check_architecture` 现在是 `f"{len(hits)} violation(s) across …"`（原来是 `0 violations`，真 FAIL 时摘要照旧喊 0），`check_leftovers` 的 `f"{len(upstream_hits)} upstream hit(s) in {len(docs)} …; {len(analytics_hits)} telemetry key(s) …"`（原来是 `0 upstream hits` / `0 telemetry keys`），`check_coordinates` 的 `1 injection site at …` 改成 `f"{len(injections)} injection site(s) at …"`，`check_build_timestamp` 改成 `f"{len(hits)} ROAMCONTROL_BUILD_TIMESTAMP entries in …"`，`check_schema` 按结论选 `==` / `!=`（原来无论对错都印等号），`check_versions` 的「0.x 待发布、README 指向已发布版」那段说明只在 `not problems` 时追加（FAIL 的结论后面不该跟一句让人安心的补充）。`run_checks` 增加一条兜底：某检查返回 FAIL 却没有任何 problem 行时，打印 `check returned FAIL without naming a problem` 并判失败。
 >
 > - `--self-test` 从「只验被抓到」升级成「还要验摘要说了什么」：`CANARIES` 每条多一个期望摘要正则，canary 2 断言 `^1 violation\(s\) across \d+ file\(s\)`、canary 5 断言 `^1 upstream hit\(s\) … ; 0 telemetry key\(s\)`，canary 1/4/6/7 同样断言各自摘要里的数字（canary 7 还断言出现 `!=`），canary 3 断言本地化失败时的 `localization gate did not report a key count`。比对用 `re.search`，不匹配时打印 `MISMATCH canary N: expected … got …`，退出 1；全通过时打印 `self-test passed: 7/7 canaries caught, summaries verified.`
@@ -1372,4 +1380,31 @@
 - 自检新增：每类 canary 带期望摘要正则，不匹配打印 `MISMATCH canary N: expected … got …` 并退出 1
 - UI 重试：`-test-iterations 2 -retry-tests-on-failure`，只包住 UI 步骤，步骤名带 `(1 retry)`
 - 未验证项：重试参数的实际生效情况只在 CI 可见；本机无 Xcode
+- 更新时间：2026-11-05
+
+### 2026-11-05 Task 32：海外搜索先取证，不再猜第三次
+
+- 任务：Task 32 - 用探针量出「海外搜索为空」到底卡在哪一层（`type: noop`）
+- 状态：`implemented`
+- 起点：`093e22b`
+- 问题：Task 28（去 `request.region`）与 Task 29（去 `searchCompleter.region` + 两级重试）都是猜的，两次都在真机上失败；真机现象是 `东京塔` 只回国内店铺、`Tokyo haneda airport` 建议列表为空
+- 修改文件：`RoamControlTests/SearchProbeTests.swift`（新增 240 行）、`.github/workflows/xcode-27.yml`（+5 行）、本文件
+- 七条探针：A 控（`MKLocalSearch` 上海外滩，无 region，`count>=1` 断言）、B 海外无 region、C 海外带东京 region、D completer 无 region、E completer 带 region、F completer 三种 `resultTypes` 分跑、G 进程 locale/时区/本地化。每条只打一行 `PROBE `，标题里的换行与分隔符被替换成空格
+- 断言位置：`SearchProbeTests.swift:34` 的 `XCTAssertGreaterThanOrEqual(items.count, 1, …)`——A 为 0 时这一步红，避免把「跑不到 Apple 地图服务」读成「查询没结果」
+- 等待方式：`XCTWaiter().wait(for: [firstAnswer], timeout: 5)`，超时打印 `PROBE D-completer-plain: timeout` 而不是失败；首个回调为空时再等 2 秒看有没有非空更新
+- 实测（run 41997884397）：A `count=24`、B `count=1`、C `count=1`、D `count=9`、E `count=8`、F `.address` 0 / `.pointOfInterest` 10 / `.query` 1、G `en_US` + `GMT` + `[en]`
+- 判读：无 region 的搜索与 completer 在 CI 上都能返回东京结果，Task 28/29 的「去 region」在 CI 不可能复现真机空结果；真机差异只能来自 locale/时区或 App 内调用链（推断，未验证）
+- 规格偏差：任务书只允许改探针，实际还改了 CI 单元测试步骤加 `-parallel-testing-enabled NO`——不改的话并行克隆把 stdout 吞进 result bundle，日志里 0 行 `PROBE `，第 4 节交付物不存在
+- 未验证项：真机；中文查询海外地点；`MapViewModel` 内部路径
+
+| # | 门禁 | 结果 |
+|---|------|------|
+| 1 | `python scripts/check_invariants.py` | pass：7 行 `PASS` + `All invariants hold.`，exit 0 |
+| 2 | 产品代码 diff | pass：`git diff --stat 093e22b..HEAD -- RoamControl` 为空 |
+| 3 | 单测 | pass：`Executed 212 tests, with 0 failures (0 unexpected) in 11.225 (13.342) seconds`（205 + 7） |
+| 4 | UI 用例 | pass：`Executed 5 tests, with 0 failures (0 unexpected) in 218.031 (218.044) seconds` |
+| 5 | 本地化 | pass：`All 644 keys have non-empty zh-Hans values.` |
+| 6 | 版本 | pass：`pbxproj 0.11.0 (63)`，CHANGELOG 顶部仍 0.11.0 待发布 |
+| 7 | CI | pass：run [41997884397](https://github.com/FaHits/Roam-Control/actions/runs/41997884397) 三 job success，日志 9 行 `PROBE ` |
+
 - 更新时间：2026-11-05
