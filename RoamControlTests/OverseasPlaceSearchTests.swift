@@ -104,6 +104,34 @@ final class OverseasPlaceSearchTests: XCTestCase {
         XCTAssertEqual(counter.value, 0)
     }
 
+    /// Task 34F: a list built while the toggle was off has no coordinates, so
+    /// selecting it would fall back to Apple's search. Flipping the toggle must
+    /// drop that list instead of leaving it one tap away from the old behaviour.
+    func testTogglingOverseasSearchDropsStaleSuggestions() async throws {
+        let model = MapViewModel()
+        model.overseasSearch = Self.stub([])
+        model.searchSuggestions = [
+            MapSearchSuggestion(title: "东京台球", subtitle: "Apple 给出的建议")
+        ]
+
+        let stale = model.searchSuggestions.count
+        model.overseasPlaceSearchEnabled = true
+        let afterOn = model.searchSuggestions.count
+        XCTAssertTrue(
+            model.searchSuggestions.isEmpty,
+            "Turning the switch on must drop the previous list; got \(afterOn) item(s)."
+        )
+
+        model.overseasPlaceSearchEnabled = false
+        let afterOff = model.searchSuggestions.count
+        XCTAssertTrue(
+            model.searchSuggestions.isEmpty,
+            "Turning it back off must not resurrect them; got \(afterOff) item(s)."
+        )
+        XCTAssertNil(model.errorMessage)
+        print("TASK34F stale=\(stale) afterOn=\(afterOn) afterOff=\(afterOff)")
+    }
+
     // MARK: - Helpers
 
     /// The request is debounced by 500 ms, so the test polls instead of sleeping a

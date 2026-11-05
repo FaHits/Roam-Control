@@ -15,7 +15,14 @@ final class MapViewModel: NSObject, MKLocalSearchCompleterDelegate {
     /// Only changes how a query is normalized and whether the subtitle shows a
     /// country or region name. It no longer biases the search by viewport: a map
     /// parked on Zhanjiang must still resolve "Tokyo haneda airport".
-    var overseasPlaceSearchEnabled = false
+    var overseasPlaceSearchEnabled = false {
+        didSet {
+            guard oldValue != overseasPlaceSearchEnabled else { return }
+            cancelOverseasSearch()
+            searchSuggestions = []
+            searchCompleter.queryFragment = ""
+        }
+    }
 
     /// The only source of overseas suggestions while the toggle is on.
     /// Replaceable so a test never leaves the device.
