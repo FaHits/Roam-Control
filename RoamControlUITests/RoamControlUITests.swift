@@ -166,9 +166,13 @@ final class RoamControlUITests: XCTestCase {
 
         let built = text(of: "settings.built", "build time row")
         XCTAssertFalse(built.isEmpty, "build time row is empty")
-        XCTAssertFalse(built.contains("Unknown"), "build time row is \"\(built)\"")
-        XCTAssertFalse(built.contains("09-15"), "build time is the placeholder date: \"\(built)\"")
-        XCTAssertFalse(built.contains("9月15"), "build time is the placeholder date: \"\(built)\"")
+        for stale in ["Unknown", "2026-09-14", "Sep 14", "9月14"] {
+            XCTAssertFalse(built.contains(stale), "build time is the value baked into the repository: \"\(built)\"")
+        }
+        guard let year = firstYear(in: built) else {
+            return XCTFail("build time row has no year: \"\(built)\"")
+        }
+        XCTAssertGreaterThanOrEqual(year, 2026, "build time year is \(year): \"\(built)\"")
 
         attachScreenshot(named: "settings.png")
     }
@@ -205,6 +209,16 @@ final class RoamControlUITests: XCTestCase {
         XCTAssertTrue(element.waitForExistence(timeout: 10), "\(description) missing")
         let value = element.value as? String ?? ""
         return element.label + " " + value
+    }
+
+    /// Pulls the four-digit year out of a formatted date, whatever the locale put around it.
+    private func firstYear(in text: String) -> Int? {
+        for token in text.split(whereSeparator: { !$0.isNumber }) where token.count == 4 {
+            if let year = Int(token), year >= 2000 {
+                return year
+            }
+        }
+        return nil
     }
 
     private func firstMetres(in label: String) -> Int? {
