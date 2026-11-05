@@ -4,6 +4,14 @@
 
 ## 当前交接
 
+> 2026-11-05 Task 31F 让不变量的失败输出说真话（`type: noop`）：`scripts/check_invariants.py` 里凡是把数字写死在摘要里的地方改成真实计数——`check_architecture` 现在是 `f"{len(hits)} violation(s) across …"`（原来是 `0 violations`，真 FAIL 时摘要照旧喊 0），`check_leftovers` 的 `f"{len(upstream_hits)} upstream hit(s) in {len(docs)} …; {len(analytics_hits)} telemetry key(s) …"`（原来是 `0 upstream hits` / `0 telemetry keys`），`check_coordinates` 的 `1 injection site at …` 改成 `f"{len(injections)} injection site(s) at …"`，`check_build_timestamp` 改成 `f"{len(hits)} ROAMCONTROL_BUILD_TIMESTAMP entries in …"`，`check_schema` 按结论选 `==` / `!=`（原来无论对错都印等号），`check_versions` 的「0.x 待发布、README 指向已发布版」那段说明只在 `not problems` 时追加（FAIL 的结论后面不该跟一句让人安心的补充）。`run_checks` 增加一条兜底：某检查返回 FAIL 却没有任何 problem 行时，打印 `check returned FAIL without naming a problem` 并判失败。
+>
+> - `--self-test` 从「只验被抓到」升级成「还要验摘要说了什么」：`CANARIES` 每条多一个期望摘要正则，canary 2 断言 `^1 violation\(s\) across \d+ file\(s\)`、canary 5 断言 `^1 upstream hit\(s\) … ; 0 telemetry key\(s\)`，canary 1/4/6/7 同样断言各自摘要里的数字（canary 7 还断言出现 `!=`），canary 3 断言本地化失败时的 `localization gate did not report a key count`。比对用 `re.search`，不匹配时打印 `MISMATCH canary N: expected … got …`，退出 1；全通过时打印 `self-test passed: 7/7 canaries caught, summaries verified.`
+> - 跳过名单的理由写进脚本注释（`:59` 起）：`Documentation/ImplementationStatus.md` 与 `Documentation/Handoffs/` 按原样保留旧仓库名，改写会篡改历史记录，且这个例外会出现在摘要里。
+> - `.github/workflows/xcode-27.yml` 的 UI 步骤改名 `Run RoamControlUITests (1 retry)`，加 `-test-iterations 2 -retry-tests-on-failure`，上方注释写明原因（模拟器 `app.launch()` 偶发超时，与代码无关，最多重试一次）；`Run RoamControlTests`、`Check invariants`、两个 IPA 步骤不带任何重试参数。
+> - 实测：`python scripts/check_invariants.py` 七行 PASS、exit 0；真实注入 `import MapKit` 到 `RoamControl/Features/Routes/Core/RouteRunner.swift` 后输出 `FAIL 2 architecture boundary: 1 violation(s) across 8 file(s) in Core/ and Models/` 加一行 `forbidden symbol at …RouteRunner.swift:302`、exit 1，注入两条后摘要变 `2 violation(s)`；还原后 `git diff --stat -- RoamControl/` 为空。
+> - 未验证：本机无 Xcode，重试参数的实际效果只能由 CI 证明；YAML 用 pyyaml 解析通过（脚本本身不依赖它）。
+
 > 2026-11-05 Task 31 把散落的验收 grep 收成一个脚本（`type: noop`）：新增 `scripts/check_invariants.py`（只用标准库 `re`/`subprocess`/`sys`/`pathlib`），一次跑完七类不变量并按 `PASS`/`FAIL` + 命中数逐行打印，任一项 FAIL 退出码 1；`--self-test` 在内存里给每类种一条 canary（不碰工作树），七条全部被对应检查抓出才算通过，漏检退出 1 并打印漏了哪条。`.github/workflows/xcode-27.yml` 的 `test` job 在 `Check localization catalogs` 之后新增 `Check invariants`，先跑 `--self-test` 再跑正式检查；原本地化步骤原样保留。
 >
 > - 七项判定：① 坐标唯一注入 = `DeviceCoordinateAdapter(conversion: .gcj02ToWGS84)` 在 `RoamControl` 恰好 1 处（实测 `DeviceCoordinateAdapter.swift:37`）且 `offsetDegrees|coordinateOffset` 在该文件外 0 处；② 架构边界 = `Features/Routes/Core`、`Features/Routes/Models` 8 个 swift 文件里 `import SwiftUI|import MapKit|AppModel|MKRoute|MKMapPoint|MKPolyline` 0 命中；③ 本地化 = 调 `scripts/check_localizations.py`，要求退出 0 且输出 `All N keys have non-empty zh-Hans values.`；④ 版本 = pbxproj 的 `MARKETING_VERSION`、`CURRENT_PROJECT_VERSION` 各 2 行同值，CHANGELOG 最上方版本段 == `MARKETING_VERSION`，README `Current release:` 的版本必须存在于 CHANGELOG 且等于最新「已发布」版本段（按版本号取最大，不按文件顺序——CHANGELOG 里 `0.9.2 preview series` 排在 `0.10.0` 之前），README 版本与 pbxproj 相同时构建号也必须相同；⑤ 上游与统计残留 = `seanhowarthdev` 在 README/CHANGELOG/`Documentation/`/`Configuration/`/`.github/` 0 命中（`Documentation/ImplementationStatus.md` 与 `Documentation/Handoffs/` 例外，它们按原样引用旧仓库名），`UsageAnalytics|ProductInteraction|DeviceID|PurposeAnalytics` 在 `RoamControl`、`RoamControlTests` 0 命中；⑥ 构建时间 = `project.pbxproj` 内 `ROAMCONTROL_BUILD_TIMESTAMP` 0 处（守住 Task 30G）；⑦ 路线 schema = `RouteStore.swift` 与本文档的 `currentSchemaVersion` 各恰好 1 个值且相等，不等时打印两个值。
@@ -1351,4 +1359,17 @@
 
 - CI：run [41961868111](https://github.com/FaHits/Roam-Control/actions/runs/41961868111)（head `ec26fd9`）`conclusion=success`，`test` 11m18s、`unsigned-ipa-debug` 46s、`unsigned-ipa` 50s
 - 未验证项：真机无涉及项；本机无 Xcode 27，iOS 侧结论只来自 CI
+- 更新时间：2026-11-05
+
+### 2026-11-05 Task 31F：让不变量的失败输出也说真话
+
+- 任务：Task 31F - 修掉写死的摘要数字、自检验证摘要、UI 步骤自动重试一次（`type: noop`）
+- 状态：`implemented`（本地七项 PASS + 真实注入 1→`1 violation(s)`、2→`2 violation(s)`；CI 见提交后补充）
+- 起点：`14bc03e`
+- 问题：检测逻辑正确但摘要把数字写死，真 FAIL 时屏幕先写 `0 violations` 再写 FAIL；`--self-test` 只断言 CAUGHT，从不断言摘要，所以这个缺陷从自检底下溜了过去
+- 修改文件：`scripts/check_invariants.py`、`.github/workflows/xcode-27.yml`、本文件
+- 摘要改为真实计数的五处：架构 `violation(s)`、残留 `upstream hit(s)` + `telemetry key(s)`、坐标 `injection site(s)` + `stray offset(s)`、构建时间 `entries`、版本 staging 说明只在通过时追加
+- 自检新增：每类 canary 带期望摘要正则，不匹配打印 `MISMATCH canary N: expected … got …` 并退出 1
+- UI 重试：`-test-iterations 2 -retry-tests-on-failure`，只包住 UI 步骤，步骤名带 `(1 retry)`
+- 未验证项：重试参数的实际生效情况只在 CI 可见；本机无 Xcode
 - 更新时间：2026-11-05
