@@ -36,7 +36,7 @@ struct MapSearchField: UIViewRepresentable {
         // map-directory gate forbids.
         let field: UITextField = .init()
         field.text = text
-        field.placeholder = String(localized: placeholder.key)
+        field.placeholder = NSLocalizedString(placeholder.key, comment: "")
         field.font = .preferredFont(forTextStyle: .body)
         field.adjustsFontForContentSizeCategory = true
         field.borderStyle = .none
@@ -61,7 +61,7 @@ struct MapSearchField: UIViewRepresentable {
     func updateUIView(_ uiView: UITextField, context: Context) {
         handle.field = uiView
         uiView.isEnabled = isEnabled
-        uiView.placeholder = String(localized: placeholder.key)
+        uiView.placeholder = NSLocalizedString(placeholder.key, comment: "")
         context.coordinator.onChange = onChange
         context.coordinator.onEditingChanged = onEditingChanged
         context.coordinator.onSubmit = onSubmit
