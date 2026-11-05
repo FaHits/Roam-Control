@@ -49,6 +49,25 @@ jobs:
             ROAMCONTROL_BUILD_TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             CODE_SIGNING_ALLOWED=NO
 
+      # Task 33: the same probes under a Chinese locale, because locale is the one
+      # measured difference left between this runner (en_US/GMT) and the phone. No
+      # retry here on purpose: this run is evidence, and a retry would hide the
+      # answer it exists to produce. `PROBE G-locale` is the line that proves
+      # `-testLanguage`/`-testRegion` actually took effect.
+      - name: Run RoamControlTests (zh-Hans, CN)
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project RoamControl.xcodeproj \
+            -scheme RoamControl \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' \
+            -only-testing:RoamControlTests \
+            -parallel-testing-enabled NO \
+            -testLanguage zh-Hans \
+            -testRegion CN \
+            ROAMCONTROL_BUILD_TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            CODE_SIGNING_ALLOWED=NO
+
       # The simulator launch is the flaky part, not our code: run 41963265863 failed
       # `app.launch()` with "DTServiceHubClient failed to bless service hub" on three
       # attempts and then passed on the fourth with no code change, while the same
