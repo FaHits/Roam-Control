@@ -107,6 +107,7 @@ final class OverseasPlaceSearchTests: XCTestCase {
     /// Task 34F: a list built while the toggle was off has no coordinates, so
     /// selecting it would fall back to Apple's search. Flipping the toggle must
     /// drop that list instead of leaving it one tap away from the old behaviour.
+    @MainActor
     func testTogglingOverseasSearchDropsStaleSuggestions() async throws {
         let model = MapViewModel()
         model.overseasSearch = Self.stub([])
