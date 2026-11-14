@@ -134,6 +134,12 @@ final class AppModel {
         addToHistory(target)
     }
 
+    /// Replaces what the app reports as the current target without touching Saved Places history.
+    /// A held run and the route it resumes are owned by My Routes, so neither belongs in that list.
+    func adoptHeldPoint(_ target: LocationTarget) {
+        selectedTarget = target
+    }
+
     func isFavourite(_ target: LocationTarget) -> Bool {
         favouriteLocations.contains { $0.id == target.id }
     }

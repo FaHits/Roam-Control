@@ -63,6 +63,10 @@ final class RouteSessionModel {
         return false
     }
 
+    /// Injected so tests never touch the network. The name is decoration: a slow or failed lookup
+    /// must not change what the run does, so it only ever renames the held point.
+    @ObservationIgnored var heldPointNameResolver: (GeoCoordinate) async -> String? = HeldPointNameResolver.name(for:)
+
     var locksRouteInput: Bool {
         switch phase {
         case .preparing, .running, .paused, .stopping, .finished, .holding:
@@ -277,6 +281,7 @@ final class RouteSessionModel {
             mode: mode,
             wasHolding: true
         )
+        showHeldPoint(at: frozen.reportedCoordinate, using: appModel)
     }
 
     /// Continues a held run from the same point: same runner, same distance, same lap.
@@ -296,6 +301,15 @@ final class RouteSessionModel {
             profile: profile,
             mode: mode,
             wasHolding: false
+        )
+        // The held point stops being the story the moment the run moves again; the next tick's
+        // `advance` re-injects "Running <route>" and the laps subtitle on its own.
+        appModel.adoptHeldPoint(
+            locationTarget(
+                for: runner.snapshot,
+                coordinate: runner.snapshot.reportedCoordinate,
+                route: route
+            )
         )
         beginMovement(using: appModel)
     }
@@ -361,6 +375,14 @@ final class RouteSessionModel {
             profile: profile,
             mode: nextMode,
             wasHolding: false
+        )
+        // Same as a resume: the continuation is a run again, not a held point.
+        appModel.adoptHeldPoint(
+            locationTarget(
+                for: started.snapshot,
+                coordinate: started.snapshot.reportedCoordinate,
+                route: route
+            )
         )
         beginMovement(using: appModel)
     }
@@ -583,6 +605,35 @@ final class RouteSessionModel {
             return target
         }
         return locationTarget(for: snapshot, coordinate: snapshot.reportedCoordinate, route: route)
+    }
+
+    /// Swaps what every held-run surface shows, without opening or closing the device session: the
+    /// session keeps injecting the same coordinate and only its label changes, so no reconnect and
+    /// no real-location flash can appear.
+    private func showHeldPoint(at coordinate: GeoCoordinate, using appModel: AppModel) {
+        applyHeldPoint(HeldPointTarget.make(coordinate: coordinate, resolvedName: nil), using: appModel)
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let resolver = self.heldPointNameResolver
+            guard let name = await resolver(coordinate) else { return }
+            // The run may have resumed, finished or moved while the lookup was in flight.
+            guard case .holding = self.phase else { return }
+            guard self.snapshot?.reportedCoordinate == coordinate else { return }
+            self.applyHeldPoint(
+                HeldPointTarget.make(coordinate: coordinate, resolvedName: name),
+                using: appModel
+            )
+        }
+    }
+
+    private func applyHeldPoint(_ target: LocationTarget, using appModel: AppModel) {
+        if deviceSessionIsActive(appModel) {
+            // Same coordinate, new label: the update lands in place. A failure here is left to the
+            // session's own failure path, which keeps the coordinate either way.
+            _ = appModel.deviceSession.updateLocation(target)
+        }
+        appModel.adoptHeldPoint(target)
     }
 
     // MARK: - Targets

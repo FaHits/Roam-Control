@@ -232,6 +232,57 @@ final class RouteSessionModelTests: XCTestCase {
         XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
     }
 
+    func testHoldingReplacesTheRouteTargetWithAPoint() throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        // No network in unit tests: the immediate label is what this case is about.
+        model.heldPointNameResolver = { _ in nil }
+        let route = closedRoute
+        try model.prepare(route: route, profile: steadyProfile(), mode: .laps(3), progress: zeroProgress)
+        appModel.chooseTarget(
+            LocationTarget(
+                name: route.name,
+                subtitle: "0 laps · 2.0 m/s · 170 spm",
+                latitude: start.latitude,
+                longitude: start.longitude
+            )
+        )
+        model.debugBeginRunning()
+        let advanced = try XCTUnwrap(model.debugTick(delta: 120))
+
+        model.hold(using: appModel)
+
+        // The route name and the laps/speed/cadence subtitle are gone from every surface that reads
+        // this target, and the coordinate is the one the iPhone is actually holding.
+        let target = try XCTUnwrap(appModel.selectedTarget)
+        XCTAssertNotEqual(target.name, route.name)
+        XCTAssertTrue(target.subtitle.isEmpty)
+        XCTAssertEqual(target.latitude, advanced.reportedCoordinate.latitude, accuracy: 1e-9)
+        XCTAssertEqual(target.longitude, advanced.reportedCoordinate.longitude, accuracy: 1e-9)
+        // Holding still keeps the run and its device session.
+        XCTAssertEqual(model.phase, .holding(.paused))
+        XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
+    }
+
+    func testResumingRestoresTheRouteTarget() throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        model.heldPointNameResolver = { _ in nil }
+        let route = closedRoute
+        try model.prepare(route: route, profile: steadyProfile(), mode: .laps(3), progress: zeroProgress)
+        model.debugBeginRunning()
+        _ = try XCTUnwrap(model.debugTick(delta: 60))
+        model.hold(using: appModel)
+        XCTAssertNotEqual(appModel.selectedTarget?.name, route.name)
+
+        model.resumeFromHold(using: appModel)
+
+        let restored = try XCTUnwrap(appModel.selectedTarget)
+        XCTAssertEqual(restored.name, String(format: String(localized: "Running %@"), route.name))
+        XCTAssertFalse(restored.subtitle.isEmpty)
+        XCTAssertEqual(model.phase, .running)
+    }
+
     // MARK: - Continuing a finished run
 
     func testContinueAfterFinishUpgradesOnceToTwoRounds() throws {
