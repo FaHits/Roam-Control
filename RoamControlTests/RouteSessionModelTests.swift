@@ -283,6 +283,62 @@ final class RouteSessionModelTests: XCTestCase {
         XCTAssertEqual(model.phase, .running)
     }
 
+    // MARK: - Held point name upgrade
+
+    /// Guards the "coordinate unchanged" and "still holding" pair: a resolver that answers after the
+    /// hold landed renames the point in place, without opening a second device session.
+    func testHeldPointNameUpgradesWhenTheResolverAnswers() async throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        model.heldPointNameResolver = { _ in "People's Square" }
+        let route = closedRoute
+        try model.prepare(route: route, profile: steadyProfile(), mode: .laps(3), progress: zeroProgress)
+        model.debugBeginRunning()
+        _ = try XCTUnwrap(model.debugTick(delta: 120))
+        model.hold(using: appModel)
+        let frozen = try XCTUnwrap(model.snapshot)
+
+        // Before the lookup answers, the point still carries the unnamed fallback.
+        XCTAssertEqual(
+            appModel.selectedTarget?.name,
+            HeldPointTarget.make(coordinate: frozen.reportedCoordinate, resolvedName: nil).name
+        )
+        XCTAssertEqual(model.phase, .holding(.paused))
+
+        await model.heldPointNameTask?.value
+
+        let upgraded = try XCTUnwrap(appModel.selectedTarget)
+        XCTAssertEqual(upgraded.name, "People's Square")
+        XCTAssertTrue(upgraded.subtitle.isEmpty)
+        XCTAssertEqual(upgraded.latitude, frozen.reportedCoordinate.latitude, accuracy: 1e-9)
+        XCTAssertEqual(upgraded.longitude, frozen.reportedCoordinate.longitude, accuracy: 1e-9)
+        // The rename lands in place: no second location session was started.
+        XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
+    }
+
+    /// Guards the phase guard: a name that arrives after the run resumed must not overwrite the route
+    /// target the resume already restored.
+    func testHeldPointNameIsIgnoredAfterResume() async throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        model.heldPointNameResolver = { _ in "People's Square" }
+        let route = closedRoute
+        try model.prepare(route: route, profile: steadyProfile(), mode: .laps(3), progress: zeroProgress)
+        model.debugBeginRunning()
+        _ = try XCTUnwrap(model.debugTick(delta: 120))
+        model.hold(using: appModel)
+
+        model.resumeFromHold(using: appModel)
+
+        await model.heldPointNameTask?.value
+
+        XCTAssertEqual(
+            appModel.selectedTarget?.name,
+            String(format: String(localized: "Running %@"), route.name)
+        )
+        XCTAssertEqual(model.phase, .running)
+    }
+
     // MARK: - Continuing a finished run
 
     func testContinueAfterFinishUpgradesOnceToTwoRounds() throws {

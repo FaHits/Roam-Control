@@ -55,15 +55,16 @@ jobs:
       # answer it exists to produce. `PROBE G-locale` is the line that proves
       # `-testLanguage`/`-testRegion` actually took effect.
       #
-      # Scoped to the probe class, not the whole unit target: 16 assertions in
-      # RouteEditorModelTests and RouteLibraryModelTests hardcode the English
+      # Task 39: this step used to run only SearchProbeTests, because 16 assertions in
+      # RouteEditorModelTests and RouteLibraryModelTests pinned the English
       # user-facing strings ("Point is outside valid coordinates.",
-      # "Route name cannot be empty.", "New Route", …), so they fail on a zh-Hans
-      # run even though the product is right. Run 42006017766 step 8 is that
-      # measurement (215 executed, 16 failures, every one of them an
-      # XCTAssertEqual of an English literal). The other 205 cases are covered by
-      # the English run above; re-running them in a locale they were not written
-      # for only turns this step red and skips the UI and IPA jobs behind it.
+      # "Route name cannot be empty.", "New Route", …) and failed on a zh-Hans run
+      # even though the product was right (run 42006017766 step 8: 215 executed,
+      # 16 failures, every one an XCTAssertEqual of an English literal). Those
+      # assertions now resolve the product's own keys, so the whole unit target runs
+      # here again and this step must report the same `Executed N tests` count as the
+      # English step above. If it goes red, the failure is real: do not narrow this
+      # step back and do not weaken the assertion to "non-empty".
       - name: Run RoamControlTests (zh-Hans, CN)
         run: |
           set -o pipefail
@@ -71,7 +72,7 @@ jobs:
             -project RoamControl.xcodeproj \
             -scheme RoamControl \
             -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' \
-            -only-testing:RoamControlTests/SearchProbeTests \
+            -only-testing:RoamControlTests \
             -parallel-testing-enabled NO \
             -testLanguage zh-Hans \
             -testRegion CN \

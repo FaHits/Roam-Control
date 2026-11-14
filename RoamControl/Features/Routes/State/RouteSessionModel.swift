@@ -67,6 +67,10 @@ final class RouteSessionModel {
     /// must not change what the run does, so it only ever renames the held point.
     @ObservationIgnored var heldPointNameResolver: (GeoCoordinate) async -> String? = HeldPointNameResolver.name(for:)
 
+    /// The lookup `showHeldPoint` started, exposed so a test can await the real one instead of
+    /// polling. Production never reads it.
+    @ObservationIgnored private(set) var heldPointNameTask: Task<Void, Never>?
+
     var locksRouteInput: Bool {
         switch phase {
         case .preparing, .running, .paused, .stopping, .finished, .holding:
@@ -613,7 +617,7 @@ final class RouteSessionModel {
     private func showHeldPoint(at coordinate: GeoCoordinate, using appModel: AppModel) {
         applyHeldPoint(HeldPointTarget.make(coordinate: coordinate, resolvedName: nil), using: appModel)
 
-        Task { @MainActor [weak self] in
+        heldPointNameTask = Task { @MainActor [weak self] in
             guard let self else { return }
             let resolver = self.heldPointNameResolver
             guard let name = await resolver(coordinate) else { return }

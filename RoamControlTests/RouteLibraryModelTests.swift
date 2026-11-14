@@ -146,7 +146,9 @@ final class RouteLibraryModelTests: XCTestCase {
         let blank = makeRoute(name: "   \n\t  ", updatedAt: createdAt.addingTimeInterval(120))
         model.upsert(blank)
 
-        XCTAssertEqual(model.errorMessage, "Route name cannot be empty.")
+        let emptyNameMessage = String(localized: "Route name cannot be empty.")
+        XCTAssertEqual(model.errorMessage, emptyNameMessage)
+        XCTAssertFalse((model.errorMessage ?? "").isEmpty)
         XCTAssertEqual(model.routes.map(\.id), savedIDs)
         XCTAssertNil(model.route(id: blank.id))
         XCTAssertEqual(try RouteStore(fileURL: storeURL).load().count, 1)
@@ -223,7 +225,9 @@ final class RouteLibraryModelTests: XCTestCase {
         model.upsert(makeRoute(name: "Doomed loop", updatedAt: createdAt.addingTimeInterval(600)))
 
         XCTAssertEqual(model.routes, loadedRoutes)
-        XCTAssertEqual(model.errorMessage, "Could not save routes.")
+        let saveFailureMessage = String(localized: "Could not save routes.")
+        XCTAssertEqual(model.errorMessage, saveFailureMessage)
+        XCTAssertFalse((model.errorMessage ?? "").isEmpty)
     }
 
     func testDeleteFailureKeepsPreviousInMemoryState() throws {
@@ -239,7 +243,9 @@ final class RouteLibraryModelTests: XCTestCase {
         model.delete(id: existing.id)
 
         XCTAssertEqual(model.routes.map(\.id), [existing.id])
-        XCTAssertEqual(model.errorMessage, "Could not save routes.")
+        let deleteFailureMessage = String(localized: "Could not save routes.")
+        XCTAssertEqual(model.errorMessage, deleteFailureMessage)
+        XCTAssertFalse((model.errorMessage ?? "").isEmpty)
     }
 
     func testCorruptedStoreExposesErrorWithoutClearingRoutes() throws {
@@ -255,7 +261,8 @@ final class RouteLibraryModelTests: XCTestCase {
 
         XCTAssertEqual(fresh.routes, [])
         XCTAssertFalse(fresh.errorMessage?.isEmpty ?? true)
-        XCTAssertEqual(fresh.errorMessage, "Routes file is corrupted.")
+        let corruptedMessage = String(localized: "Routes file is corrupted.")
+        XCTAssertEqual(fresh.errorMessage, corruptedMessage)
 
         // 2. Good load first, then corruption: the previous array survives.
         let valid = makeRoute(name: "Recovered loop", updatedAt: createdAt.addingTimeInterval(60))
@@ -270,7 +277,9 @@ final class RouteLibraryModelTests: XCTestCase {
         model.load()
 
         XCTAssertEqual(model.routes, loadedRoutes)
-        XCTAssertEqual(model.errorMessage, "Routes file is corrupted.")
+        let reloadedCorruptedMessage = String(localized: "Routes file is corrupted.")
+        XCTAssertEqual(model.errorMessage, reloadedCorruptedMessage)
+        XCTAssertFalse((model.errorMessage ?? "").isEmpty)
         XCTAssertFalse(model.isLoading)
         XCTAssertEqual(try Data(contentsOf: storeURL), corrupted)
     }
@@ -287,7 +296,12 @@ final class RouteLibraryModelTests: XCTestCase {
         let model = makeModel(storeURL: storeURL)
 
         XCTAssertEqual(model.routes, [])
-        XCTAssertEqual(model.errorMessage, "Routes file uses unsupported schema version 2.")
+        let unsupportedMessage = String(
+            format: String(localized: "Routes file uses unsupported schema version %lld."),
+            2
+        )
+        XCTAssertEqual(model.errorMessage, unsupportedMessage)
+        XCTAssertFalse((model.errorMessage ?? "").isEmpty)
         XCTAssertEqual(try Data(contentsOf: storeURL), document)
     }
 
@@ -298,7 +312,9 @@ final class RouteLibraryModelTests: XCTestCase {
         let model = makeModel(storeURL: storeURL)
 
         model.upsert(makeRoute(name: "   ", updatedAt: createdAt))
-        XCTAssertEqual(model.errorMessage, "Route name cannot be empty.")
+        let blankNameMessage = String(localized: "Route name cannot be empty.")
+        XCTAssertEqual(model.errorMessage, blankNameMessage)
+        XCTAssertFalse((model.errorMessage ?? "").isEmpty)
 
         let route = makeRoute(name: "Clearing loop", updatedAt: createdAt.addingTimeInterval(60))
         model.upsert(route)
@@ -319,7 +335,9 @@ final class RouteLibraryModelTests: XCTestCase {
         XCTAssertNil(model.route(id: UUID()))
 
         model.upsert(makeRoute(name: "", updatedAt: createdAt))
-        XCTAssertEqual(model.errorMessage, "Route name cannot be empty.")
+        let lookupBlankNameMessage = String(localized: "Route name cannot be empty.")
+        XCTAssertEqual(model.errorMessage, lookupBlankNameMessage)
+        XCTAssertFalse((model.errorMessage ?? "").isEmpty)
 
         model.clearError()
 

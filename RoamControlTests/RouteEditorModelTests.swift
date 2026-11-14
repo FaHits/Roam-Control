@@ -5,8 +5,10 @@ import XCTest
 final class RouteEditorModelTests: XCTestCase {
     /// Real coordinates near Shanghai; every fixture distance is measured with `GeoCoordinate.distance`.
     private let base = GeoCoordinate(latitude: 31.2304, longitude: 121.4737)
-    private let invalidCoordinateMessage = "Point is outside valid coordinates."
-    private let emptyNameMessage = "Route name cannot be empty."
+    /// Resolved through the same keys the product uses, so the assertion compares two lookups of one
+    /// key instead of pinning an English string that a zh-Hans run never produces.
+    private var invalidCoordinateMessage: String { String(localized: "Point is outside valid coordinates.") }
+    private var emptyNameMessage: String { String(localized: "Route name cannot be empty.") }
 
     // MARK: - Fixtures
 
@@ -56,7 +58,9 @@ final class RouteEditorModelTests: XCTestCase {
     func testNewEditorStartsWithClosedModeAndDefaultName() {
         let model = RouteEditorModel()
 
-        XCTAssertEqual(model.name, "New Route")
+        let expectedName = String(localized: "New Route")
+        XCTAssertEqual(model.name, expectedName)
+        XCTAssertFalse(model.name.isEmpty)
         XCTAssertTrue(model.isClosed)
         XCTAssertEqual(model.points, [])
         XCTAssertFalse(model.canSave)
@@ -106,14 +110,17 @@ final class RouteEditorModelTests: XCTestCase {
         model.appendPoint(GeoCoordinate(latitude: .nan, longitude: base.longitude))
         XCTAssertEqual(model.points, [])
         XCTAssertEqual(model.errorMessage, invalidCoordinateMessage)
+        XCTAssertFalse((model.errorMessage ?? "").isEmpty)
 
         model.appendPoint(GeoCoordinate(latitude: 91, longitude: base.longitude))
         XCTAssertEqual(model.points, [])
         XCTAssertEqual(model.errorMessage, invalidCoordinateMessage)
+        XCTAssertFalse((model.errorMessage ?? "").isEmpty)
 
         model.appendPoint(GeoCoordinate(latitude: base.latitude, longitude: 181))
         XCTAssertEqual(model.points, [])
         XCTAssertEqual(model.errorMessage, invalidCoordinateMessage)
+        XCTAssertFalse((model.errorMessage ?? "").isEmpty)
     }
 
     func testDuplicatePointRejectionKeepsExistingError() {
@@ -121,11 +128,13 @@ final class RouteEditorModelTests: XCTestCase {
         model.appendPoint(point(north: 0))
         model.appendPoint(GeoCoordinate(latitude: 91, longitude: base.longitude))
         XCTAssertEqual(model.errorMessage, invalidCoordinateMessage)
+        XCTAssertFalse((model.errorMessage ?? "").isEmpty)
 
         model.appendPoint(nearPoint())
 
         XCTAssertEqual(model.points.count, 1)
         XCTAssertEqual(model.errorMessage, invalidCoordinateMessage)
+        XCTAssertFalse((model.errorMessage ?? "").isEmpty)
     }
 
     func testAppendAfterInvalidCoordinateClearsError() {
@@ -380,6 +389,7 @@ final class RouteEditorModelTests: XCTestCase {
         }
 
         XCTAssertEqual(model.errorMessage, emptyNameMessage)
+        XCTAssertFalse((model.errorMessage ?? "").isEmpty)
         XCTAssertEqual(model.points, pointsBefore)
     }
 
@@ -393,7 +403,9 @@ final class RouteEditorModelTests: XCTestCase {
             XCTAssertEqual(error as? RouteGeometryError, .tooFewPoints(minimum: 3))
         }
 
-        XCTAssertEqual(model.errorMessage, "A closed route needs at least 3 points.")
+        let expectedMessage = String(localized: "A closed route needs at least 3 points.")
+        XCTAssertEqual(model.errorMessage, expectedMessage)
+        XCTAssertFalse((model.errorMessage ?? "").isEmpty)
     }
 
     func testSuccessfulSaveClearsPreviousError() throws {
