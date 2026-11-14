@@ -10352,6 +10352,38 @@
           }
         }
       }
+    },
+    "Finish this run before picking a point on the map.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish this run before picking a point on the map."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跑步进行中，先结束这次跑步再选点。"
+          }
+        }
+      }
+    },
+    "Finish the walking preview before picking a point on the map.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish the walking preview before picking a point on the map."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在预览步行路线，先结束预览再选点。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

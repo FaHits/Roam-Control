@@ -19,4 +19,21 @@ enum RunLockCopy {
     static func searchPlaceholder(isLocked: Bool) -> LocalizedStringResource {
         isLocked ? lockedSearchPlaceholder : defaultSearchPlaceholder
     }
+
+    static let mapTapRunLocked = LocalizedStringResource(
+        "Finish this run before picking a point on the map."
+    )
+    static let mapTapWalkingPreviewLocked = LocalizedStringResource(
+        "Finish the walking preview before picking a point on the map."
+    )
+
+    /// The one-line reason a tap on the map did nothing, or `nil` when the tap
+    /// is allowed to pick a point.
+    static func mapTapHint(for action: MapTapAction) -> LocalizedStringResource? {
+        switch action {
+        case .hintRunLocked: return mapTapRunLocked
+        case .hintWalkingPreviewLocked: return mapTapWalkingPreviewLocked
+        case .resignSearch, .selectPin: return nil
+        }
+    }
 }

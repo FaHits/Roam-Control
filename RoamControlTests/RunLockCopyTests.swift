@@ -26,4 +26,20 @@ final class RunLockCopyTests: XCTestCase {
             LocalizedStringResource("Finish or hold the run to search places")
         )
     }
+
+    func testMapTapHintExplainsEachLock() {
+        XCTAssertEqual(
+            RunLockCopy.mapTapHint(for: .hintRunLocked),
+            LocalizedStringResource("Finish this run before picking a point on the map.")
+        )
+        XCTAssertEqual(
+            RunLockCopy.mapTapHint(for: .hintWalkingPreviewLocked),
+            LocalizedStringResource("Finish the walking preview before picking a point on the map.")
+        )
+    }
+
+    func testMapTapHintStaysQuietWhenTheTapIsAllowed() {
+        XCTAssertNil(RunLockCopy.mapTapHint(for: .selectPin))
+        XCTAssertNil(RunLockCopy.mapTapHint(for: .resignSearch))
+    }
 }

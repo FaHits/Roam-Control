@@ -22,6 +22,12 @@ struct HomeView: View {
     @State private var recoveredWalkError: String?
     @State private var searchField = MapSearchFieldHandle()
     @State private var isSearchEditing = false
+    /// Why the last map tap did nothing; cleared after 2.5 s or by the next tap
+    /// that is allowed to do something.
+    @State private var mapTapHint: LocalizedStringResource?
+    /// Bumped on every locked tap so a repeated tap restarts the 2.5 s timer
+    /// instead of stacking a second hint.
+    @State private var mapTapHintToken = 0
 
     init(
         showDeviceSetupInitially: Bool = false,
@@ -84,15 +90,24 @@ struct HomeView: View {
                     visibleMapCamera = context.camera
                 }
                 .onTapGesture { point in
-                    if isSearchEditing {
-                        searchField.resign()
-                        return
-                    }
+                    let action = MapTapPolicy.action(
+                        isSearchEditing: isSearchEditing,
+                        walkingLocksDestination: walkingSimulation.locksDestination,
+                        runLocksRouteInput: routeSession.locksRouteInput
+                    )
 
-                    guard !walkingSimulation.locksDestination else { return }
-                    guard !routeSession.locksRouteInput else { return }
-                    guard let coordinate = proxy.convert(point, from: .local) else { return }
-                    Task { await mapModel.selectDroppedPin(at: coordinate) }
+                    switch action {
+                    case .resignSearch:
+                        mapTapHint = nil
+                        searchField.resign()
+                    case .hintWalkingPreviewLocked, .hintRunLocked:
+                        mapTapHint = RunLockCopy.mapTapHint(for: action)
+                        mapTapHintToken += 1
+                    case .selectPin:
+                        mapTapHint = nil
+                        guard let coordinate = proxy.convert(point, from: .local) else { return }
+                        Task { await mapModel.selectDroppedPin(at: coordinate) }
+                    }
                 }
             }
             .ignoresSafeArea()
@@ -115,6 +130,24 @@ struct HomeView: View {
                     onClear: mapModel.clearSearch
                 )
                 .disabled(walkingSimulation.locksDestination || routeSession.locksRouteInput)
+
+                if let hint = mapTapHint {
+                    Text(hint)
+                        .font(.caption)
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(
+                            .regularMaterial,
+                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        )
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .task(id: mapTapHintToken) {
+                            try? await Task.sleep(for: .seconds(2.5))
+                            guard !Task.isCancelled else { return }
+                            mapTapHint = nil
+                        }
+                }
 
                 if mapModel.isShowingSuggestions
                     && !walkingSimulation.locksDestination
