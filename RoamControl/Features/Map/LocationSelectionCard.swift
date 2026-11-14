@@ -52,38 +52,27 @@ struct LocationSelectionCard: View {
             if let location {
                 locationHeader(for: location)
 
-                Button(action: primaryAction) {
-                    HStack(spacing: 8) {
-                        if isWorking {
-                            ProgressView()
-                                .tint(.white)
-                        } else {
-                            Image(systemName: primarySymbol)
-                        }
-                        Text(primaryTitle.localized)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .tint(isShowingActiveTarget ? .red : .blue)
+                CardActionButton(
+                    kind: isShowingActiveTarget ? .destructive : .primary,
+                    title: LocalizedStringKey(primaryTitle),
+                    symbol: primarySymbol,
+                    isWorking: isWorking,
+                    accessibilityLabel: Text(primaryTitle.localized),
+                    accessibilityIdentifier: "card.primary",
+                    action: primaryAction
+                )
                 .disabled(isPrimaryDisabled)
 
                 if canPreviewWalkingRoute {
-                    Button(action: onPreviewWalkingRoute) {
-                        HStack(spacing: 8) {
-                            if isPreviewingWalkingRoute {
-                                ProgressView()
-                                    .controlSize(.small)
-                            } else {
-                                Image(systemName: "figure.walk")
-                            }
-                            Text(isPreviewingWalkingRoute ? "Planning Walking Route…" : "Preview Walking Route")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
+                    CardActionButton(
+                        kind: .secondary,
+                        title: LocalizedStringKey(previewTitle),
+                        symbol: "figure.walk",
+                        isWorking: isPreviewingWalkingRoute,
+                        accessibilityLabel: Text(previewTitle.localized),
+                        accessibilityIdentifier: "card.secondary",
+                        action: onPreviewWalkingRoute
+                    )
                     .disabled(isPreviewingWalkingRoute)
                 }
 
@@ -96,12 +85,14 @@ struct LocationSelectionCard: View {
                 }
 
                 if isActive && !isShowingActiveTarget {
-                    Button("Stop & Restore", role: .destructive) {
-                        isConfirmingStop = true
-                    }
-                        .buttonStyle(.bordered)
-                        .controlSize(.regular)
-                        .frame(maxWidth: .infinity)
+                    CardActionButton(
+                        kind: .destructive,
+                        title: "Stop & Restore",
+                        symbol: "stop.fill",
+                        accessibilityLabel: Text("Stop & Restore".localized),
+                        accessibilityIdentifier: "card.destructive",
+                        action: { isConfirmingStop = true }
+                    )
                 }
 
                 Text(statusMessage.localized)
@@ -182,7 +173,7 @@ struct LocationSelectionCard: View {
                             .foregroundStyle(didCopyCoordinates ? .green : .blue)
                             .frame(width: 44, height: 44)
                     }
-                    .buttonStyle(.plain)
+                    .cardIconButtonStyle()
                     .accessibilityLabel(didCopyCoordinates ? "Location copied" : "Copy location")
                 }
             }
@@ -197,7 +188,7 @@ struct LocationSelectionCard: View {
                 .foregroundStyle(isFavourite ? .pink : .secondary)
                 .frame(width: 44, height: 44)
         }
-        .buttonStyle(.plain)
+        .cardIconButtonStyle()
         .accessibilityLabel(isFavourite ? "Remove from favourites" : "Add to favourites")
 
         if canClearSelection {
@@ -207,7 +198,7 @@ struct LocationSelectionCard: View {
                     .foregroundStyle(.secondary)
                     .frame(width: 44, height: 44)
             }
-            .buttonStyle(.plain)
+            .cardIconButtonStyle()
             .accessibilityLabel("Clear selected location")
         }
     }
@@ -296,6 +287,10 @@ struct LocationSelectionCard: View {
         case .idle:
             "Start Location"
         }
+    }
+
+    private var previewTitle: String {
+        isPreviewingWalkingRoute ? "Planning Walking Route…" : "Preview Walking Route"
     }
 
     private var primarySymbol: String {

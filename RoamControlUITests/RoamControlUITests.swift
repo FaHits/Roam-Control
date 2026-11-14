@@ -102,6 +102,39 @@ final class RoamControlUITests: XCTestCase {
         attachScreenshot(named: "run-card-unavailable.png")
     }
 
+    /// Every button on the card is drawn by one component, so they share a height whatever their
+    /// role. A simulator has no device session to start, which makes the unavailable card the only
+    /// state reachable here; the shapes are left to the screenshot and the phone.
+    func testRunCardButtonsShareHeight() {
+        openRunCard()
+
+        let card = app.descendants(matching: .any)["run.card"]
+        XCTAssertTrue(card.waitForExistence(timeout: 10), "run card missing")
+        XCTAssertTrue(app.buttons["run.primary"].waitForExistence(timeout: 10), "primary control missing")
+
+        let buttons = card.buttons.allElementsBoundByIndex.filter { $0.exists && $0.frame.height > 0 }
+        XCTAssertFalse(buttons.isEmpty, "the card laid out no buttons")
+
+        for button in buttons {
+            XCTAssertGreaterThanOrEqual(
+                button.frame.height,
+                44,
+                "\"\(button.label)\" is \(button.frame.height) pt tall"
+            )
+        }
+
+        let heights = buttons.map(\.frame.height)
+        if let shortest = heights.min(), let tallest = heights.max() {
+            XCTAssertLessThanOrEqual(
+                tallest - shortest,
+                1,
+                "the card's buttons differ by \(tallest - shortest) pt: \(heights)"
+            )
+        }
+
+        attachScreenshot(named: "run-card-buttons.png")
+    }
+
     // MARK: - Route library
 
     func testRouteLibraryRows() {

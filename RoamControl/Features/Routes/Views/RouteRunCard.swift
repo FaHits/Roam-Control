@@ -107,24 +107,23 @@ struct RouteRunCard: View {
             }
 
             VStack(spacing: 10) {
-                Button(role: .destructive) {
-                    isConfirmingStop = true
-                } label: {
-                    Label("Stop & Restore".localized, systemImage: "stop.fill")
-                        .frame(maxWidth: .infinity, minHeight: 46)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .tint(.red)
-                .accessibilityLabel("Stop & Restore".localized)
+                CardActionButton(
+                    kind: .destructive,
+                    title: "Stop & Restore",
+                    symbol: "stop.fill",
+                    accessibilityLabel: Text("Stop & Restore".localized),
+                    accessibilityIdentifier: "run.destructive",
+                    action: { isConfirmingStop = true }
+                )
 
-                Button(action: onPreviewWalkingRoute) {
-                    Label("Preview Walking Route".localized, systemImage: "figure.walk")
-                        .frame(maxWidth: .infinity, minHeight: 46)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .accessibilityLabel("Preview Walking Route".localized)
+                CardActionButton(
+                    kind: .secondary,
+                    title: "Preview Walking Route",
+                    symbol: "figure.walk",
+                    accessibilityLabel: Text("Preview Walking Route".localized),
+                    accessibilityIdentifier: "run.secondary",
+                    action: onPreviewWalkingRoute
+                )
             }
 
             footerText(
@@ -335,7 +334,7 @@ struct RouteRunCard: View {
             VStack(spacing: 10) {
                 primaryButton(title: "Hold Here", symbol: "hand.raised.fill", action: onHold)
                 primaryRow {
-                    continueButton(prominent: false)
+                    continueButton()
                     secondaryButton(title: "Finish & Restore", symbol: "checkmark", action: onDone)
                 }
             }
@@ -345,15 +344,15 @@ struct RouteRunCard: View {
     }
 
     private func startButton(title: String, symbol: String) -> some View {
-        Button(action: onStart) {
-            Label(title.localized, systemImage: symbol)
-                .frame(maxWidth: .infinity, minHeight: 46)
-        }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
+        CardActionButton(
+            kind: .primary,
+            title: LocalizedStringKey(title),
+            symbol: symbol,
+            accessibilityLabel: Text(verbatim: "Start"),
+            accessibilityIdentifier: "run.primary",
+            action: onStart
+        )
         .disabled(!isPaired)
-        .accessibilityLabel("Start")
-        .accessibilityIdentifier("run.primary")
     }
 
     @ViewBuilder
@@ -387,33 +386,27 @@ struct RouteRunCard: View {
         symbol: String,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
-            Label(title.localized, systemImage: symbol)
-                .frame(maxWidth: .infinity, minHeight: 46)
-        }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .accessibilityLabel(title.localized)
+        CardActionButton(
+            kind: .primary,
+            title: LocalizedStringKey(title),
+            symbol: symbol,
+            accessibilityLabel: Text(title.localized),
+            accessibilityIdentifier: "run.primary",
+            action: action
+        )
     }
 
     /// "Continue Run" asks for a lap count unless the run loops forever, which has no count to
     /// ask for.
-    @ViewBuilder
-    private func continueButton(prominent: Bool) -> some View {
-        if prominent {
-            continueAction.buttonStyle(.borderedProminent)
-        } else {
-            continueAction.buttonStyle(.bordered)
-        }
-    }
-
-    private var continueAction: some View {
-        Button(action: startContinuation) {
-            Label("Continue Run".localized, systemImage: "arrow.triangle.2.circlepath")
-                .frame(maxWidth: .infinity, minHeight: 46)
-        }
-        .controlSize(.large)
-        .accessibilityLabel("Continue Run".localized)
+    private func continueButton() -> some View {
+        CardActionButton(
+            kind: .secondary,
+            title: "Continue Run",
+            symbol: "arrow.triangle.2.circlepath",
+            accessibilityLabel: Text("Continue Run".localized),
+            accessibilityIdentifier: "run.secondary",
+            action: startContinuation
+        )
     }
 
     private func startContinuation() {
@@ -429,60 +422,49 @@ struct RouteRunCard: View {
         symbol: String,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
-            Label(title.localized, systemImage: symbol)
-                .frame(maxWidth: .infinity, minHeight: 46)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-        .accessibilityLabel(title.localized)
+        CardActionButton(
+            kind: .secondary,
+            title: LocalizedStringKey(title),
+            symbol: symbol,
+            accessibilityLabel: Text(title.localized),
+            accessibilityIdentifier: "run.secondary",
+            action: action
+        )
     }
 
     private func holdButton(showTitle: Bool) -> some View {
-        Button(action: onHold) {
-            if showTitle {
-                Label("Hold Here".localized, systemImage: "hand.raised.fill")
-                    .frame(maxWidth: .infinity, minHeight: 46)
-            } else {
-                Image(systemName: "hand.raised.fill")
-                    .frame(width: 28)
-                    .frame(minHeight: 46)
-            }
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-        .accessibilityLabel("Hold Here".localized)
+        CardActionButton(
+            kind: .secondary,
+            title: "Hold Here",
+            symbol: "hand.raised.fill",
+            showsTitle: showTitle,
+            accessibilityLabel: Text("Hold Here".localized),
+            accessibilityIdentifier: "run.secondary",
+            action: onHold
+        )
     }
 
     private func pauseButton(isPaused: Bool) -> some View {
-        Button(action: onTogglePause) {
-            Label(
-                isPaused ? "Resume" : "Pause",
-                systemImage: isPaused ? "play.fill" : "pause.fill"
-            )
-            .frame(maxWidth: .infinity, minHeight: 46)
-        }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .accessibilityLabel(isPaused ? "Resume" : "Pause")
+        CardActionButton(
+            kind: .primary,
+            title: LocalizedStringKey(isPaused ? "Resume" : "Pause"),
+            symbol: isPaused ? "play.fill" : "pause.fill",
+            accessibilityLabel: Text(verbatim: isPaused ? "Resume" : "Pause"),
+            accessibilityIdentifier: "run.primary",
+            action: onTogglePause
+        )
     }
 
     private func stopButton(showTitle: Bool) -> some View {
-        Button(role: .destructive) {
-            isConfirmingStop = true
-        } label: {
-            if showTitle {
-                Label("Stop & Restore", systemImage: "stop.fill")
-                    .frame(maxWidth: .infinity, minHeight: 46)
-            } else {
-                Image(systemName: "stop.fill")
-                    .frame(width: 28)
-                    .frame(minHeight: 46)
-            }
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-        .accessibilityLabel("Stop")
+        CardActionButton(
+            kind: .destructive,
+            title: "Stop & Restore",
+            symbol: "stop.fill",
+            showsTitle: showTitle,
+            accessibilityLabel: Text(verbatim: "Stop"),
+            accessibilityIdentifier: "run.destructive",
+            action: { isConfirmingStop = true }
+        )
     }
 
     /// Lays secondary actions out in a row, or in a column at accessibility text sizes.
