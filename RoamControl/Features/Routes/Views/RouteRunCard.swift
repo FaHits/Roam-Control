@@ -1,4 +1,3 @@
-import MapKit
 import SwiftUI
 
 /// The controls and live telemetry for a manual route run. It only reads `RouteSessionModel` and
@@ -15,11 +14,9 @@ struct RouteRunCard: View {
     let onContinue: (Int) -> Void
     let onStop: () -> Void
     let onDone: () -> Void
-    let onPreviewWalkingRoute: () -> Void
 
     @State private var isConfirmingStop = false
     @State private var isChoosingContinuation = false
-    @State private var heldPlace: HeldPlace?
 
     var body: some View {
         // The card sizes to its content and only scrolls once the content no longer fits the space
@@ -35,9 +32,6 @@ struct RouteRunCard: View {
         .shadow(color: .black.opacity(0.15), radius: 18, y: 8)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("run.card")
-        .task(id: heldCoordinateKey) {
-            await resolveHeldPlace()
-        }
         .confirmationDialog(
             "Stop the run and restore this iPhone's real location?",
             isPresented: $isConfirmingStop,
@@ -56,16 +50,7 @@ struct RouteRunCard: View {
         }
     }
 
-    @ViewBuilder
     private var content: some View {
-        if isHolding {
-            heldContent
-        } else {
-            runContent
-        }
-    }
-
-    private var runContent: some View {
         VStack(alignment: .leading, spacing: 14) {
             header
 
@@ -81,146 +66,10 @@ struct RouteRunCard: View {
         .padding(.bottom, 4)
     }
 
-    /// A held point is a place, not a paused run: it names where the iPhone is, and offers the two
-    /// things that make sense from there — restoring the real location or walking on preview.
-    private var heldContent: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "mappin.and.ellipse")
-                    .font(.title2)
-                    .foregroundStyle(.blue)
-                    .frame(width: 32)
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(heldTitle)
-                        .font(.headline)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text(heldSubtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 0)
-            }
-
-            VStack(spacing: 10) {
-                CardActionButton(
-                    kind: .destructive,
-                    title: "Stop & Restore",
-                    symbol: "stop.fill",
-                    accessibilityLabel: Text("Stop & Restore".localized),
-                    accessibilityIdentifier: "run.destructive",
-                    action: { isConfirmingStop = true }
-                )
-
-                CardActionButton(
-                    kind: .secondary,
-                    title: "Preview Walking Route",
-                    symbol: "figure.walk",
-                    accessibilityLabel: Text("Preview Walking Route".localized),
-                    accessibilityIdentifier: "run.secondary",
-                    action: onPreviewWalkingRoute
-                )
-            }
-
-            footerText(
-                String(
-                    format: String(localized: "This iPhone is using %@. Stop & Restore ends the simulation and restores its real location."),
-                    heldTitle
-                )
-            )
-        }
-        .padding(.bottom, 4)
-    }
-
-    private var isHolding: Bool {
-        if case .holding = session.phase { return true }
-        return false
-    }
-
-    private var heldCoordinateKey: GeoCoordinate? {
-        guard isHolding, let coordinate = session.snapshot?.reportedCoordinate else { return nil }
-        return coordinate
-    }
-
-    private var heldCoordinate: CLLocationCoordinate2D? {
-        guard let coordinate = heldCoordinateKey else { return nil }
-        return CLLocationCoordinate2D(
-            latitude: coordinate.latitude,
-            longitude: coordinate.longitude
-        )
-    }
-
-    private var heldTitle: String {
-        HeldPointLabel.title(
-            resolvedName: heldPlace?.name,
-            fallback: String(localized: "Held here")
-        )
-    }
-
-    private var heldSubtitle: String {
-        if let address = heldPlace?.address, !address.isEmpty {
-            return address
-        }
-        guard let coordinate = heldCoordinate else { return "" }
-        return String(format: "%.4f, %.4f", coordinate.latitude, coordinate.longitude)
-    }
-
-    /// One lookup per held coordinate: the point does not move while held, so this never repeats
-    /// per tick.
-    private func resolveHeldPlace() async {
-        guard let coordinate = heldCoordinate else {
-            heldPlace = nil
-            return
-        }
-        guard
-            let request = MKReverseGeocodingRequest(
-                location: CLLocation(
-                    latitude: coordinate.latitude,
-                    longitude: coordinate.longitude
-                )
-            )
-        else {
-            heldPlace = HeldPlace(name: nil, address: nil)
-            return
-        }
-
-        do {
-            let items = try await request.mapItems
-            let item = items.first
-            heldPlace = HeldPlace(name: item?.name, address: item.flatMap { addressText(for: $0) })
-        } catch {
-            heldPlace = HeldPlace(name: nil, address: nil)
-        }
-    }
-
-    private func addressText(for item: MKMapItem) -> String? {
-        let candidates = [
-            item.address?.shortAddress,
-            item.addressRepresentations?.cityWithContext,
-            item.address?.fullAddress
-        ]
-        for candidate in candidates {
-            let value = candidate?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            if !value.isEmpty { return value }
-        }
-        return nil
-    }
-
-    private struct HeldPlace: Equatable {
-        let name: String?
-        let address: String?
-    }
-
     private var progressTint: Color {
         switch session.phase {
         case .finished:
             .green
-        case .holding:
-            .orange
         case .idle, .preparing, .running, .paused, .stopping, .failed:
             .blue
         }
@@ -328,8 +177,6 @@ struct RouteRunCard: View {
             runningControls(isPaused: false)
         case .paused:
             runningControls(isPaused: true)
-        case .holding:
-            EmptyView()
         case .finished:
             VStack(spacing: 10) {
                 primaryButton(title: "Hold Here", symbol: "hand.raised.fill", action: onHold)
@@ -505,9 +352,6 @@ struct RouteRunCard: View {
             footerText(String(localized: "Keep Roam Control running. You can use other apps while the run continues."))
         case .paused:
             footerText(String(localized: "Your simulated location is held here until you resume."))
-        case .holding:
-            // Rendered by `heldContent`, which carries its own explanation.
-            EmptyView()
         case .finished:
             if let error = session.errorMessage {
                 errorText(error)
@@ -543,7 +387,6 @@ struct RouteRunCard: View {
         case .preparing: "Preparing route"
         case .running: "Running"
         case .paused: "Run paused"
-        case .holding: "Held at this point"
         case .finished: "Run finished"
         case .stopping: "Ending run"
         case .failed: "Run unavailable"
@@ -554,7 +397,6 @@ struct RouteRunCard: View {
         switch session.phase {
         case .idle, .preparing, .running: "figure.run"
         case .paused: "pause.circle.fill"
-        case .holding: "hand.raised.fill"
         case .finished: "checkmark.circle.fill"
         case .stopping: "location.slash.fill"
         case .failed: "exclamationmark.triangle.fill"
@@ -563,7 +405,6 @@ struct RouteRunCard: View {
 
     private var phaseColour: Color {
         switch session.phase {
-        case .holding: .orange
         case .finished: .green
         case .failed: .red
         case .idle, .preparing, .running, .paused, .stopping: .blue

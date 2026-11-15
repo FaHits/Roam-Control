@@ -1,21 +1,11 @@
 import Foundation
 import Observation
 
-/// Where a held run was frozen. A run held mid-route keeps going from the same point; a run held
-/// at its finish appends more trips instead.
-enum RouteSessionHoldOrigin: Equatable, Sendable {
-    case paused
-    case finished
-}
-
 enum RouteSessionPhase: Equatable {
     case idle
     case preparing
     case running
     case paused
-    /// The run stopped advancing but kept its injected coordinate, its device session and its
-    /// background keepalive. Nothing is stopped, so continuing is a resume rather than a restart.
-    case holding(RouteSessionHoldOrigin)
     case finished
     case stopping
     case failed(String)
@@ -52,9 +42,6 @@ final class RouteSessionModel {
     @ObservationIgnored private var profile: RunProfile?
     @ObservationIgnored private var mode: RouteRunMode?
     @ObservationIgnored private var movementTask: Task<Void, Never>?
-    /// Set while a held run reconnects its device session, so the session comes back as `.holding`
-    /// rather than pretending the movement was never frozen.
-    @ObservationIgnored private var restoredHoldOrigin: RouteSessionHoldOrigin?
 
     /// Injected so tests can prove a continuation reuses the live device session; production code
     /// never replaces it.
@@ -67,13 +54,13 @@ final class RouteSessionModel {
     /// must not change what the run does, so it only ever renames the held point.
     @ObservationIgnored var heldPointNameResolver: (GeoCoordinate) async -> String? = HeldPointNameResolver.name(for:)
 
-    /// The lookup `showHeldPoint` started, exposed so a test can await the real one instead of
-    /// polling. Production never reads it.
+    /// The lookup a hold started, exposed so a test can await the real one instead of polling.
+    /// Production never reads it.
     @ObservationIgnored private(set) var heldPointNameTask: Task<Void, Never>?
 
     var locksRouteInput: Bool {
         switch phase {
-        case .preparing, .running, .paused, .stopping, .finished, .holding:
+        case .preparing, .running, .paused, .stopping, .finished:
             true
         case .idle, .failed:
             false
@@ -127,20 +114,13 @@ final class RouteSessionModel {
         }
     }
 
-    /// Where a hold would freeze this run, or `nil` when the phase cannot be held.
-    var holdOrigin: RouteSessionHoldOrigin? {
-        if case .holding(let origin) = phase { return origin }
-        return nil
-    }
-
     // MARK: - Preparation
 
     func prepare(
         route: RouteDefinition,
         profile: RunProfile,
         mode: RouteRunMode,
-        progress: RouteRunProgress,
-        wasHolding: Bool = false
+        progress: RouteRunProgress
     ) throws {
         let geometry = try RouteGeometry(points: route.points, isClosed: route.isClosed)
         let mode = try mode.validated()
@@ -156,10 +136,7 @@ final class RouteSessionModel {
         self.runner = runner
         self.snapshot = runner.snapshot
         self.errorMessage = nil
-        self.restoredHoldOrigin = nil
-        // A recovery record does not store which phase the hold happened in; the progress says it:
-        // a run that already reached its lap target was held at the finish.
-        self.phase = wasHolding ? .holding(Self.holdOrigin(forProgress: progress, mode: mode)) : .idle
+        self.phase = .idle
     }
 
     private static func isValid(_ progress: RouteRunProgress) -> Bool {
@@ -168,21 +145,6 @@ final class RouteSessionModel {
             && progress.distanceInLap >= 0
             && progress.elapsedTime.isFinite
             && progress.elapsedTime >= 0
-    }
-
-    private static func holdOrigin(
-        forProgress progress: RouteRunProgress,
-        mode: RouteRunMode
-    ) -> RouteSessionHoldOrigin {
-        let targetLaps: Int?
-        switch mode {
-        case .once: targetLaps = 1
-        case .laps(let count): targetLaps = count
-        case .outAndBack(let trips): targetLaps = trips
-        case .continuous: targetLaps = nil
-        }
-        guard let targetLaps, progress.completedLaps >= targetLaps else { return .paused }
-        return .finished
     }
 
     // MARK: - Session control
@@ -195,7 +157,7 @@ final class RouteSessionModel {
         switch phase {
         case .preparing, .running, .paused, .stopping:
             return
-        case .idle, .holding, .finished, .failed:
+        case .idle, .finished, .failed:
             break
         }
         guard case .paired = appModel.pairingStatus else {
@@ -203,8 +165,6 @@ final class RouteSessionModel {
             return
         }
 
-        let heldOrigin = holdOrigin
-        restoredHoldOrigin = heldOrigin
         phase = .preparing
         let initialTarget = locationTarget(
             for: runner.snapshot,
@@ -223,18 +183,7 @@ final class RouteSessionModel {
             fail("Roam Control could not start the route session.")
             return
         }
-        if heldOrigin != nil {
-            appModel.armActiveRouteRecovery(
-                at: initialTarget,
-                route: route,
-                progress: progress(of: runner.snapshot),
-                profile: profile,
-                mode: mode,
-                wasHolding: true
-            )
-        } else {
-            appModel.updateActiveRouteRecovery(at: initialTarget, progress: progress(of: runner.snapshot))
-        }
+        appModel.updateActiveRouteRecovery(at: initialTarget, progress: progress(of: runner.snapshot))
         if case .active(let target) = appModel.deviceSession.phase {
             handleDeviceSessionPhase(.active(target), appModel: appModel)
         }
@@ -250,72 +199,48 @@ final class RouteSessionModel {
             runner?.resume()
             snapshot = runner?.snapshot
             phase = .running
-        case .idle, .preparing, .holding, .finished, .stopping, .failed:
+        case .idle, .preparing, .finished, .stopping, .failed:
             break
         }
     }
 
-    /// Freezes the run where it is. The device session is left running, so the injected coordinate
-    /// stays in place and continuing does not restart anything.
-    func hold(using appModel: AppModel) {
-        let origin: RouteSessionHoldOrigin
+    /// Ends the run and keeps its last coordinate as a plain fixed location. The device session is
+    /// reused in place, so the iPhone keeps reporting that point while every route surface — the
+    /// polyline, the laps, the resume and continue controls — goes away for good.
+    @discardableResult
+    func hold(using appModel: AppModel) -> LocationTarget? {
         switch phase {
-        case .running, .paused:
-            origin = .paused
-        case .finished:
-            origin = .finished
-        case .idle, .preparing, .holding, .stopping, .failed:
-            return
+        case .running, .paused, .finished:
+            break
+        case .idle, .preparing, .stopping, .failed:
+            return nil
         }
-        guard let route, let profile, let mode, var runner = runner else { return }
+        guard let runner else { return nil }
 
         cancelMovement()
-        if case .running = runner.snapshot.phase {
-            runner.pause()
+        var paused = runner
+        if case .running = paused.snapshot.phase { paused.pause() }
+        let frozen = paused.snapshot
+        let target = HeldPointTarget.make(coordinate: frozen.reportedCoordinate, resolvedName: nil)
+
+        // Same coordinate, new label: the device session is never reopened, so no real-location
+        // flash and no "Starting route session…" can appear.
+        if deviceSessionIsActive(appModel) {
+            _ = appModel.deviceSession.updateLocation(target)
         }
-        self.runner = runner
-        let frozen = runner.snapshot
-        snapshot = frozen
-        phase = .holding(origin)
-        appModel.armActiveRouteRecovery(
-            at: heldTarget(for: frozen, route: route, appModel: appModel),
-            route: route,
-            progress: progress(of: frozen),
-            profile: profile,
-            mode: mode,
-            wasHolding: true
-        )
-        showHeldPoint(at: frozen.reportedCoordinate, using: appModel)
-    }
+        appModel.adoptHeldPointAsFixedPoint(target)
 
-    /// Continues a held run from the same point: same runner, same distance, same lap.
-    func resumeFromHold(using appModel: AppModel) {
-        guard case .holding(.paused) = phase else { return }
-        guard let route, let profile, let mode, var runner = runner else { return }
-
-        Self.startOrResume(&runner)
-        self.runner = runner
-        snapshot = runner.snapshot
+        route = nil
+        geometry = nil
+        profile = nil
+        mode = nil
+        self.runner = nil
+        snapshot = nil
         errorMessage = nil
-        phase = .running
-        appModel.armActiveRouteRecovery(
-            at: heldTarget(for: runner.snapshot, route: route, appModel: appModel),
-            route: route,
-            progress: progress(of: runner.snapshot),
-            profile: profile,
-            mode: mode,
-            wasHolding: false
-        )
-        // The held point stops being the story the moment the run moves again; the next tick's
-        // `advance` re-injects "Running <route>" and the laps subtitle on its own.
-        appModel.adoptHeldPoint(
-            locationTarget(
-                for: runner.snapshot,
-                coordinate: runner.snapshot.reportedCoordinate,
-                route: route
-            )
-        )
-        beginMovement(using: appModel)
+        phase = .idle
+
+        resolveHeldPointName(for: target, using: appModel)
+        return target
     }
 
     /// Appends more laps to a finished run. The device session is reused as-is: a continuation
@@ -323,9 +248,9 @@ final class RouteSessionModel {
     /// flash can appear. A session that already dropped stays `.finished` with an explicit error.
     func continueAfterFinish(additionalLaps: Int = 1, using appModel: AppModel) {
         switch phase {
-        case .finished, .holding(.finished):
+        case .finished:
             break
-        case .idle, .preparing, .running, .paused, .holding, .stopping, .failed:
+        case .idle, .preparing, .running, .paused, .stopping, .failed:
             return
         }
         guard let route, let geometry, let profile, let mode, let runner = runner else { return }
@@ -372,22 +297,19 @@ final class RouteSessionModel {
         snapshot = started.snapshot
         errorMessage = nil
         phase = .running
+        let target = locationTarget(
+            for: started.snapshot,
+            coordinate: started.snapshot.reportedCoordinate,
+            route: route
+        )
         appModel.armActiveRouteRecovery(
-            at: heldTarget(for: started.snapshot, route: route, appModel: appModel),
+            at: target,
             route: route,
             progress: progress(of: started.snapshot),
             profile: profile,
-            mode: nextMode,
-            wasHolding: false
+            mode: nextMode
         )
-        // Same as a resume: the continuation is a run again, not a held point.
-        appModel.adoptHeldPoint(
-            locationTarget(
-                for: started.snapshot,
-                coordinate: started.snapshot.reportedCoordinate,
-                route: route
-            )
-        )
+        appModel.adoptHeldPoint(target)
         beginMovement(using: appModel)
     }
 
@@ -475,7 +397,7 @@ final class RouteSessionModel {
                 reset()
             case .running, .preparing:
                 fail("The active location session ended before the route finished.")
-            case .idle, .paused, .holding, .finished, .failed:
+            case .idle, .paused, .finished, .failed:
                 break
             }
         case .openingLocalDevVPN, .discovering, .connecting, .stopping:
@@ -492,36 +414,11 @@ final class RouteSessionModel {
         geometry = nil
         profile = nil
         mode = nil
-        restoredHoldOrigin = nil
         phase = .idle
     }
 
     private func handleActiveDeviceSession(appModel: AppModel) {
         guard phase == .preparing, movementTask == nil else { return }
-        if let origin = restoredHoldOrigin {
-            restoredHoldOrigin = nil
-            snapshot = runner?.snapshot
-            phase = .holding(origin)
-            if let frozen = snapshot {
-                // Same path `hold()` uses: the device reports the point, not the route.
-                showHeldPoint(at: frozen.reportedCoordinate, using: appModel)
-                // `start(using:)` armed the record with the route target; rewrite it with the point.
-                if let route, let profile, let mode {
-                    appModel.armActiveRouteRecovery(
-                        at: HeldPointTarget.make(
-                            coordinate: frozen.reportedCoordinate,
-                            resolvedName: nil
-                        ),
-                        route: route,
-                        progress: progress(of: frozen),
-                        profile: profile,
-                        mode: mode,
-                        wasHolding: true
-                    )
-                }
-            }
-            return
-        }
         runner?.start()
         snapshot = runner?.snapshot
         phase = .running
@@ -530,7 +427,7 @@ final class RouteSessionModel {
 
     private var isActiveRun: Bool {
         switch phase {
-        case .preparing, .running, .paused, .holding, .stopping:
+        case .preparing, .running, .paused, .stopping:
             true
         case .idle, .finished, .failed:
             false
@@ -539,7 +436,6 @@ final class RouteSessionModel {
 
     private func fail(_ message: String) {
         cancelMovement()
-        restoredHoldOrigin = nil
         errorMessage = message
         phase = .failed(message)
     }
@@ -559,7 +455,7 @@ final class RouteSessionModel {
                 switch self.phase {
                 case .running:
                     self.advance(by: delta, using: appModel)
-                case .paused, .holding:
+                case .paused:
                     continue
                 case .idle, .preparing, .finished, .stopping, .failed:
                     return
@@ -616,46 +512,23 @@ final class RouteSessionModel {
         movementTask = nil
     }
 
-    /// The injected coordinate the session is already holding, so a hold or a continuation keeps
-    /// the recovery record pointing at the point the iPhone is really reporting.
-    private func heldTarget(
-        for snapshot: RouteRunSnapshot,
-        route: RouteDefinition,
-        appModel: AppModel
-    ) -> LocationTarget {
-        if case .active(let target) = appModel.deviceSession.phase {
-            return target
-        }
-        return locationTarget(for: snapshot, coordinate: snapshot.reportedCoordinate, route: route)
-    }
-
-    /// Swaps what every held-run surface shows, without opening or closing the device session: the
-    /// session keeps injecting the same coordinate and only its label changes, so no reconnect and
-    /// no real-location flash can appear.
-    private func showHeldPoint(at coordinate: GeoCoordinate, using appModel: AppModel) {
-        applyHeldPoint(HeldPointTarget.make(coordinate: coordinate, resolvedName: nil), using: appModel)
-
+    /// Swaps the point's label for a real place name once the lookup answers. The device session is
+    /// never opened or closed here: the coordinate stays put and only its name changes, so no
+    /// reconnect and no real-location flash can appear.
+    private func resolveHeldPointName(for target: LocationTarget, using appModel: AppModel) {
         heldPointNameTask = Task { @MainActor [weak self] in
             guard let self else { return }
             let resolver = self.heldPointNameResolver
-            guard let name = await resolver(coordinate) else { return }
-            // The run may have resumed, finished or moved while the lookup was in flight.
-            guard case .holding = self.phase else { return }
-            guard self.snapshot?.reportedCoordinate == coordinate else { return }
-            self.applyHeldPoint(
-                HeldPointTarget.make(coordinate: coordinate, resolvedName: name),
-                using: appModel
-            )
+            guard let name = await resolver(target.coordinate) else { return }
+            // The user may have picked another point while the lookup was in flight.
+            guard appModel.selectedTarget?.id == target.id else { return }
+            guard appModel.activeSessionRecovery?.kind == .fixedLocation else { return }
+            let named = HeldPointTarget.make(coordinate: target.coordinate, resolvedName: name)
+            if deviceSessionIsActive(appModel) {
+                _ = appModel.deviceSession.updateLocation(named)
+            }
+            appModel.adoptHeldPointAsFixedPoint(named)
         }
-    }
-
-    private func applyHeldPoint(_ target: LocationTarget, using appModel: AppModel) {
-        if deviceSessionIsActive(appModel) {
-            // Same coordinate, new label: the update lands in place. A failure here is left to the
-            // session's own failure path, which keeps the coordinate either way.
-            _ = appModel.deviceSession.updateLocation(target)
-        }
-        appModel.adoptHeldPoint(target)
     }
 
     // MARK: - Targets
@@ -710,14 +583,6 @@ extension RouteSessionModel {
     @discardableResult
     func debugTick(delta: TimeInterval) -> RouteRunSnapshot? {
         applyTick(delta: delta)
-    }
-
-    /// Test seam: the device session turned active after a relaunch, exactly as `start(using:)`
-    /// leaves it — the restored hold origin is set, then the active callback arrives.
-    func debugResumeRestoredHold(using appModel: AppModel) {
-        restoredHoldOrigin = holdOrigin
-        phase = .preparing
-        handleActiveDeviceSession(appModel: appModel)
     }
 }
 #endif

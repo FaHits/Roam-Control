@@ -71,7 +71,7 @@ struct HomeView: View {
                         }
                     }
 
-                    if let snapshot = routeSession.snapshot, !isHoldingRoute {
+                    if let snapshot = routeSession.snapshot {
                         Annotation("Running location", coordinate: snapshot.reportedCoordinate.mapCoordinate) {
                             Image(systemName: "figure.run.circle.fill")
                                 .font(.title.weight(.semibold))
@@ -80,17 +80,6 @@ struct HomeView: View {
                                 .background(.regularMaterial, in: Circle())
                                 .shadow(color: .black.opacity(0.22), radius: 7, y: 3)
                         }
-                    }
-
-                    // A held run is a point, not a line: the polyline and the running marker are
-                    // both hidden on purpose, so this pin is the only thing marking where it stopped.
-                    if let pin = HoldMapPin.pin(
-                        isHolding: isHoldingRoute,
-                        coordinate: routeSession.snapshot?.reportedCoordinate,
-                        name: appModel.selectedTarget?.name
-                    ) {
-                        Marker(pin.name, coordinate: pin.coordinate.mapCoordinate)
-                            .tint(.blue)
                     }
                 }
                 .mapStyle(appModel.mapDisplayStyle.mapStyle)
@@ -318,7 +307,8 @@ struct HomeView: View {
                         },
                         onTogglePause: routeSession.togglePause,
                         onHold: {
-                            routeSession.hold(using: appModel)
+                            guard let held = routeSession.hold(using: appModel) else { return }
+                            mapModel.show(held)
                         },
                         onContinue: { additionalLaps in
                             routeSession.continueAfterFinish(additionalLaps: additionalLaps, using: appModel)
@@ -337,8 +327,7 @@ struct HomeView: View {
                             case .idle, .openingLocalDevVPN, .discovering, .connecting, .failed:
                                 break
                             }
-                        },
-                        onPreviewWalkingRoute: previewWalkingRouteFromHeldPoint
+                        }
                     )
                     } else if let route = walkingRoutePlanner.route,
                    let destination = walkingRoutePlanner.destination {
@@ -659,42 +648,7 @@ struct HomeView: View {
 
     private var activeRouteGeometry: RouteGeometry? {
         guard let route = routeSession.route else { return nil }
-        // A held run is a point, not a line: drawing the route would claim movement that stopped.
-        if case .holding = routeSession.phase { return nil }
         return try? RouteGeometry(points: route.points, isClosed: route.isClosed)
-    }
-
-    private var isHoldingRoute: Bool {
-        if case .holding = routeSession.phase { return true }
-        return false
-    }
-
-    /// Walks on from the point the run is held at to the end of the route, without starting a
-    /// walking simulation while the route session still owns the device.
-    private func previewWalkingRouteFromHeldPoint() {
-        guard
-            let held = routeSession.snapshot?.reportedCoordinate,
-            let end = routeSession.route?.points.last
-        else { return }
-
-        let source = LocationTarget(
-            name: String(localized: "Held here"),
-            subtitle: "",
-            latitude: held.latitude,
-            longitude: held.longitude
-        )
-        let destination = LocationTarget(
-            name: routeSession.route?.name ?? "",
-            subtitle: "",
-            latitude: end.latitude,
-            longitude: end.longitude
-        )
-        Task {
-            guard let preview = await walkingRoutePlanner.preview(to: destination, from: source) else {
-                return
-            }
-            mapModel.show(preview)
-        }
     }
 
     private var shouldShowRealLocation: Bool {
@@ -852,8 +806,7 @@ struct HomeView: View {
                 route: route,
                 profile: profile,
                 mode: mode,
-                progress: progress,
-                wasHolding: recovery.wasHolding
+                progress: progress
             )
             mapModel.show(
                 try RouteGeometry(points: route.points, isClosed: route.isClosed)

@@ -17,9 +17,6 @@ struct SessionRecoveryRecord: Codable, Equatable {
     var routeProgress: RouteRunProgress? = nil
     var runProfile: RunProfile? = nil
     var runMode: RouteRunMode? = nil
-    /// Set when the run was frozen at its current point. Records written before the hold phase
-    /// existed have no such key and decode as `false`.
-    var wasHolding: Bool = false
 
     enum CodingKeys: String, CodingKey {
         case kind
@@ -32,7 +29,6 @@ struct SessionRecoveryRecord: Codable, Equatable {
         case routeProgress
         case runProfile
         case runMode
-        case wasHolding
     }
 
     var isWalkingRoute: Bool {
@@ -96,8 +92,7 @@ struct SessionRecoveryRecord: Codable, Equatable {
 }
 
 extension SessionRecoveryRecord {
-    /// Hand-written so the memberwise initialiser and the factories above keep working, and so a
-    /// record written before the hold phase existed still decodes.
+    /// Hand-written so the memberwise initialiser and the factories above keep working.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         kind = try container.decode(Kind.self, forKey: .kind)
@@ -113,6 +108,5 @@ extension SessionRecoveryRecord {
         routeProgress = try container.decodeIfPresent(RouteRunProgress.self, forKey: .routeProgress)
         runProfile = try container.decodeIfPresent(RunProfile.self, forKey: .runProfile)
         runMode = try container.decodeIfPresent(RouteRunMode.self, forKey: .runMode)
-        wasHolding = try container.decodeIfPresent(Bool.self, forKey: .wasHolding) ?? false
     }
 }

@@ -40,7 +40,7 @@ final class AppModel {
     private(set) var isRestoringInterruptedSession = false
     private(set) var interruptedSessionError: String?
 
-    private var activeSessionRecovery: SessionRecoveryRecord?
+    private(set) var activeSessionRecovery: SessionRecoveryRecord?
     private var lastRecoverySaveDate: Date?
     private var restorationReachedActiveSession = false
     private var restorationWasCancelled = false
@@ -138,6 +138,18 @@ final class AppModel {
     /// A held run and the route it resumes are owned by My Routes, so neither belongs in that list.
     func adoptHeldPoint(_ target: LocationTarget) {
         selectedTarget = target
+    }
+
+    /// Turns the run into a plain fixed location: the target and the recovery record both point at
+    /// the frozen coordinate, so a relaunch offers "Resume Location" instead of "Resume Route Run".
+    func adoptHeldPointAsFixedPoint(_ target: LocationTarget) {
+        selectedTarget = target
+        var recovery = SessionRecoveryRecord.fixed(at: target)
+        recovery.updatedAt = .now
+        activeSessionRecovery = recovery
+        lastRecoverySaveDate = .now
+        guard let data = try? JSONEncoder().encode(recovery) else { return }
+        preferences.set(data, forKey: Self.activeSessionRecoveryKey)
     }
 
     func isFavourite(_ target: LocationTarget) -> Bool {
@@ -590,16 +602,14 @@ final class AppModel {
         preferences.set(data, forKey: Self.activeSessionRecoveryKey)
     }
 
-    /// Writes a saved-route record for a run that is held or continued, promoting a finished
-    /// fixed-location record back into a resumable run. `wasHolding` survives a relaunch so the
-    /// restored session comes back held instead of running.
+    /// Writes a saved-route record for a continued run, promoting a finished fixed-location record
+    /// back into a resumable run.
     func armActiveRouteRecovery(
         at target: LocationTarget,
         route: RouteDefinition,
         progress: RouteRunProgress,
         profile: RunProfile,
-        mode: RouteRunMode,
-        wasHolding: Bool
+        mode: RouteRunMode
     ) {
         var recovery = SessionRecoveryRecord.savedRoute(
             route: route,
@@ -608,7 +618,6 @@ final class AppModel {
             profile: profile,
             mode: mode
         )
-        recovery.wasHolding = wasHolding
         recovery.updatedAt = .now
         activeSessionRecovery = recovery
         lastRecoverySaveDate = .now

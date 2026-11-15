@@ -156,9 +156,11 @@ final class RouteSessionModelTests: XCTestCase {
         RouteRunProgress(distanceInLap: 0, completedLaps: 0, elapsedTime: 0)
     }
 
-    func testHoldFromRunningFreezesProgress() throws {
+    /// A hold is not a pause: the route goes away and the run becomes a plain point.
+    func testHoldEndsTheRouteSession() throws {
         let appModel = makeAppModel()
         let model = RouteSessionModel()
+        model.heldPointNameResolver = { _ in nil }
         try model.prepare(route: closedRoute, profile: steadyProfile(), mode: .laps(3), progress: zeroProgress)
         model.debugBeginRunning()
         let advanced = try XCTUnwrap(model.debugTick(delta: 120))
@@ -166,73 +168,15 @@ final class RouteSessionModelTests: XCTestCase {
 
         model.hold(using: appModel)
 
-        XCTAssertEqual(model.phase, .holding(.paused))
-        XCTAssertEqual(model.holdOrigin, .paused)
-        XCTAssertTrue(model.locksRouteInput)
-        XCTAssertEqual(try XCTUnwrap(model.snapshot).distanceInLap, advanced.distanceInLap, accuracy: 1e-9)
-        // A held run does not advance: the tick is rejected and the snapshot stays put.
-        XCTAssertNil(model.debugTick(delta: 120))
-        XCTAssertEqual(try XCTUnwrap(model.snapshot).distanceInLap, advanced.distanceInLap, accuracy: 1e-9)
-
-        // Holding keeps the injected coordinate and the session: nothing was stopped or reopened.
-        XCTAssertEqual(appModel.deviceSession.phase, .idle)
-        XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
-        let recovery = try XCTUnwrap(appModel.debugActiveSessionRecovery)
-        XCTAssertEqual(recovery.kind, .savedRoute)
-        XCTAssertTrue(recovery.wasHolding)
-        XCTAssertEqual(recovery.runMode, .laps(3))
-        XCTAssertEqual(try XCTUnwrap(recovery.routeProgress).distanceInLap, advanced.distanceInLap, accuracy: 1e-9)
+        XCTAssertNil(model.route)
+        XCTAssertNil(model.snapshot)
+        XCTAssertEqual(model.phase, .idle)
+        XCTAssertFalse(model.locksRouteInput)
     }
 
-    func testHoldFromPausedKeepsPausedOrigin() throws {
-        let appModel = makeAppModel()
-        let model = RouteSessionModel()
-        try model.prepare(route: closedRoute, profile: steadyProfile(), mode: .laps(3), progress: zeroProgress)
-        model.debugBeginRunning()
-        let advanced = try XCTUnwrap(model.debugTick(delta: 60))
-        model.togglePause()
-        XCTAssertEqual(model.phase, .paused)
-
-        model.hold(using: appModel)
-
-        XCTAssertEqual(model.phase, .holding(.paused))
-        XCTAssertEqual(model.holdOrigin, .paused)
-        XCTAssertEqual(try XCTUnwrap(model.snapshot).distanceInLap, advanced.distanceInLap, accuracy: 1e-9)
-        XCTAssertEqual(try XCTUnwrap(model.snapshot).elapsedTime, advanced.elapsedTime, accuracy: 1e-9)
-        XCTAssertEqual(model.completedLaps, 0)
-        XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
-        XCTAssertTrue(try XCTUnwrap(appModel.debugActiveSessionRecovery).wasHolding)
-    }
-
-    func testResumeFromHoldContinuesSameLap() throws {
-        let appModel = makeAppModel()
-        let model = RouteSessionModel()
-        let progress = RouteRunProgress(distanceInLap: 200, completedLaps: 1, elapsedTime: 30)
-        try model.prepare(route: closedRoute, profile: steadyProfile(), mode: .laps(3), progress: progress)
-        model.debugBeginRunning()
-        let before = try XCTUnwrap(model.snapshot)
-        model.hold(using: appModel)
-        XCTAssertEqual(model.phase, .holding(.paused))
-
-        model.resumeFromHold(using: appModel)
-
-        XCTAssertEqual(model.phase, .running)
-        let resumed = try XCTUnwrap(model.snapshot)
-        // Same runner, same lap: the distance is neither reset nor restarted.
-        XCTAssertEqual(resumed.distanceInLap, 200, accuracy: 1e-9)
-        XCTAssertEqual(resumed.completedLaps, 1)
-        XCTAssertEqual(resumed.totalDistance, before.totalDistance, accuracy: 1e-9)
-        XCTAssertEqual(resumed.elapsedTime, 30, accuracy: 1e-9)
-
-        let next = try XCTUnwrap(model.debugTick(delta: 10))
-        XCTAssertEqual(next.distanceInLap, 220, accuracy: 1e-6)
-        XCTAssertEqual(next.completedLaps, 1)
-        XCTAssertEqual(model.completedLaps, 1)
-        XCTAssertFalse(try XCTUnwrap(appModel.debugActiveSessionRecovery).wasHolding)
-        XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
-    }
-
-    func testHoldingReplacesTheRouteTargetWithAPoint() throws {
+    /// The point keeps the coordinate the run stopped at, and the run's own label is gone: no route
+    /// name and no laps/speed/cadence subtitle.
+    func testHoldKeepsTheInjectedCoordinate() throws {
         let appModel = makeAppModel()
         let model = RouteSessionModel()
         // No network in unit tests: the immediate label is what this case is about.
@@ -252,41 +196,87 @@ final class RouteSessionModelTests: XCTestCase {
 
         model.hold(using: appModel)
 
-        // The route name and the laps/speed/cadence subtitle are gone from every surface that reads
-        // this target, and the coordinate is the one the iPhone is actually holding.
+        let held = HeldPointTarget.make(coordinate: advanced.reportedCoordinate, resolvedName: nil)
         let target = try XCTUnwrap(appModel.selectedTarget)
         XCTAssertNotEqual(target.name, route.name)
+        XCTAssertEqual(target.name, held.name)
         XCTAssertTrue(target.subtitle.isEmpty)
         XCTAssertEqual(target.latitude, advanced.reportedCoordinate.latitude, accuracy: 1e-9)
         XCTAssertEqual(target.longitude, advanced.reportedCoordinate.longitude, accuracy: 1e-9)
-        // Holding still keeps the run and its device session.
-        XCTAssertEqual(model.phase, .holding(.paused))
+        // The point is pushed into the session that is already running: none is opened here.
         XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
     }
 
-    func testResumingRestoresTheRouteTarget() throws {
+    /// The recovery record must describe a location, not a run, or the next relaunch offers to
+    /// resume a route that no longer exists.
+    func testHoldArmsAFixedLocationRecovery() throws {
         let appModel = makeAppModel()
         let model = RouteSessionModel()
         model.heldPointNameResolver = { _ in nil }
-        let route = closedRoute
-        try model.prepare(route: route, profile: steadyProfile(), mode: .laps(3), progress: zeroProgress)
+        try model.prepare(route: closedRoute, profile: steadyProfile(), mode: .laps(3), progress: zeroProgress)
         model.debugBeginRunning()
-        _ = try XCTUnwrap(model.debugTick(delta: 60))
+        let advanced = try XCTUnwrap(model.debugTick(delta: 120))
+
         model.hold(using: appModel)
-        XCTAssertNotEqual(appModel.selectedTarget?.name, route.name)
 
-        model.resumeFromHold(using: appModel)
+        let recovery = try XCTUnwrap(appModel.debugActiveSessionRecovery)
+        XCTAssertEqual(recovery.kind, .fixedLocation)
+        XCTAssertNil(recovery.savedRoute)
+        XCTAssertEqual(
+            recovery.lastReportedLocation.latitude,
+            advanced.reportedCoordinate.latitude,
+            accuracy: 1e-9
+        )
+        XCTAssertEqual(
+            recovery.lastReportedLocation.longitude,
+            advanced.reportedCoordinate.longitude,
+            accuracy: 1e-9
+        )
+    }
 
-        let restored = try XCTUnwrap(appModel.selectedTarget)
-        XCTAssertEqual(restored.name, String(format: String(localized: "Running %@"), route.name))
-        XCTAssertFalse(restored.subtitle.isEmpty)
-        XCTAssertEqual(model.phase, .running)
+    /// The map needs the point back from the hold itself, or the pin and the card would have to
+    /// rebuild it from a snapshot the hold just cleared.
+    func testHoldReturnsThePointForTheMap() throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        model.heldPointNameResolver = { _ in nil }
+        try model.prepare(route: closedRoute, profile: steadyProfile(), mode: .laps(3), progress: zeroProgress)
+        model.debugBeginRunning()
+        let advanced = try XCTUnwrap(model.debugTick(delta: 120))
+
+        let held = try XCTUnwrap(model.hold(using: appModel))
+
+        XCTAssertEqual(held.latitude, advanced.reportedCoordinate.latitude, accuracy: 1e-9)
+        XCTAssertEqual(held.longitude, advanced.reportedCoordinate.longitude, accuracy: 1e-9)
+        XCTAssertEqual(
+            held.name,
+            HeldPointTarget.make(coordinate: advanced.reportedCoordinate, resolvedName: nil).name
+        )
+    }
+
+    /// Holding a run that already finished behaves the same way: the route is over either way.
+    func testHoldFromFinishedAlsoEndsTheRoute() throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        model.heldPointNameResolver = { _ in nil }
+        try model.prepare(route: closedRoute, profile: steadyProfile(), mode: .laps(1), progress: zeroProgress)
+        model.debugSetPhase(.finished)
+        let frozen = try XCTUnwrap(model.snapshot)
+
+        model.hold(using: appModel)
+
+        XCTAssertNil(model.route)
+        XCTAssertNil(model.snapshot)
+        XCTAssertEqual(model.phase, .idle)
+        let target = try XCTUnwrap(appModel.selectedTarget)
+        XCTAssertEqual(target.latitude, frozen.reportedCoordinate.latitude, accuracy: 1e-9)
+        XCTAssertEqual(target.longitude, frozen.reportedCoordinate.longitude, accuracy: 1e-9)
     }
 
     // MARK: - Held point name upgrade
 
-    /// Guards the "coordinate unchanged" and "still holding" pair: a resolver that answers after the
-    /// hold landed renames the point in place, without opening a second device session.
+    /// Guards the "coordinate unchanged" and "still the selected point" pair: a resolver that
+    /// answers after the hold landed renames the point in place, without opening a device session.
     func testHeldPointNameUpgradesWhenTheResolverAnswers() async throws {
         let appModel = makeAppModel()
         let model = RouteSessionModel()
@@ -294,105 +284,14 @@ final class RouteSessionModelTests: XCTestCase {
         let route = closedRoute
         try model.prepare(route: route, profile: steadyProfile(), mode: .laps(3), progress: zeroProgress)
         model.debugBeginRunning()
-        _ = try XCTUnwrap(model.debugTick(delta: 120))
+        let advanced = try XCTUnwrap(model.debugTick(delta: 120))
         model.hold(using: appModel)
-        let frozen = try XCTUnwrap(model.snapshot)
+        let frozen = advanced.reportedCoordinate
 
         // Before the lookup answers, the point still carries the unnamed fallback.
         XCTAssertEqual(
             appModel.selectedTarget?.name,
-            HeldPointTarget.make(coordinate: frozen.reportedCoordinate, resolvedName: nil).name
-        )
-        XCTAssertEqual(model.phase, .holding(.paused))
-
-        await model.heldPointNameTask?.value
-
-        let upgraded = try XCTUnwrap(appModel.selectedTarget)
-        XCTAssertEqual(upgraded.name, "People's Square")
-        XCTAssertTrue(upgraded.subtitle.isEmpty)
-        XCTAssertEqual(upgraded.latitude, frozen.reportedCoordinate.latitude, accuracy: 1e-9)
-        XCTAssertEqual(upgraded.longitude, frozen.reportedCoordinate.longitude, accuracy: 1e-9)
-        // The rename lands in place: no second location session was started.
-        XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
-    }
-
-    /// Guards the phase guard: a name that arrives after the run resumed must not overwrite the route
-    /// target the resume already restored.
-    func testHeldPointNameIsIgnoredAfterResume() async throws {
-        let appModel = makeAppModel()
-        let model = RouteSessionModel()
-        model.heldPointNameResolver = { _ in "People's Square" }
-        let route = closedRoute
-        try model.prepare(route: route, profile: steadyProfile(), mode: .laps(3), progress: zeroProgress)
-        model.debugBeginRunning()
-        _ = try XCTUnwrap(model.debugTick(delta: 120))
-        model.hold(using: appModel)
-
-        model.resumeFromHold(using: appModel)
-
-        await model.heldPointNameTask?.value
-
-        XCTAssertEqual(
-            appModel.selectedTarget?.name,
-            String(format: String(localized: "Running %@"), route.name)
-        )
-        XCTAssertEqual(model.phase, .running)
-    }
-
-    // MARK: - Restored hold
-
-    func testRestoredHoldTargetsTheHeldPoint() throws {
-        let appModel = makeAppModel()
-        let model = RouteSessionModel()
-        model.heldPointNameResolver = { _ in nil }
-        let progress = RouteRunProgress(distanceInLap: 120, completedLaps: 0, elapsedTime: 45)
-        try model.prepare(
-            route: closedRoute,
-            profile: steadyProfile(),
-            mode: .laps(3),
-            progress: progress,
-            wasHolding: true
-        )
-        let frozen = try XCTUnwrap(model.snapshot)
-
-        model.debugResumeRestoredHold(using: appModel)
-
-        XCTAssertEqual(model.phase, .holding(.paused))
-        XCTAssertEqual(try XCTUnwrap(model.snapshot).distanceInLap, frozen.distanceInLap, accuracy: 1e-9)
-        XCTAssertNil(model.debugTick(delta: 10), "a restored hold must not advance")
-
-        // Expected values are computed the way the product computes them, never typed as English.
-        let held = HeldPointTarget.make(coordinate: frozen.reportedCoordinate, resolvedName: nil)
-        let target = try XCTUnwrap(appModel.selectedTarget)
-        XCTAssertEqual(target.name, held.name)
-        XCTAssertTrue(target.subtitle.isEmpty)
-        XCTAssertEqual(target.latitude, frozen.reportedCoordinate.latitude, accuracy: 1e-9)
-        XCTAssertEqual(target.longitude, frozen.reportedCoordinate.longitude, accuracy: 1e-9)
-        // The recovery record must describe the point too, or the next relaunch repeats the bug.
-        let record = try XCTUnwrap(appModel.debugActiveSessionRecovery)
-        XCTAssertEqual(record.lastReportedLocation.name, held.name)
-        XCTAssertTrue(record.wasHolding)
-        XCTAssertNotEqual(target.name, String(format: String(localized: "Running %@"), closedRoute.name))
-    }
-
-    func testRestoredHoldResolvesThePlaceName() async throws {
-        let appModel = makeAppModel()
-        let model = RouteSessionModel()
-        model.heldPointNameResolver = { _ in "People's Square" }
-        let progress = RouteRunProgress(distanceInLap: 120, completedLaps: 0, elapsedTime: 45)
-        try model.prepare(
-            route: closedRoute,
-            profile: steadyProfile(),
-            mode: .laps(3),
-            progress: progress,
-            wasHolding: true
-        )
-        let frozen = try XCTUnwrap(model.snapshot)
-
-        model.debugResumeRestoredHold(using: appModel)
-        XCTAssertEqual(
-            appModel.selectedTarget?.name,
-            HeldPointTarget.make(coordinate: frozen.reportedCoordinate, resolvedName: nil).name
+            HeldPointTarget.make(coordinate: frozen, resolvedName: nil).name
         )
 
         await model.heldPointNameTask?.value
@@ -400,8 +299,9 @@ final class RouteSessionModelTests: XCTestCase {
         let upgraded = try XCTUnwrap(appModel.selectedTarget)
         XCTAssertEqual(upgraded.name, "People's Square")
         XCTAssertTrue(upgraded.subtitle.isEmpty)
-        XCTAssertEqual(upgraded.latitude, frozen.reportedCoordinate.latitude, accuracy: 1e-9)
-        XCTAssertEqual(upgraded.longitude, frozen.reportedCoordinate.longitude, accuracy: 1e-9)
+        XCTAssertEqual(upgraded.latitude, frozen.latitude, accuracy: 1e-9)
+        XCTAssertEqual(upgraded.longitude, frozen.longitude, accuracy: 1e-9)
+        // The rename lands in place: no location session was started.
         XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
     }
 
@@ -475,7 +375,6 @@ final class RouteSessionModelTests: XCTestCase {
         XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
         XCTAssertEqual(model.completedLaps, 1)
         XCTAssertEqual(model.totalLaps, 3)
-        XCTAssertFalse(try XCTUnwrap(appModel.debugActiveSessionRecovery).wasHolding)
 
         // With the device session gone the run fails loudly and stays finished.
         let droppedModel = RouteSessionModel()
@@ -558,9 +457,11 @@ final class RouteSessionModelTests: XCTestCase {
         XCTAssertEqual(rebased.completedLaps, 1)
         XCTAssertEqual(rebased.elapsedTime, 600)
     }
-    func testHoldingDoesNotAdvanceTheRun() throws {
+
+    func testHoldingLeavesNothingToAdvance() throws {
         let appModel = makeAppModel()
         let model = RouteSessionModel()
+        model.heldPointNameResolver = { _ in nil }
         try model.prepare(
             route: closedRoute,
             profile: steadyProfile(),
@@ -568,20 +469,17 @@ final class RouteSessionModelTests: XCTestCase {
             progress: zeroProgress
         )
         model.debugBeginRunning()
-        _ = try XCTUnwrap(model.debugTick(delta: 30))
-        model.hold(using: appModel)
-        let held = try XCTUnwrap(model.snapshot)
+        let running = try XCTUnwrap(model.debugTick(delta: 30))
+        XCTAssertGreaterThan(running.totalDistance, 0)
 
-        // A minute of wall clock while held moves neither the distance nor the elapsed time.
+        model.hold(using: appModel)
+
+        // A minute of wall clock after the hold advances nothing: the runner is gone.
         for _ in 0..<60 {
             XCTAssertNil(model.debugTick(delta: 1))
         }
-
-        let after = try XCTUnwrap(model.snapshot)
-        XCTAssertEqual(after.totalDistance, held.totalDistance, accuracy: 1e-9)
-        XCTAssertEqual(after.elapsedTime, held.elapsedTime, accuracy: 1e-9)
-        XCTAssertGreaterThan(held.totalDistance, 0)
-        XCTAssertEqual(model.phase, .holding(.paused))
+        XCTAssertNil(model.snapshot)
+        XCTAssertEqual(model.phase, .idle)
     }
 
     func testOpenContinuousRunSurvivesRecovery() throws {
@@ -608,7 +506,6 @@ final class RouteSessionModelTests: XCTestCase {
         )
         XCTAssertEqual(decoded.runMode, .continuous)
         XCTAssertEqual(try XCTUnwrap(decoded.routeProgress), progress)
-        XCTAssertEqual(decoded.wasHolding, false)
 
         let model = RouteSessionModel()
         try model.prepare(
