@@ -4,13 +4,17 @@ import XCTest
 final class HeldPointLabelTests: XCTestCase {
     func testHeldLabelPrefersResolvedName() {
         XCTAssertEqual(
-            HeldPointLabel.title(resolvedName: "Shibuya Crossing"),
+            HeldPointLabel.title(resolvedName: "Shibuya Crossing", fallback: "Fallback"),
             "Shibuya Crossing"
         )
     }
 
-    func testHeldLabelFallsBackToHeldHere() {
-        XCTAssertEqual(HeldPointLabel.title(resolvedName: nil), "Held here")
-        XCTAssertEqual(HeldPointLabel.title(resolvedName: "   "), "Held here")
+    func testHeldLabelFallsBackToTheCallersLabel() {
+        XCTAssertEqual(HeldPointLabel.title(resolvedName: nil, fallback: "Fallback"), "Fallback")
+        XCTAssertEqual(HeldPointLabel.title(resolvedName: "   ", fallback: "Fallback"), "Fallback")
+    }
+
+    func testHeldLabelTreatsAnEmptyNameAsMissing() {
+        XCTAssertEqual(HeldPointLabel.title(resolvedName: "", fallback: "Fallback"), "Fallback")
     }
 }

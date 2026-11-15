@@ -102,35 +102,19 @@ final class RoamControlUITests: XCTestCase {
         attachScreenshot(named: "run-card-unavailable.png")
     }
 
-    /// Every button on the card is drawn by one component, so they share a height whatever their
-    /// role. A simulator has no device session to start, which makes the unavailable card the only
-    /// state reachable here; the shapes are left to the screenshot and the phone.
-    func testRunCardButtonsShareHeight() {
+    /// The unavailable card has exactly one action (`Try Again`), so the only height claim it can
+    /// make is about that button. Cross-button uniformity is enforced by `CardActionButton` being the
+    /// single source (see the `buttonStyle` gate in the brief) — a one-button card cannot prove it.
+    func testRunCardUnavailablePrimaryHeight() {
         openRunCard()
 
         let card = app.descendants(matching: .any)["run.card"]
         XCTAssertTrue(card.waitForExistence(timeout: 10), "run card missing")
-        XCTAssertTrue(app.buttons["run.primary"].waitForExistence(timeout: 10), "primary control missing")
 
-        let buttons = card.buttons.allElementsBoundByIndex.filter { $0.exists && $0.frame.height > 0 }
-        XCTAssertFalse(buttons.isEmpty, "the card laid out no buttons")
-
-        for button in buttons {
-            XCTAssertGreaterThanOrEqual(
-                button.frame.height,
-                44,
-                "\"\(button.label)\" is \(button.frame.height) pt tall"
-            )
-        }
-
-        let heights = buttons.map(\.frame.height)
-        if let shortest = heights.min(), let tallest = heights.max() {
-            XCTAssertLessThanOrEqual(
-                tallest - shortest,
-                1,
-                "the card's buttons differ by \(tallest - shortest) pt: \(heights)"
-            )
-        }
+        let primary = app.buttons["run.primary"]
+        XCTAssertTrue(primary.waitForExistence(timeout: 10), "primary control missing")
+        XCTAssertGreaterThanOrEqual(primary.frame.height, 44, "the card's only action is \(primary.frame.height) pt tall")
+        XCTAssertEqual(card.buttons.count, 1, "the unavailable card is expected to offer exactly one action")
 
         attachScreenshot(named: "run-card-buttons.png")
     }
