@@ -339,6 +339,72 @@ final class RouteSessionModelTests: XCTestCase {
         XCTAssertEqual(model.phase, .running)
     }
 
+    // MARK: - Restored hold
+
+    func testRestoredHoldTargetsTheHeldPoint() throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        model.heldPointNameResolver = { _ in nil }
+        let progress = RouteRunProgress(distanceInLap: 120, completedLaps: 0, elapsedTime: 45)
+        try model.prepare(
+            route: closedRoute,
+            profile: steadyProfile(),
+            mode: .laps(3),
+            progress: progress,
+            wasHolding: true
+        )
+        let frozen = try XCTUnwrap(model.snapshot)
+
+        model.debugResumeRestoredHold(using: appModel)
+
+        XCTAssertEqual(model.phase, .holding(.paused))
+        XCTAssertEqual(try XCTUnwrap(model.snapshot).distanceInLap, frozen.distanceInLap, accuracy: 1e-9)
+        XCTAssertNil(model.debugTick(delta: 10), "a restored hold must not advance")
+
+        // Expected values are computed the way the product computes them, never typed as English.
+        let held = HeldPointTarget.make(coordinate: frozen.reportedCoordinate, resolvedName: nil)
+        let target = try XCTUnwrap(appModel.selectedTarget)
+        XCTAssertEqual(target.name, held.name)
+        XCTAssertTrue(target.subtitle.isEmpty)
+        XCTAssertEqual(target.latitude, frozen.reportedCoordinate.latitude, accuracy: 1e-9)
+        XCTAssertEqual(target.longitude, frozen.reportedCoordinate.longitude, accuracy: 1e-9)
+        // The recovery record must describe the point too, or the next relaunch repeats the bug.
+        let record = try XCTUnwrap(appModel.debugActiveSessionRecovery)
+        XCTAssertEqual(record.lastReportedLocation.name, held.name)
+        XCTAssertTrue(record.wasHolding)
+        XCTAssertNotEqual(target.name, String(format: String(localized: "Running %@"), closedRoute.name))
+    }
+
+    func testRestoredHoldResolvesThePlaceName() async throws {
+        let appModel = makeAppModel()
+        let model = RouteSessionModel()
+        model.heldPointNameResolver = { _ in "People's Square" }
+        let progress = RouteRunProgress(distanceInLap: 120, completedLaps: 0, elapsedTime: 45)
+        try model.prepare(
+            route: closedRoute,
+            profile: steadyProfile(),
+            mode: .laps(3),
+            progress: progress,
+            wasHolding: true
+        )
+        let frozen = try XCTUnwrap(model.snapshot)
+
+        model.debugResumeRestoredHold(using: appModel)
+        XCTAssertEqual(
+            appModel.selectedTarget?.name,
+            HeldPointTarget.make(coordinate: frozen.reportedCoordinate, resolvedName: nil).name
+        )
+
+        await model.heldPointNameTask?.value
+
+        let upgraded = try XCTUnwrap(appModel.selectedTarget)
+        XCTAssertEqual(upgraded.name, "People's Square")
+        XCTAssertTrue(upgraded.subtitle.isEmpty)
+        XCTAssertEqual(upgraded.latitude, frozen.reportedCoordinate.latitude, accuracy: 1e-9)
+        XCTAssertEqual(upgraded.longitude, frozen.reportedCoordinate.longitude, accuracy: 1e-9)
+        XCTAssertEqual(appModel.debugRouteSessionStartCount, 0)
+    }
+
     // MARK: - Continuing a finished run
 
     func testContinueAfterFinishUpgradesOnceToTwoRounds() throws {

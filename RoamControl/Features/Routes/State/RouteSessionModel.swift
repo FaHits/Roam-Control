@@ -502,6 +502,24 @@ final class RouteSessionModel {
             restoredHoldOrigin = nil
             snapshot = runner?.snapshot
             phase = .holding(origin)
+            if let frozen = snapshot {
+                // Same path `hold()` uses: the device reports the point, not the route.
+                showHeldPoint(at: frozen.reportedCoordinate, using: appModel)
+                // `start(using:)` armed the record with the route target; rewrite it with the point.
+                if let route, let profile, let mode {
+                    appModel.armActiveRouteRecovery(
+                        at: HeldPointTarget.make(
+                            coordinate: frozen.reportedCoordinate,
+                            resolvedName: nil
+                        ),
+                        route: route,
+                        progress: progress(of: frozen),
+                        profile: profile,
+                        mode: mode,
+                        wasHolding: true
+                    )
+                }
+            }
             return
         }
         runner?.start()
@@ -692,6 +710,14 @@ extension RouteSessionModel {
     @discardableResult
     func debugTick(delta: TimeInterval) -> RouteRunSnapshot? {
         applyTick(delta: delta)
+    }
+
+    /// Test seam: the device session turned active after a relaunch, exactly as `start(using:)`
+    /// leaves it — the restored hold origin is set, then the active callback arrives.
+    func debugResumeRestoredHold(using appModel: AppModel) {
+        restoredHoldOrigin = holdOrigin
+        phase = .preparing
+        handleActiveDeviceSession(appModel: appModel)
     }
 }
 #endif
