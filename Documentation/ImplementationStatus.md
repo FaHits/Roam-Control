@@ -1628,3 +1628,36 @@
 
 - 下一任务：处理台账里地图点按的静默 return（`HomeView.swift:88-95`）与按钮形状（#5）
 - 更新时间：2026-11-06
+
+### 2026-11-15 Task 45：保持在此点等于结束跑步
+
+- 任务：Task 45 - 点「保持在此点」后跑步彻底结束，变成一个普通地点模拟（`type: feature`）
+- 状态：`implemented`（237 条单测、6 条 UI 用例、两个 IPA 与 6 张界面截图由 CI 复核；真机三项未验证）
+- 起点：`028c698`
+- 用户可见变化：点「保持在此点」后不再有「从此点继续」「接着跑」；杀 App 重开提示「继续位置模拟」，进去是点定位，地图有该点 pin，卡片是地点卡（地名 + 坐标 + `Stop & Restore` + `Preview Walking Route`）
+- 修改文件：`RoamControl/Features/Routes/State/RouteSessionModel.swift`（+64/−198）、`RoamControl/App/AppModel.swift`（+16/−7）、`RoamControl/Features/Home/HomeView.swift`（+5/−52）、`RoamControl/Features/Routes/Views/RouteRunCard.swift`（+0/−159）、`RoamControl/Models/SessionRecoveryRecord.swift`（+1/−7）、删除 `RoamControl/Features/Home/HoldMapPin.swift`（−26）、`RoamControlTests/RouteSessionModelTests.swift`（+73/−176）、`RoamControlTests/RouteRecoveryTests.swift`（+0/−75）、删除 `RoamControlTests/HoldMapPinTests.swift`（−31）、本文件。合计 +159/−732，净删 573 行
+- 关键实现：
+  - `hold(using:)` 改成 `@discardableResult func hold(using:) -> LocationTarget?`：暂停 runner 冻结快照 → `HeldPointTarget.make(coordinate:resolvedName:nil)` → 会话已 active 时原地 `updateLocation`（同坐标换名字，不重连、不闪真机位置）→ `adoptHeldPointAsFixedPoint` → 清空 `route/geometry/profile/mode/runner/snapshot/errorMessage` 并 `phase = .idle` → 启动地名升级
+  - `AppModel.adoptHeldPointAsFixedPoint(_:)` 直接写 `.fixedLocation` 恢复记录（`SessionRecoveryRecord.fixed(at:)` + 立刻落盘），**不调 `addToHistory`**：路线跑步本来没有收藏历史，保持也不该凭空造一条
+  - 地名升级的守卫从「恢复记录是 `.savedRoute`」改成「用户选中的仍是这个点且记录仍是 `.fixedLocation`」，所以保持后改名照样生效，而用户换点后不会被覆盖
+  - `SessionRecoveryView` 与 `LocationSelectionCard` 无需改动：前者早已按 `kind` 区分「Resume Location / Resume Route Run」，后者就是地点卡本身，`route == nil` 时 HomeView 自然落到它
+- 删掉的语义（净删为主）：`RouteSessionHoldOrigin`、`RouteSessionPhase.holding`、`holdOrigin`、`holdOrigin(forProgress:mode:)`、`resumeFromHold`、`restoredHoldOrigin` 与 `handleActiveDeviceSession` 的整段恢复保持分支、`heldTarget(for:route:appModel:)`、`applyHeldPoint`、`debugResumeRestoredHold`、`HoldMapPin`、`RouteRunCard.heldContent` 与 6 处 `case .holding`、`SessionRecoveryRecord.wasHolding` 及 `armActiveRouteRecovery` 的 `wasHolding` 参数
+- 与任务书的两处偏差（按实际落地，均已在下方门禁体现）：
+  1. 任务书的删除表漏了 `testResumingRestoresTheRouteTarget`（原 `RouteSessionModelTests.swift:265-283`），它直接调 `resumeFromHold` 并断言「resume 后 target 名 == `Running <route>`」，接口删掉后必然编译失败，语义也已不存在，因此一并删除。实际是**删 12 加 3**，`246 − 12 + 3 = 237`，不是任务书写的 238；门禁 4 的期望值按 237 落地
+  2. `hold` 里用注入 seam `deviceSessionIsActive(appModel)` 而不是任务书写的 `appModel.isDeviceSessionActive`：这个 seam 是 `RouteSessionModel.swift:48` 的可替换闭包，默认实现就是 `if case .active = appModel.deviceSession.phase`，与 `continueAfterFinish` 等既有调用点一致，测试可以替身
+- 失败的第一次 CI：`5c7c3cd` 的 run [43724518370](https://github.com/FaHits/Roam-Control/actions/runs/43724518370) test job 红，`RouteSessionModel.swift:522:52: error: cannot convert value of type 'CLLocationCoordinate2D' to expected argument type 'GeoCoordinate'`（`LocationTarget.coordinate` 是 `CLLocationCoordinate2D`，`HeldPointTarget.make` 与 `heldPointNameResolver` 都要 `GeoCoordinate`），两个 IPA job skipped；修复提交 `f797654` 后三 job 全绿
+- 未验证项：真机三项（对应台账 #16 保持转点、#17 跑完也转点、#14 恢复瞬间不闪）；`deviceSession` 实际收到的目标坐标在单测里不可观测（单测中会话不可能处于 active），改用「未新开会话」（`debugRouteSessionStartCount == 0`）与 `selectedTarget` 断言，真机上需人眼确认位置确实停住、不漂回
+
+| # | 门禁 | 结果 |
+|---|------|------|
+| 1 | `rg -n "\.holding\|holding(\|wasHolding\|resumeFromHold\|HoldMapPin\|isHoldingRoute\|RouteSessionHoldOrigin\|holdOrigin" RoamControl RoamControlTests` | pass：0 命中，exit 1 |
+| 2 | `test -f` 两个已删文件 | pass：`HoldMapPin.swift` 与 `HoldMapPinTests.swift` 均 exit 1（不存在） |
+| 3 | `rg -n "adoptHeldPointAsFixedPoint" RoamControl RoamControlTests \| wc -l`；`rg -n "SessionRecoveryRecord.fixed\(at:" RoamControl \| wc -l` | pass：3 与 2（要求 ≥2） |
+| 4 | `rg -c "^    func test" RoamControlTests \| awk -F: '{s+=$2} END {print s}'` | pass：237（任务书写 238，见上方偏差 1） |
+| 5 | `rg -n "gcj02ToWGS84\|offsetDegrees\|coordinateOffset" RoamControl \| wc -l` | 8（与起点一致） |
+| 6 | `python scripts/check_localizations.py`；`python scripts/check_invariants.py`；`--self-test` | pass：`All 651 keys have non-empty zh-Hans values.` exit 0；7 行 `PASS` + `All invariants hold.` exit 0；`self-test passed: 7/7 canaries caught, summaries verified.` exit 0 |
+| 7 | `rg -n "MARKETING_VERSION\|CURRENT_PROJECT_VERSION" project.pbxproj` | 未改：`0.11.0 (63)` |
+| 8 | CI | pass：run [43725281533](https://github.com/FaHits/Roam-Control/actions/runs/43725281533) 三 job success；`Executed 237 tests, with 0 failures (0 unexpected) in 16.256 (23.268) seconds`（zh-Hans 复跑 19.634 (26.897)）；UI `Executed 6 tests, with 0 failures (0 unexpected) in 199.494 (199.505) seconds`，6 张截图；产物 `RoamControl-unsigned-ipa` id 14166457546、3,165,929 字节，`RoamControl-unsigned-debug-ipa` id 14166527256、4,806,740 字节，`roam-ui-screenshots` id 14167000359、7,186,950 字节 |
+
+- 下一任务：Task 45 的真机三项（台账 #16 / #17 / #14）与 Task 44（GPX 导入，已写未发）的派单顺序由用户决定
+- 更新时间：2026-11-15
