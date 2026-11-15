@@ -82,12 +82,11 @@ struct RenameDialog: View {
                     Button(action: onCancel) {
                         Text("Cancel")
                             .frame(maxWidth: .infinity, minHeight: 34)
-                            .background(
-                                .secondary.opacity(0.18),
-                                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.regular)
+                    .accessibilityIdentifier("rename.cancel")
 
                     Button {
                         guard let name = model.submit() else { return }
@@ -97,7 +96,10 @@ struct RenameDialog: View {
                             .frame(maxWidth: .infinity, minHeight: 34)
                     }
                     .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.regular)
                     .disabled(!model.canSubmit)
+                    .accessibilityIdentifier("rename.save")
                 }
             }
             .padding(16)

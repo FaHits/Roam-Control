@@ -176,6 +176,21 @@ final class RoamControlUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Cancel"].exists, "cancel button missing")
         XCTAssertTrue(app.buttons["Save"].exists, "save button missing")
 
+        let cancel = app.buttons["rename.cancel"]
+        let save = app.buttons["rename.save"]
+        XCTAssertTrue(cancel.exists && save.exists, "both dialog buttons must exist")
+        XCTAssertGreaterThanOrEqual(cancel.frame.height, 30, "cancel is \(cancel.frame.height) pt tall")
+        XCTAssertLessThanOrEqual(
+            abs(cancel.frame.height - save.frame.height),
+            1,
+            "heights differ: \(cancel.frame.height) vs \(save.frame.height)"
+        )
+        XCTAssertLessThanOrEqual(
+            abs(cancel.frame.width - save.frame.width),
+            1,
+            "widths differ: \(cancel.frame.width) vs \(save.frame.width)"
+        )
+
         attachScreenshot(named: "rename-dialog.png")
     }
 
