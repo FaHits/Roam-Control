@@ -519,11 +519,12 @@ final class RouteSessionModel {
         heldPointNameTask = Task { @MainActor [weak self] in
             guard let self else { return }
             let resolver = self.heldPointNameResolver
-            guard let name = await resolver(target.coordinate) else { return }
+            let coordinate = GeoCoordinate(latitude: target.latitude, longitude: target.longitude)
+            guard let name = await resolver(coordinate) else { return }
             // The user may have picked another point while the lookup was in flight.
             guard appModel.selectedTarget?.id == target.id else { return }
             guard appModel.activeSessionRecovery?.kind == .fixedLocation else { return }
-            let named = HeldPointTarget.make(coordinate: target.coordinate, resolvedName: name)
+            let named = HeldPointTarget.make(coordinate: coordinate, resolvedName: name)
             if deviceSessionIsActive(appModel) {
                 _ = appModel.deviceSession.updateLocation(named)
             }
