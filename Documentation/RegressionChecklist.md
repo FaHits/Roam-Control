@@ -81,6 +81,8 @@ Use this checklist before packaging an IPA or declaring a development build stab
 
 ## 0.11.0 device regression
 
+结果按 `docs/roam-device-backlog.md` 的编号记录（本地台账），勾选状态以台账为准；下面保留为发布前的完整回归模板，未逐条对应台账的项不要当成已验证。
+
 - [ ] A finished run shows three exits: Hold Here, Continue Run and Finish & Restore.
 - [ ] A paused run shows three exits: Resume, Hold Here and Stop & Restore.
 - [ ] Three minutes after Hold Here the map point has not moved and Find My on the device still reports that point.

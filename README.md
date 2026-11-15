@@ -9,13 +9,13 @@
 </p>
 
 <p align="center">
-  <strong>Current release:</strong> 0.10.0 (62) · <a href="https://github.com/FaHits/Roam-Control/releases/tag/v0.10.0">Download unsigned IPA</a> · <strong>Requires:</strong> iOS 27+
+  <strong>Current release:</strong> 0.11.0 (63) · <a href="https://github.com/FaHits/Roam-Control/releases/tag/v0.11.0">Download unsigned IPA</a> · <strong>Requires:</strong> iOS 27+
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/iOS-27%2B-blue" alt="iOS 27+">
   <img src="https://img.shields.io/badge/UI-SwiftUI-orange" alt="SwiftUI">
-  <img src="https://img.shields.io/badge/Release-0.10.0%20(62)-purple" alt="Release 0.10.0 (62)">
+  <img src="https://img.shields.io/badge/Release-0.11.0%20(63)-purple" alt="Release 0.11.0 (63)">
   <img src="https://img.shields.io/badge/License-PolyForm%20NC%201.0.0-blue" alt="PolyForm Noncommercial 1.0.0">
 </p>
 
@@ -32,11 +32,11 @@ Roam Control is a source-available SwiftUI app for location-based development, q
 - **Humanised running.** Speed wobble, cadence and smoothed GPS jitter make the reported track look like a person moving. Jitter only touches the reported coordinate — it never moves the saved route progress, so the run stays exactly on its geometry.
 - **Run card and recovery.** Live distance, lap/trip progress, elapsed time, pause and resume; an interrupted run comes back as a recovery card that names the route and where you stopped.
 - **One map style everywhere.** Standard, satellite and hybrid are mapped once and shared by the main map and the route editor, which can switch style in place.
-- **Chinese and English.** The whole interface is localised (615 keys, zh-Hans complete). The restart prompt compares the language you will see next launch against the one on screen right now, so two names for the same language never nag you.
+- **Chinese and English.** The whole interface is localised (651 keys, zh-Hans complete). The restart prompt compares the language you will see next launch against the one on screen right now, so two names for the same language never nag you.
 - **Coordinates converted once, at the injection boundary.** MapKit returns GCJ-02 inside mainland China while the device session expects WGS-84; the conversion happens at the single place a coordinate is injected, never as a hard-coded offset.
 - **No analytics.** The usage-statistics feature and its `PrivacyInfo.xcprivacy` entries are gone; nothing is reported anywhere.
 
-The suite runs 158 unit tests covering route geometry, persistence, the runner, recovery, map styles and language selection.
+The suite runs 243 unit tests covering route geometry, persistence, the runner, recovery, map styles, language selection and the session states, plus 6 UI tests that drive the route library, the run card, the search field, the rename dialog and the settings screen in a simulator.
 
 ## Screenshots
 
@@ -64,7 +64,7 @@ The suite runs 158 unit tests covering route geometry, persistence, the runner, 
 
 ## Builds
 
-Roam Control is not distributed through the App Store or TestFlight. Release **0.10.0 (62)** is published on the [Releases page](https://github.com/FaHits/Roam-Control/releases/tag/v0.10.0) as an unsigned release IPA (`RoamControl-unsigned.ipa`); it must be signed with your own Apple account before it can be installed. A debug build is available from the CI run's `unsigned-ipa-debug` artifact when one is needed for troubleshooting.
+Roam Control is not distributed through the App Store or TestFlight. Release **0.11.0 (63)** is published on the [Releases page](https://github.com/FaHits/Roam-Control/releases/tag/v0.11.0) as an unsigned release IPA (`RoamControl-unsigned.ipa`); it must be signed with your own Apple account before it can be installed. A debug build is available from the CI run's `unsigned-ipa-debug` artifact when one is needed for troubleshooting.
 
 You will need:
 

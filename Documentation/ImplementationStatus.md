@@ -4,6 +4,15 @@
 
 ## 当前交接
 
+> 2026-11-15 **0.11.0 (63) 已发布**。标签 `v0.11.0`（annotated）指向 `1b8bad4bb1ad6212eaade117c44dd4d42c345ebe`——就是真机验收那版 IPA 所在的提交（run `43696831856`，head `1b8bad4`），标签不带 docs 提交，与 0.10.0 的处理一致。
+>
+> - release：`https://github.com/FaHits/Roam-Control/releases/tag/v0.11.0`，published `2026-11-15T09:28:14Z`，非 draft、非 prerelease，资产一个：`RoamControl-unsigned.ipa` / **3,180,303 字节** / `sha256:b56f5c45f485d1bcfa65a7aed7d67fcffa7092cfd38d3d22bcb030242452e310`。
+> - 资产来源：run `43696831856` 的 `RoamControl-unsigned-ipa` artifact `14155550960`（zip 3,177,096 字节），解出的 IPA 才是 3,180,303 字节；不要拿 zip 字节数当 IPA 大小（0.10.0 时记错过一次）。
+> - 包内实测（`plistlib` 读 `Payload/RoamControl.app/Info.plist`）：`CFBundleShortVersionString=0.11.0`、`CFBundleVersion=63`、`CFBundleIdentifier=com.sean.roamcontrol`、`MinimumOSVersion=27.0`、`RoamControlBuildTimestamp=2026-11-15T09:12:39Z`。
+> - 真机验收：`docs/roam-device-backlog.md` 里 #1–#12 全部 PASS（构建时间、海外搜索、保持态卡片、状态全局一致、按钮规格、重命名弹窗、微信输入法、地图点按提示、保持后全局变点定位、保持后地图上的 pin）。#8/#11 是测试卫生项，由 Task 39 修完，不需要真机。
+> - 同批文档改动：`CHANGELOG.md` 的 `[0.11.0]` 去掉「待发布」、`README.md` 的版本行与 badge 改 `0.11.0 (63)` 并链新 release、`VERSIONING.md` 与 `Documentation/AIDevelopment.md` 的「当前版本」行同步、`Documentation/RegressionChecklist.md` 的 0.11.0 段注明以台账为准。代码一行未动，版本号仍是 `0.11.0` / `63`。
+> - `fork/main` 在本次提交后快进到同一提交（发版顺序见 `docs/roam-process.md` 第 7 节：先打标签与 release，再改文档，最后快进 main）。
+
 > 2026-11-15 Task 41 重命名对话框两个按钮外轮廓一致（用户可见变化一条：对话框里「取消」与「存储」都是胶囊、同高同宽，只有填充色不同）：根因是同一个 `HStack` 里两种画法——取消用 `.buttonStyle(.plain)` 手画 `.secondary.opacity(0.18)` 背景 + `RoundedRectangle(cornerRadius: 8)`，存储用 `.borderedProminent`，iOS 26 上后者渲染成胶囊，于是左边方角矩形、右边药丸。
 >
 > - `RoamControl/Features/Shared/RenameSheet.swift`（196 → 199 行，按钮段 `:81-103`）：取消删掉手画背景、改 `.buttonStyle(.bordered)`；两个按钮各加 `.buttonBorderShape(.capsule)` 与 `.controlSize(.regular)`，不再依赖平台默认；存储保留 `.borderedProminent` 与 `.disabled(!model.canSubmit)`；两者加 `accessibilityIdentifier("rename.cancel")` / `"rename.save"`，文本 `Cancel` / `Save` 未动。对话框宽度 `frame(width: 270)`、圆角 14、`regularMaterial`、输入框 `RoundedRectangle(cornerRadius: 8)`、`RenameSheetModel` 的重命名规则、`RenameField` 的 `UITextField` 包装与 marked text 读取全部未动；`CardActionButton` 未动；未新增本地化 key。

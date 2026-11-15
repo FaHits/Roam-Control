@@ -2,7 +2,7 @@
 
 All notable public changes to Roam Control are recorded here.
 
-## [0.11.0] - 待发布（真机验收进行中）
+## [0.11.0] - 2026-11-15
 
 ### Added
 
