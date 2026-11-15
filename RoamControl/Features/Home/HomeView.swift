@@ -81,6 +81,17 @@ struct HomeView: View {
                                 .shadow(color: .black.opacity(0.22), radius: 7, y: 3)
                         }
                     }
+
+                    // A held run is a point, not a line: the polyline and the running marker are
+                    // both hidden on purpose, so this pin is the only thing marking where it stopped.
+                    if let pin = HoldMapPin.pin(
+                        isHolding: isHoldingRoute,
+                        coordinate: routeSession.snapshot?.reportedCoordinate,
+                        name: appModel.selectedTarget?.name
+                    ) {
+                        Marker(pin.name, coordinate: pin.coordinate.mapCoordinate)
+                            .tint(.blue)
+                    }
                 }
                 .mapStyle(appModel.mapDisplayStyle.mapStyle)
                 .mapControls {
